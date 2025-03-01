@@ -5,6 +5,7 @@ import ThreeDSpheres from "@/Global/ThreeDSpheres.vue";
 import CubeStrip from "@/Global/CubeStrip.vue";
 import Hallway from "@/Global/Hallway.vue";
 import HallwayV2 from "@/Global/HallwayV2.vue";
+import HallwayEngine from "@/Global/HallwayEngine.vue";
 
 defineProps({
     canLogin: {
@@ -37,7 +38,7 @@ function handleImageError() {
 
     <div class="bg-gray-50 text-black/50 dark:bg-black dark:text-white/50">
 
-        <nav class="relative flex flex-col items-center justify-center pt-5">
+        <nav class="relative z-10 flex flex-col items-center justify-center pt-32 -mb-48">
 
             <logo-mark/>
 
@@ -45,10 +46,10 @@ function handleImageError() {
 
 	    <div class="overflow-hidden">
 
-<!--		    <hallway/>-->
+		    <!--<hallway/>-->
+            <!--<hallway-v2/>-->
 
-
-            <hallway-v2/>
+            <hallway-engine/>
 
 	    </div>
 
