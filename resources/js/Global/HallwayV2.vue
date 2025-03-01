@@ -19,8 +19,8 @@ const projects = [
     { title: "GOTHAM KNIGHTS", size: 9 },
     { title: "GAME OF THRONES: CONQUEST", size: 9 },
     { title: "MARVEL: STRIKE FORCE", size: 9 },
-    { title: "LOL: LEAGUE OF LEGENDS", size: 9 },
-    { title: "LOL: CONVERGENCE", size: 9 },
+    { title: "LEAGUE OF LEGENDS: RIOT KING", size: 9 },
+    { title: "LEAGUE OF LEGENDS: CONVERGENCE", size: 9 },
 ]
 
 const ASPECT_RATIO = ref(16 / 9)
