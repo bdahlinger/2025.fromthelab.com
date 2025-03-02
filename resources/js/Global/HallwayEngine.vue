@@ -1,9 +1,12 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref } from 'vue'
+import { onMounted, onUnmounted, ref, defineProps } from 'vue'
 import * as THREE from 'three'
 import { gsap } from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import Stats from 'three/examples/jsm/libs/stats.module'
+import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer'
+import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass'
+import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass'
 import { useIntroCubes } from './useIntroCubes'
 import { useProjectCubes } from './useProjectCubes'
 import { useCityscape } from './useCityscape'
@@ -11,9 +14,16 @@ import { setupScrollAnimation } from '/resources/js/Global/tunnelAnimations'
 
 gsap.registerPlugin(ScrollTrigger)
 
+const props = defineProps<{
+    projects: { title: string; size: number }[]
+}>()
+
 const CUBE_SIZE = 250;
 const CUBE_SPACING = 500;
 const FIRST_CUBE_Z = -500;
+const SCROLL_BUFFER = 100;
+const BLOOM_FADE_START_Z = -520; // Start fade at Z = -520
+const BLOOM_FADE_END_Z = -720;   // End fade at Z = -720
 
 const tunnelWrapper = ref<HTMLElement | null>(null)
 const wrapper = ref<HTMLElement | null>(null)
@@ -21,13 +31,18 @@ const wrapper = ref<HTMLElement | null>(null)
 let scene: THREE.Scene
 let camera: THREE.PerspectiveCamera
 let renderer: THREE.WebGLRenderer
+let composer: EffectComposer
+let bloomPass: UnrealBloomPass
 let animationFrameId: number
 let stats: Stats
+let updateCityParticles: (delta: number) => void
+let lastTime = 0
 
 const updateRendererSize = () => {
     const width = tunnelWrapper.value ? tunnelWrapper.value.getBoundingClientRect().width : window.innerWidth
     const height = window.innerHeight
     renderer.setSize(width, height)
+    composer.setSize(width, height)
     camera.aspect = width / height
     camera.updateProjectionMatrix()
 }
@@ -43,6 +58,19 @@ const init = () => {
 
     renderer = new THREE.WebGLRenderer({ antialias: true })
     renderer.setPixelRatio(window.devicePixelRatio)
+
+    composer = new EffectComposer(renderer)
+    const renderPass = new RenderPass(scene, camera)
+    composer.addPass(renderPass)
+    bloomPass = new UnrealBloomPass(
+        new THREE.Vector2(window.innerWidth, window.innerHeight),
+        1.5,
+        0.4,
+        0.0
+    )
+    bloomPass.renderToScreen = true
+    composer.addPass(bloomPass)
+
     updateRendererSize()
 
     if (tunnelWrapper.value) {
@@ -51,28 +79,41 @@ const init = () => {
         return
     }
 
-    // Initialize Stats with fixed positioning
     stats = new Stats()
-    stats.dom.style.position = 'fixed' // Changed to fixed
+    stats.dom.style.position = 'fixed'
     stats.dom.style.top = '0px'
     stats.dom.style.left = '0px'
-    stats.dom.style.zIndex = '1000' // Ensure it stays above other elements
+    stats.dom.style.zIndex = '1000'
     document.body.appendChild(stats.dom)
 
-    const { cityGroup } = useCityscape(scene);
+    const { cityGroup, updateParticles } = useCityscape(scene, scene)
+    updateCityParticles = updateParticles
 
-    useProjectCubes(scene, { CUBE_SIZE, CUBE_SPACING, FIRST_CUBE_Z }).getInitializedData().then(({ projectCubes, updateCubeColors, loadedFont }) => {
-        const { introCubes } = useIntroCubes(scene, Promise.resolve(loadedFont), { CUBE_SIZE, FIRST_CUBE_Z });
-        const allCubes = [...introCubes, ...projectCubes];
-        setupScrollAnimation(scene, camera, wrapper, allCubes, updateCubeColors, { CUBE_SIZE, CUBE_SPACING, FIRST_CUBE_Z });
+    useProjectCubes(scene, scene, { CUBE_SIZE, CUBE_SPACING, FIRST_CUBE_Z }, props.projects).getInitializedData().then(({ projectCubes, updateCubeColors, loadedFont }) => {
+        const { introCubes } = useIntroCubes(scene, scene, Promise.resolve(loadedFont), { CUBE_SIZE, FIRST_CUBE_Z })
+        const allCubes = [...introCubes, ...projectCubes]
+        setupScrollAnimation(scene, scene, camera, wrapper, allCubes, updateCubeColors, { CUBE_SIZE, CUBE_SPACING, FIRST_CUBE_Z }, () => {})
         animate()
     })
 }
 
-const animate = () => {
+const animate = (time: number = 0) => {
     animationFrameId = requestAnimationFrame(animate)
-    if (renderer) {
-        renderer.render(scene, camera)
+    if (renderer && composer) {
+        const delta = (time - lastTime) / 1000
+        lastTime = time
+        updateCityParticles(delta)
+        const fadeRange = BLOOM_FADE_END_Z - BLOOM_FADE_START_Z // -720 - (-520) = -200
+        let progress = 0
+        if (camera.position.z >= BLOOM_FADE_START_Z) { // Z >= -520 (e.g., 0 to -520)
+            progress = 0 // Stay at 1.5
+        } else if (camera.position.z <= BLOOM_FADE_END_Z) { // Z <= -720
+            progress = 1 // Stay at 0.5
+        } else { // Between -520 and -720
+            progress = (camera.position.z - BLOOM_FADE_START_Z) / fadeRange
+        }
+        bloomPass.strength = THREE.MathUtils.lerp(1.5, 0.5, progress)
+        composer.render()
     }
     ScrollTrigger.update()
     stats.update()
@@ -88,6 +129,7 @@ onUnmounted(() => {
     cancelAnimationFrame(animationFrameId)
     ScrollTrigger.getAll().forEach(trigger => trigger.kill())
     renderer.dispose()
+    composer.dispose()
     scene.clear()
     document.body.removeChild(stats.dom)
 })

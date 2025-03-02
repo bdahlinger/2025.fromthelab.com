@@ -4,7 +4,8 @@ import { TextGeometry } from 'three/examples/jsm/geometries/TextGeometry'
 import { SVGLoader } from 'three/examples/jsm/loaders/SVGLoader'
 
 export function useIntroCubes(
-    scene: THREE.Scene,
+    sceneNoGlow: THREE.Scene,
+    sceneGlow: THREE.Scene,
     fontPromise: Promise<THREE.Font>,
     config: { CUBE_SIZE: number; FIRST_CUBE_Z: number }
 ) {
@@ -69,7 +70,7 @@ export function useIntroCubes(
             })
         }
 
-        introGroup = new THREE.Group() // Ensure introGroup is initialized
+        introGroup = new THREE.Group()
         if (!introGroup) {
             console.error('introGroup failed to initialize')
             return
@@ -83,20 +84,17 @@ export function useIntroCubes(
             introGroup.add(cube)
         }
 
-        // Set position after initialization
-        introGroup.position.z = FIRST_CUBE_Z // Likely line 36 or nearby
-        scene.add(introGroup)
+        introGroup.position.z = FIRST_CUBE_Z
+        sceneGlow.add(introGroup) // Single scene usage
         introCubes.push(introGroup)
 
         initialOpacities = introMaterials.map(m => m.opacity)
 
-        // Continuous rotation
         const tl = gsap.timeline({ repeat: -1 })
         tl.to(introGroup.rotation, { x: THREE.MathUtils.degToRad(360), duration: 12, ease: 'none' }, 0)
         tl.to(introGroup.rotation, { y: THREE.MathUtils.degToRad(360), duration: 10, ease: 'none' }, 0)
         tl.to(introGroup.rotation, { z: THREE.MathUtils.degToRad(360), duration: 14, ease: 'none' }, 0)
 
-        // Marquee effect
         let activeCubeIndex = -1
         let activationTime = 0
         const cycleDurationInMs = CUBE_CYCLE_DURATION * 1000
@@ -136,17 +134,15 @@ export function useIntroCubes(
 
     setupIntro()
 
-    // Wait for font promise to resolve before adding message
     fontPromise.then((font) => {
         if (font) {
             const messageGroup = createMessageGroup(font)
-            scene.add(messageGroup)
+            sceneNoGlow.add(messageGroup) // Single scene usage
         }
     })
 
     return { introCubes }
 
-    // Message group creation (unchanged, included for completeness)
     function createMessageGroup(font: THREE.Font): THREE.Group {
         const messageGroup = new THREE.Group()
         const textMesh = createMessageText(font)

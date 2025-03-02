@@ -3,32 +3,22 @@ import { FontLoader } from 'three/examples/jsm/loaders/FontLoader'
 import { TextGeometry } from 'three/examples/jsm/geometries/TextGeometry'
 
 export function useProjectCubes(
-    scene: THREE.Scene,
-    config: { CUBE_SIZE: number; CUBE_SPACING: number; FIRST_CUBE_Z: number }
+    sceneNoGlow: THREE.Scene,
+    sceneGlow: THREE.Scene,
+    config: { CUBE_SIZE: number; CUBE_SPACING: number; FIRST_CUBE_Z: number },
+    projects: { title: string; size: number }[]
 ) {
     const { CUBE_SIZE, CUBE_SPACING, FIRST_CUBE_Z } = config;
-    const projects = [
-        { title: "SUICIDE SQUAD: KILL THE JUSTICE LEAGUE", size: 9 },
-        { title: "MORTAL KOMBAT 1", size: 9 },
-        { title: "HARRY POTTER: HOGWARTS LEGACY", size: 9 },
-        { title: "HARRY POTTER: QUIDDITCH CHAMPIONS", size: 9 },
-        { title: "MULTIVERSUS", size: 9 },
-        { title: "GOTHAM KNIGHTS", size: 9 },
-        { title: "GAME OF THRONES: CONQUEST", size: 9 },
-        { title: "MARVEL: STRIKE FORCE", size: 9 },
-        { title: "LEAGUE OF LEGENDS: RIOT KING", size: 9 },
-        { title: "LEAGUE OF LEGENDS: CONVERGENCE", size: 9 },
-    ]
 
     const CUBE_COLOR = 0x00ffff
     const CUBE_COLOR_ACTIVE = 0xff00ff
     const ROTATION_INCREMENT = THREE.MathUtils.degToRad(15)
     const PROXIMITY_THRESHOLD = 1000
 
-    let projectCubes: THREE.Group[] = [] // Reset on each call
+    let projectCubes: THREE.Group[] = []
     let fontLoader: FontLoader | null = null
     let loadedFont: THREE.Font | null = null
-    let isInitialized = false; // Prevent re-initialization
+    let isInitialized = false;
 
     const createProjectCube = (size: number, zPosition: number, rotation: number): THREE.Group => {
         const geometry = new THREE.BoxGeometry(size, size, size)
@@ -64,7 +54,7 @@ export function useProjectCubes(
         })
         const textMesh = new THREE.Mesh(textGeometry, textMaterial)
         textMesh.position.set(x, y, z)
-        scene.add(textMesh)
+        sceneNoGlow.add(textMesh) // Single scene usage
         return textMesh
     }
 
@@ -79,7 +69,7 @@ export function useProjectCubes(
                         const zPosition = FIRST_CUBE_Z - (index + 1) * CUBE_SPACING
                         const rotation = (index + 1) * ROTATION_INCREMENT
                         const cube = createProjectCube(CUBE_SIZE, zPosition, rotation)
-                        scene.add(cube)
+                        sceneNoGlow.add(cube) // Single scene usage
                         projectCubes.push(cube)
                         createTextObject(project.title, 0, project.size + 15, zPosition, project.size, font)
                     })
@@ -105,7 +95,7 @@ export function useProjectCubes(
         const cameraZ = camera.position.z
         let textMeshes: THREE.Mesh[] = []
 
-        scene.traverse((object) => {
+        sceneNoGlow.traverse((object) => {
             if (object instanceof THREE.Mesh && object.geometry && object.geometry.type === 'TextGeometry') {
                 textMeshes.push(object)
             }

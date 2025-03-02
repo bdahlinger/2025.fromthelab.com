@@ -6,16 +6,18 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger'
 gsap.registerPlugin(ScrollTrigger)
 
 export function setupScrollAnimation(
-    scene: THREE.Scene,
+    sceneNoGlow: THREE.Scene,
+    sceneGlow: THREE.Scene,
     camera: THREE.PerspectiveCamera,
     wrapper: Ref<HTMLElement | null>,
     cubes: THREE.Group[],
     updateCubeColors: (camera: THREE.PerspectiveCamera) => void,
-    config: { CUBE_SIZE: number; CUBE_SPACING: number; FIRST_CUBE_Z: number }
+    config: { CUBE_SIZE: number; CUBE_SPACING: number; FIRST_CUBE_Z: number },
+    onScrollProgress?: (progress: number) => void // Callback for bloom fade
 ) {
     const { CUBE_SIZE, CUBE_SPACING, FIRST_CUBE_Z } = config;
 
-    const projectCubeCountRaw = cubes.length - 1;
+    const projectCubeCountRaw = cubes.length - 1; // Assuming first is intro cubes group
     const projectCubeCount = Math.min(projectCubeCountRaw, 10);
     const firstProjectCubeZ = FIRST_CUBE_Z - CUBE_SPACING;
     const lastProjectCubeZ = firstProjectCubeZ - (projectCubeCount - 1) * CUBE_SPACING;
@@ -35,6 +37,11 @@ export function setupScrollAnimation(
             pinSpacing: true,
             anticipatePin: 1,
             refreshPriority: 1,
+            onUpdate: (self) => {
+                if (onScrollProgress) {
+                    onScrollProgress(self.progress); // Pass scroll progress for bloom fade
+                }
+            },
             onLeaveBack: () => {
                 cubes.forEach(cube => {
                     cube.children.forEach((child) => {

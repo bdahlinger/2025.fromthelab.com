@@ -1,28 +1,19 @@
-<script setup>
+<script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3';
 import LogoMark from "@/Global/LogoMark.vue";
-import ThreeDSpheres from "@/Global/ThreeDSpheres.vue";
+//import ThreeDSpheres from "@/Global/ThreeDSpheres.vue";
 import CubeStrip from "@/Global/CubeStrip.vue";
-import Hallway from "@/Global/Hallway.vue";
-import HallwayV2 from "@/Global/HallwayV2.vue";
+//import Hallway from "@/Global/Hallway.vue";
+//import HallwayV2 from "@/Global/HallwayV2.vue";
 import HallwayEngine from "@/Global/HallwayEngine.vue";
 
-defineProps({
-    canLogin: {
-        type: Boolean,
-    },
-    canRegister: {
-        type: Boolean,
-    },
-    laravelVersion: {
-        type: String,
-        required: true,
-    },
-    phpVersion: {
-        type: String,
-        required: true,
-    },
-});
+const props = defineProps<{
+    canLogin: boolean
+    canRegister: boolean
+    laravelVersion: string
+    phpVersion: string
+    projects: { title: string; size: number }[] // Type the projects array
+}>()
 
 function handleImageError() {
     document.getElementById('screenshot-container')?.classList.add('!hidden');
@@ -72,7 +63,7 @@ scene.add( gridHelper4 );
 		    <!--<hallway/>-->
             <!--<hallway-v2/>-->
 
-            <hallway-engine/>
+            <hallway-engine :projects="projects"/>
 
 	    </div>
 
