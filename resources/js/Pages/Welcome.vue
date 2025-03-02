@@ -30,6 +30,29 @@ function handleImageError() {
     document.getElementById('docs-card-content')?.classList.add('!flex-row');
     document.getElementById('background')?.classList.add('!hidden');
 }
+
+
+/*
+    const size = 800;
+    const divisions = 20;
+const gridHelper = new THREE.GridHelper( size, divisions, 0x222222, 0x444444 );
+gridHelper.position.z = -810
+gridHelper.position.y = -400
+scene.add( gridHelper );
+const gridHelper2 = new THREE.GridHelper( size, divisions, 0x222222, 0x444444  );
+gridHelper2.position.z = gridHelper.position.z - size
+gridHelper2.position.y = -400
+scene.add( gridHelper2 );
+const gridHelper3 = new THREE.GridHelper( size, divisions, 0x222222, 0x444444  );
+gridHelper3.position.z = gridHelper2.position.z - size
+gridHelper3.position.y = -400
+scene.add( gridHelper3 );
+const gridHelper4 = new THREE.GridHelper( size, divisions, 0x222222, 0x444444  );
+gridHelper4.position.z = gridHelper3.position.z - size
+gridHelper4.position.y = -400
+scene.add( gridHelper4 );
+*/
+
 </script>
 
 <template>

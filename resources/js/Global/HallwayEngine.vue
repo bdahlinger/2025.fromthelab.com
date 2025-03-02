@@ -3,8 +3,10 @@ import { onMounted, onUnmounted, ref } from 'vue'
 import * as THREE from 'three'
 import { gsap } from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
+import Stats from 'three/examples/jsm/libs/stats.module'
 import { useIntroCubes } from './useIntroCubes'
 import { useProjectCubes } from './useProjectCubes'
+import { useCityscape } from './useCityscape'
 import { setupScrollAnimation } from '/resources/js/Global/tunnelAnimations'
 
 gsap.registerPlugin(ScrollTrigger)
@@ -20,6 +22,7 @@ let scene: THREE.Scene
 let camera: THREE.PerspectiveCamera
 let renderer: THREE.WebGLRenderer
 let animationFrameId: number
+let stats: Stats
 
 const updateRendererSize = () => {
     const width = tunnelWrapper.value ? tunnelWrapper.value.getBoundingClientRect().width : window.innerWidth
@@ -32,7 +35,7 @@ const updateRendererSize = () => {
 const init = () => {
     scene = new THREE.Scene()
     scene.background = new THREE.Color(0x000000)
-    scene.fog = new THREE.Fog(0x000000, 0, 10000)
+    scene.fog = new THREE.Fog(0x000000, 700, 4000)
 
     camera = new THREE.PerspectiveCamera(90, window.innerWidth / window.innerHeight, 1, 10000)
     camera.position.set(0, 0, 0)
@@ -48,6 +51,16 @@ const init = () => {
         return
     }
 
+    // Initialize Stats with fixed positioning
+    stats = new Stats()
+    stats.dom.style.position = 'fixed' // Changed to fixed
+    stats.dom.style.top = '0px'
+    stats.dom.style.left = '0px'
+    stats.dom.style.zIndex = '1000' // Ensure it stays above other elements
+    document.body.appendChild(stats.dom)
+
+    const { cityGroup } = useCityscape(scene);
+
     useProjectCubes(scene, { CUBE_SIZE, CUBE_SPACING, FIRST_CUBE_Z }).getInitializedData().then(({ projectCubes, updateCubeColors, loadedFont }) => {
         const { introCubes } = useIntroCubes(scene, Promise.resolve(loadedFont), { CUBE_SIZE, FIRST_CUBE_Z });
         const allCubes = [...introCubes, ...projectCubes];
@@ -62,6 +75,7 @@ const animate = () => {
         renderer.render(scene, camera)
     }
     ScrollTrigger.update()
+    stats.update()
 }
 
 onMounted(() => {
@@ -75,6 +89,7 @@ onUnmounted(() => {
     ScrollTrigger.getAll().forEach(trigger => trigger.kill())
     renderer.dispose()
     scene.clear()
+    document.body.removeChild(stats.dom)
 })
 
 const handleResize = () => {
