@@ -11,6 +11,7 @@ import { useIntroCubes } from './useIntroCubes'
 import { useProjectCubes } from './useProjectCubes'
 import { useCityscape } from './useCityscape'
 import { setupScrollAnimation } from '/resources/js/Global/tunnelAnimations'
+import { useStarfield } from './useStarfield' // Added back
 
 gsap.registerPlugin(ScrollTrigger)
 
@@ -22,8 +23,8 @@ const CUBE_SIZE = 250;
 const CUBE_SPACING = 500;
 const FIRST_CUBE_Z = -500;
 const SCROLL_BUFFER = 100;
-const BLOOM_FADE_START_Z = -520; // Start fade at Z = -520
-const BLOOM_FADE_END_Z = -720;   // End fade at Z = -720
+const BLOOM_FADE_START_Z = -520;
+const BLOOM_FADE_END_Z = -720;
 
 const tunnelWrapper = ref<HTMLElement | null>(null)
 const wrapper = ref<HTMLElement | null>(null)
@@ -37,106 +38,112 @@ let animationFrameId: number
 let stats: Stats
 let updateCityParticles: (delta: number) => void
 let lastTime = 0
+let starfieldDispose: (() => void) | null = null; // Declared at top level
 
 const updateRendererSize = () => {
-    const width = tunnelWrapper.value ? tunnelWrapper.value.getBoundingClientRect().width : window.innerWidth
-    const height = window.innerHeight
-    renderer.setSize(width, height)
-    composer.setSize(width, height)
-    camera.aspect = width / height
-    camera.updateProjectionMatrix()
+    const width = tunnelWrapper.value ? tunnelWrapper.value.getBoundingClientRect().width : window.innerWidth;
+    const height = window.innerHeight;
+    renderer.setSize(width, height);
+    composer.setSize(width, height);
+    camera.aspect = width / height;
+    camera.far = 60000; // Ensure far plane supports stars
+    camera.updateProjectionMatrix();
 }
 
 const init = () => {
-    scene = new THREE.Scene()
-    scene.background = new THREE.Color(0x000000)
-    scene.fog = new THREE.Fog(0x000000, 700, 4000)
+    scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x000000);
+    scene.fog = new THREE.Fog(0x000000, 700, 4000);
 
-    camera = new THREE.PerspectiveCamera(90, window.innerWidth / window.innerHeight, 1, 10000)
-    camera.position.set(0, 0, 0)
-    camera.lookAt(0, 0, 0)
+    camera = new THREE.PerspectiveCamera(90, window.innerWidth / window.innerHeight, 1, 60000); // Increased far plane
+    camera.position.set(0, 0, 0);
+    camera.lookAt(0, 0, 0);
 
-    renderer = new THREE.WebGLRenderer({ antialias: true })
-    renderer.setPixelRatio(window.devicePixelRatio)
+    renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setPixelRatio(window.devicePixelRatio);
 
-    composer = new EffectComposer(renderer)
-    const renderPass = new RenderPass(scene, camera)
-    composer.addPass(renderPass)
+    composer = new EffectComposer(renderer);
+    const renderPass = new RenderPass(scene, camera);
+    composer.addPass(renderPass);
     bloomPass = new UnrealBloomPass(
         new THREE.Vector2(window.innerWidth, window.innerHeight),
         1.5,
         0.4,
         0.0
-    )
-    bloomPass.renderToScreen = true
-    composer.addPass(bloomPass)
+    );
+    bloomPass.renderToScreen = true;
+    composer.addPass(bloomPass);
 
-    updateRendererSize()
+    updateRendererSize();
 
     if (tunnelWrapper.value) {
-        tunnelWrapper.value.appendChild(renderer.domElement)
+        tunnelWrapper.value.appendChild(renderer.domElement);
     } else {
-        return
+        return;
     }
 
-    stats = new Stats()
-    stats.dom.style.position = 'fixed'
-    stats.dom.style.top = '0px'
-    stats.dom.style.left = '0px'
-    stats.dom.style.zIndex = '1000'
-    document.body.appendChild(stats.dom)
+    stats = new Stats();
+    stats.dom.style.position = 'fixed';
+    stats.dom.style.top = '0px';
+    stats.dom.style.left = '0px';
+    stats.dom.style.zIndex = '1000';
+    document.body.appendChild(stats.dom);
 
-    const { cityGroup, updateParticles } = useCityscape(scene, scene)
-    updateCityParticles = updateParticles
+    const { cityGroup, updateParticles } = useCityscape(scene, scene);
+    updateCityParticles = updateParticles;
 
     useProjectCubes(scene, scene, { CUBE_SIZE, CUBE_SPACING, FIRST_CUBE_Z }, props.projects).getInitializedData().then(({ projectCubes, updateCubeColors, loadedFont }) => {
-        const { introCubes } = useIntroCubes(scene, scene, Promise.resolve(loadedFont), { CUBE_SIZE, FIRST_CUBE_Z })
-        const allCubes = [...introCubes, ...projectCubes]
-        setupScrollAnimation(scene, scene, camera, wrapper, allCubes, updateCubeColors, { CUBE_SIZE, CUBE_SPACING, FIRST_CUBE_Z }, () => {})
-        animate()
-    })
+        const { introCubes } = useIntroCubes(scene, scene, Promise.resolve(loadedFont), { CUBE_SIZE, FIRST_CUBE_Z });
+        const allCubes = [...introCubes, ...projectCubes];
+        setupScrollAnimation(scene, scene, camera, wrapper, allCubes, updateCubeColors, { CUBE_SIZE, CUBE_SPACING, FIRST_CUBE_Z }, () => {});
+        animate();
+    });
+
+    const { dispose } = useStarfield(scene, camera); // Add starfield
+    starfieldDispose = dispose;
 }
 
 const animate = (time: number = 0) => {
-    animationFrameId = requestAnimationFrame(animate)
+    animationFrameId = requestAnimationFrame(animate);
     if (renderer && composer) {
-        const delta = (time - lastTime) / 1000
-        lastTime = time
-        updateCityParticles(delta)
-        const fadeRange = BLOOM_FADE_END_Z - BLOOM_FADE_START_Z // -720 - (-520) = -200
-        let progress = 0
-        if (camera.position.z >= BLOOM_FADE_START_Z) { // Z >= -520 (e.g., 0 to -520)
-            progress = 0 // Stay at 1.5
-        } else if (camera.position.z <= BLOOM_FADE_END_Z) { // Z <= -720
-            progress = 1 // Stay at 0.5
-        } else { // Between -520 and -720
-            progress = (camera.position.z - BLOOM_FADE_START_Z) / fadeRange
+        const delta = (time - lastTime) / 1000;
+        lastTime = time;
+        updateCityParticles(delta);
+        const fadeRange = BLOOM_FADE_END_Z - BLOOM_FADE_START_Z;
+        let progress = 0;
+        if (camera.position.z >= BLOOM_FADE_START_Z) {
+            progress = 0;
+        } else if (camera.position.z <= BLOOM_FADE_END_Z) {
+            progress = 1;
+        } else {
+            progress = (camera.position.z - BLOOM_FADE_START_Z) / fadeRange;
         }
-        bloomPass.strength = THREE.MathUtils.lerp(1.5, 0.5, progress)
-        composer.render()
+        bloomPass.strength = THREE.MathUtils.lerp(1.5, 0.5, progress);
+        composer.render();
     }
-    ScrollTrigger.update()
-    stats.update()
-}
+    ScrollTrigger.update();
+    stats.update();
+};
 
 onMounted(() => {
-    init()
-    window.addEventListener('resize', handleResize)
+    init();
+    window.addEventListener('resize', handleResize);
 })
 
 onUnmounted(() => {
-    window.removeEventListener('resize', handleResize)
-    cancelAnimationFrame(animationFrameId)
-    ScrollTrigger.getAll().forEach(trigger => trigger.kill())
-    renderer.dispose()
-    composer.dispose()
-    scene.clear()
-    document.body.removeChild(stats.dom)
+    window.removeEventListener('resize', handleResize);
+    cancelAnimationFrame(animationFrameId);
+    ScrollTrigger.getAll().forEach(trigger => trigger.kill());
+    renderer.dispose();
+    composer.dispose();
+    scene.clear();
+    document.body.removeChild(stats.dom);
+    if (starfieldDispose) starfieldDispose(); // Cleanup starfield
 })
 
 const handleResize = () => {
-    updateRendererSize()
-    ScrollTrigger.refresh()
+    updateRendererSize();
+    ScrollTrigger.refresh();
 }
 </script>
 
