@@ -11,12 +11,12 @@ import { useIntroCubes } from './useIntroCubes'
 import { useProjectCubes } from './useProjectCubes'
 import { useCityscape } from './useCityscape'
 import { setupScrollAnimation } from '/resources/js/Global/tunnelAnimations'
-import { useStarfield } from './useStarfield' // Added back
+import { useStarfield } from './useStarfield'
 
 gsap.registerPlugin(ScrollTrigger)
 
 const props = defineProps<{
-    projects: { title: string; size: number }[]
+    projects: { title: string; size: number; keyart?: string }[] // Updated prop type
 }>()
 
 const CUBE_SIZE = 250;
@@ -38,7 +38,7 @@ let animationFrameId: number
 let stats: Stats
 let updateCityParticles: (delta: number) => void
 let lastTime = 0
-let starfieldDispose: (() => void) | null = null; // Declared at top level
+let starfieldDispose: (() => void) | null = null;
 
 const updateRendererSize = () => {
     const width = tunnelWrapper.value ? tunnelWrapper.value.getBoundingClientRect().width : window.innerWidth;
@@ -46,7 +46,7 @@ const updateRendererSize = () => {
     renderer.setSize(width, height);
     composer.setSize(width, height);
     camera.aspect = width / height;
-    camera.far = 60000; // Ensure far plane supports stars
+    camera.far = 60000;
     camera.updateProjectionMatrix();
 }
 
@@ -55,7 +55,7 @@ const init = () => {
     scene.background = new THREE.Color(0x000000);
     scene.fog = new THREE.Fog(0x000000, 700, 4000);
 
-    camera = new THREE.PerspectiveCamera(90, window.innerWidth / window.innerHeight, 1, 60000);
+    camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 1, 60000);
     camera.position.set(0, 0, 0);
     camera.lookAt(0, 0, 0);
 
@@ -67,9 +67,9 @@ const init = () => {
     composer.addPass(renderPass);
     bloomPass = new UnrealBloomPass(
         new THREE.Vector2(window.innerWidth, window.innerHeight),
-        2.5,
-        0.6,
-        0.0
+        3.5, // Lowered initial strength from 2.5
+        0.4, // Reduced radius from 0.6
+        0.0  // Increased threshold to reduce bloom on darker areas
     );
     bloomPass.renderToScreen = true;
     composer.addPass(bloomPass);
@@ -99,7 +99,7 @@ const init = () => {
         animate();
     });
 
-    const { dispose } = useStarfield(scene, camera); // Already correct
+    const { dispose } = useStarfield(scene, camera);
     starfieldDispose = dispose;
 };
 
@@ -118,7 +118,7 @@ const animate = (time: number = 0) => {
         } else {
             progress = (camera.position.z - BLOOM_FADE_START_Z) / fadeRange;
         }
-        bloomPass.strength = THREE.MathUtils.lerp(1.5, 0.5, progress);
+        bloomPass.strength = THREE.MathUtils.lerp(1.0, 0.125, progress); // Adjusted range: 1.0 to 0.25
         composer.render();
     }
     ScrollTrigger.update();
@@ -138,7 +138,7 @@ onUnmounted(() => {
     composer.dispose();
     scene.clear();
     document.body.removeChild(stats.dom);
-    if (starfieldDispose) starfieldDispose(); // Cleanup starfield
+    if (starfieldDispose) starfieldDispose();
 })
 
 const handleResize = () => {

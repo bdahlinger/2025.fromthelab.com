@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 
 use Illuminate\Http\Request;
@@ -14,7 +15,8 @@ class HomeController extends Controller
         $projects = collect([
             [
                 'title' => "SUICIDE SQUAD: KILL THE JUSTICE LEAGUE",
-                'size' => 9
+                'size' => 9,
+                'keyart' => Storage::url('projects/ss.jpg')
             ],
             [
                 'title' => "MORTAL KOMBAT 1",

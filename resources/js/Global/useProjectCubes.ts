@@ -6,7 +6,7 @@ export function useProjectCubes(
     sceneNoGlow: THREE.Scene,
     sceneGlow: THREE.Scene,
     config: { CUBE_SIZE: number; CUBE_SPACING: number; FIRST_CUBE_Z: number },
-    projects: { title: string; size: number }[]
+    projects: { title: string; size: number; keyart?: string }[]
 ) {
     const { CUBE_SIZE, CUBE_SPACING, FIRST_CUBE_Z } = config;
 
@@ -20,7 +20,7 @@ export function useProjectCubes(
     let loadedFont: THREE.Font | null = null
     let isInitialized = false;
 
-    const createProjectCube = (size: number, zPosition: number, rotation: number): THREE.Group => {
+    const createProjectCube = (size: number, zPosition: number, rotation: number, keyart?: string): THREE.Group => {
         const geometry = new THREE.BoxGeometry(size, size, size)
         const edges = new THREE.EdgesGeometry(geometry)
         const material = new THREE.LineBasicMaterial({
@@ -33,6 +33,28 @@ export function useProjectCubes(
         group.add(cube)
         group.position.z = zPosition
         group.rotation.z = rotation
+
+        // Add keyart plane if provided
+        if (keyart) {
+            const textureLoader = new THREE.TextureLoader()
+            textureLoader.load(keyart, (texture) => {
+                const planeGeometry = new THREE.PlaneGeometry(size * 0.9, size * 0.9)
+                const planeMaterial = new THREE.MeshBasicMaterial({
+                    map: texture,
+                    transparent: true,
+                    opacity: 0, // Start invisible
+                    blending: THREE.AdditiveBlending, // Additive blending mode
+                    side: THREE.DoubleSide
+                })
+                const plane = new THREE.Mesh(planeGeometry, planeMaterial)
+                plane.position.set(-size / 2, 0, 0) // Left face (negative X)
+                plane.rotation.y = Math.PI / 2 // Face inward (positive X)
+                group.add(plane)
+            }, undefined, (error) => {
+                console.error('Error loading keyart texture:', error)
+            })
+        }
+
         return group
     }
 
@@ -54,7 +76,7 @@ export function useProjectCubes(
         })
         const textMesh = new THREE.Mesh(textGeometry, textMaterial)
         textMesh.position.set(x, y, z)
-        sceneNoGlow.add(textMesh) // Single scene usage
+        sceneNoGlow.add(textMesh)
         return textMesh
     }
 
@@ -68,8 +90,8 @@ export function useProjectCubes(
                     projects.forEach((project, index) => {
                         const zPosition = FIRST_CUBE_Z - (index + 1) * CUBE_SPACING
                         const rotation = (index + 1) * ROTATION_INCREMENT
-                        const cube = createProjectCube(CUBE_SIZE, zPosition, rotation)
-                        sceneNoGlow.add(cube) // Single scene usage
+                        const cube = createProjectCube(CUBE_SIZE, zPosition, rotation, project.keyart)
+                        sceneNoGlow.add(cube)
                         projectCubes.push(cube)
                         createTextObject(project.title, 0, project.size + 15, zPosition, project.size, font)
                     })
@@ -105,28 +127,39 @@ export function useProjectCubes(
             const cubeZ = cube.position.z
             const cubeDistance = Math.abs(cameraZ - cubeZ)
             cube.children.forEach((child) => {
-                const material = (child as THREE.LineSegments).material as THREE.LineBasicMaterial
-                if (cubeDistance <= PROXIMITY_THRESHOLD) {
-                    const progress = 1 - (cubeDistance / PROXIMITY_THRESHOLD)
-                    const r = THREE.MathUtils.lerp(
-                        (CUBE_COLOR >> 16 & 255) / 255,
-                        (CUBE_COLOR_ACTIVE >> 16 & 255) / 255,
-                        progress
-                    )
-                    const g = THREE.MathUtils.lerp(
-                        (CUBE_COLOR >> 8 & 255) / 255,
-                        (CUBE_COLOR_ACTIVE >> 8 & 255) / 255,
-                        progress
-                    )
-                    const b = THREE.MathUtils.lerp(
-                        (CUBE_COLOR & 255) / 255,
-                        (CUBE_COLOR_ACTIVE & 255) / 255,
-                        progress
-                    )
-                    material.color.set(r, g, b)
-                    material.opacity = Math.min(1, progress * 2)
-                } else {
-                    material.opacity = 0
+                if (child instanceof THREE.LineSegments) {
+                    const material = child.material as THREE.LineBasicMaterial
+                    if (cubeDistance <= PROXIMITY_THRESHOLD) {
+                        const progress = 1 - (cubeDistance / PROXIMITY_THRESHOLD)
+                        const r = THREE.MathUtils.lerp(
+                            (CUBE_COLOR >> 16 & 255) / 255,
+                            (CUBE_COLOR_ACTIVE >> 16 & 255) / 255,
+                            progress
+                        )
+                        const g = THREE.MathUtils.lerp(
+                            (CUBE_COLOR >> 8 & 255) / 255,
+                            (CUBE_COLOR_ACTIVE >> 8 & 255) / 255,
+                            progress
+                        )
+                        const b = THREE.MathUtils.lerp(
+                            (CUBE_COLOR & 255) / 255,
+                            (CUBE_COLOR_ACTIVE & 255) / 255,
+                            progress
+                        )
+                        material.color.set(r, g, b)
+                        material.opacity = Math.min(1, progress * 2)
+                    } else {
+                        material.opacity = 0
+                    }
+                } else if (child instanceof THREE.Mesh && child.material instanceof THREE.MeshBasicMaterial) {
+                    // Handle keyart plane
+                    const material = child.material as THREE.MeshBasicMaterial
+                    if (cubeDistance <= PROXIMITY_THRESHOLD) {
+                        const progress = 1 - (cubeDistance / PROXIMITY_THRESHOLD)
+                        material.opacity = Math.min(0.7, progress * 2) // Max opacity 0.8
+                    } else {
+                        material.opacity = 0
+                    }
                 }
             })
         })
