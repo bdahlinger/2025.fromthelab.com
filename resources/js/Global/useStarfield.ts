@@ -5,9 +5,9 @@ import { gsap } from 'gsap';
 export function useStarfield(scene: THREE.Scene, camera: THREE.PerspectiveCamera) {
     const STAR_SIZE = 20;
     const STAR_COUNT = 1000;
-    const FIELD_XY_SIZE = 10000;
+    const FIELD_XY_SIZE = 4000; // X/Y: ±2000, fits FOV
     const FIELD_Z_MIN = -1000;
-    const FIELD_Z_MAX = -10000;
+    const FIELD_Z_MAX = -9000; // 2000 past -7200
 
     // Exclusion zones
     const CAMERA_PATH_XY = 1000;
@@ -16,16 +16,11 @@ export function useStarfield(scene: THREE.Scene, camera: THREE.PerspectiveCamera
     const CUBE_Z_MIN = -500;
     const CUBE_Z_MAX = -2500;
 
-    // Geometry setup
-    const baseGeometry = new THREE.PlaneGeometry(STAR_SIZE, STAR_SIZE);
-    const geometry = new THREE.InstancedBufferGeometry();
-    geometry.index = baseGeometry.index;
-    geometry.attributes.position = baseGeometry.attributes.position;
-    geometry.attributes.uv = baseGeometry.attributes.uv;
-
-    const offsets = new Float32Array(STAR_COUNT * 3);
-    const initialOpacities = new Float32Array(STAR_COUNT); // Store initial values
-    const dynamicOpacities = new Float32Array(STAR_COUNT); // For animation
+    // Geometry setup (switch to Points for culling)
+    const geometry = new THREE.BufferGeometry();
+    const positions = new Float32Array(STAR_COUNT * 3);
+    const initialOpacities = new Float32Array(STAR_COUNT);
+    const dynamicOpacities = new Float32Array(STAR_COUNT);
     let placedStars = 0;
 
     // Generate stars
@@ -39,47 +34,43 @@ export function useStarfield(scene: THREE.Scene, camera: THREE.PerspectiveCamera
 
         if (!inCameraPath && !inCubeBounds) {
             const index = placedStars * 3;
-            offsets[index] = x;
-            offsets[index + 1] = y;
-            offsets[index + 2] = z;
+            positions[index] = x;
+            positions[index + 1] = y;
+            positions[index + 2] = z;
             const opacity = 0.1 + Math.random() * (0.7 - 0.1);
             initialOpacities[placedStars] = opacity;
-            dynamicOpacities[placedStars] = opacity; // Start at initial
+            dynamicOpacities[placedStars] = opacity;
             placedStars++;
         }
     }
 
-    geometry.setAttribute('offset', new THREE.InstancedBufferAttribute(offsets, 3));
-    geometry.setAttribute('opacity', new THREE.InstancedBufferAttribute(dynamicOpacities, 1));
+    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    geometry.setAttribute('opacity', new THREE.BufferAttribute(dynamicOpacities, 1));
 
-    // Shader material
+    // Shader material (adapted for Points)
     const material = new THREE.ShaderMaterial({
         uniforms: {
             color: { value: new THREE.Color(1, 1, 1) },
+            size: { value: STAR_SIZE },
         },
         vertexShader: `
-      attribute vec3 offset;
       attribute float opacity;
-      varying vec2 vUv;
       varying float vOpacity;
+      uniform float size;
 
       void main() {
-        vUv = uv;
         vOpacity = opacity;
-        vec3 vPosition = position;
-        vec4 mvPosition = modelViewMatrix * vec4(0.0, 0.0, 0.0, 1.0);
-        mvPosition.xyz += vPosition;
-        mvPosition = vec4(mvPosition.xyz + offset, 1.0);
+        vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+        gl_PointSize = size * (300.0 / -mvPosition.z); // Size attenuation
         gl_Position = projectionMatrix * mvPosition;
       }
     `,
         fragmentShader: `
       uniform vec3 color;
-      varying vec2 vUv;
       varying float vOpacity;
 
       void main() {
-        float dist = distance(vUv, vec2(0.5, 0.5)) * 2.0;
+        float dist = distance(gl_PointCoord, vec2(0.5, 0.5)) * 2.0;
         float alpha = vOpacity * (1.0 - dist);
         if (alpha <= 0.0) discard;
         gl_FragColor = vec4(color, alpha);
@@ -90,34 +81,33 @@ export function useStarfield(scene: THREE.Scene, camera: THREE.PerspectiveCamera
         depthWrite: false,
     });
 
-    const starfield = new THREE.Mesh(geometry, material);
-    starfield.frustumCulled = false;
+    const starfield = new THREE.Points(geometry, material);
+    // Frustum culling enabled by default for Points
     scene.add(starfield);
 
-    // GSAP animation for blinking
+    // GSAP animation
     const opacityAttribute = geometry.attributes.opacity;
     for (let i = 0; i < STAR_COUNT; i++) {
         gsap.to({ opacity: initialOpacities[i] }, {
             opacity: 0.05,
-            duration: 2,
+            duration: 1 + Math.random(), // 1 to 2 seconds
             yoyo: true,
             repeat: -1,
             ease: 'sine.inOut',
-            delay: Math.random() * 2, // Stagger start times
+            delay: Math.random() * 2,
             onUpdate: function () {
                 dynamicOpacities[i] = this.targets()[0].opacity;
-                opacityAttribute.needsUpdate = true; // Flag for GPU update
+                opacityAttribute.needsUpdate = true;
             },
         });
     }
 
-    // Dispose function
+    // Dispose
     const dispose = () => {
-        gsap.killTweensOf(dynamicOpacities); // Stop GSAP animations
+        gsap.killTweensOf(dynamicOpacities);
         scene.remove(starfield);
         geometry.dispose();
         material.dispose();
-        baseGeometry.dispose();
     };
 
     return { dispose };
