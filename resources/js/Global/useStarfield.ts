@@ -1,133 +1,124 @@
-import * as THREE from 'three'
-import { gsap } from 'gsap'
+// useStarfield.ts
+import * as THREE from 'three';
+import { gsap } from 'gsap';
 
 export function useStarfield(scene: THREE.Scene, camera: THREE.PerspectiveCamera) {
-    const STAR_COUNT = 500;
-    const STAR_DISTANCE = 50000;
-    const STAR_SIZE = 1 * window.devicePixelRatio;
-    const MIN_OPACITY = 0.1;
-    const MAX_OPACITY = 0.2;
-    const BLINK_FADE_MIN = 0.05;
-    const BLINKING_STAR_COUNT = 20;
-    const CITY_BOTTOM_Y = -600;
+    const STAR_SIZE = 20;
+    const STAR_COUNT = 1000;
+    const FIELD_XY_SIZE = 10000;
+    const FIELD_Z_MIN = -1000;
+    const FIELD_Z_MAX = -10000;
 
-    let starGroup: THREE.Points;
-    let starMaterials: THREE.PointsMaterial;
-    let geometry: THREE.BufferGeometry;
+    // Exclusion zones
+    const CAMERA_PATH_XY = 1000;
+    const CAMERA_PATH_Z_MIN = -7200;
+    const CUBE_XY = 150;
+    const CUBE_Z_MIN = -500;
+    const CUBE_Z_MAX = -2500;
 
-    const setupStarfield = () => {
-        geometry = new THREE.BufferGeometry();
-        const positions = new Float32Array(STAR_COUNT * 3);
-        const colors = new Float32Array(STAR_COUNT * 4);
+    // Geometry setup
+    const baseGeometry = new THREE.PlaneGeometry(STAR_SIZE, STAR_SIZE);
+    const geometry = new THREE.InstancedBufferGeometry();
+    geometry.index = baseGeometry.index;
+    geometry.attributes.position = baseGeometry.attributes.position;
+    geometry.attributes.uv = baseGeometry.attributes.uv;
 
-        const fovRad = THREE.MathUtils.degToRad(camera.fov);
-        const aspect = camera.aspect;
-        const heightAtDistance = 2 * STAR_DISTANCE * Math.tan(fovRad / 2);
-        const widthAtDistance = heightAtDistance * aspect;
+    const offsets = new Float32Array(STAR_COUNT * 3);
+    const initialOpacities = new Float32Array(STAR_COUNT); // Store initial values
+    const dynamicOpacities = new Float32Array(STAR_COUNT); // For animation
+    let placedStars = 0;
 
-        const starColors = [
-            new THREE.Color(1, 0, 0),
-            new THREE.Color(0, 1, 0),
-            new THREE.Color(0, 0, 1),
-            new THREE.Color(1, 1, 1)
-        ];
+    // Generate stars
+    while (placedStars < STAR_COUNT) {
+        const x = (Math.random() - 0.5) * FIELD_XY_SIZE;
+        const y = (Math.random() - 0.5) * FIELD_XY_SIZE;
+        const z = FIELD_Z_MIN + Math.random() * (FIELD_Z_MAX - FIELD_Z_MIN);
 
-        const opacityValues = new Float32Array(STAR_COUNT);
+        const inCameraPath = z > CAMERA_PATH_Z_MIN && Math.abs(x) < CAMERA_PATH_XY && Math.abs(y) < CAMERA_PATH_XY;
+        const inCubeBounds = Math.abs(x) < CUBE_XY && Math.abs(y) < CUBE_XY && z > CUBE_Z_MAX && z < CUBE_Z_MIN;
 
-        for (let i = 0; i < STAR_COUNT; i++) {
-            const x = THREE.MathUtils.randFloatSpread(widthAtDistance);
-            const y = THREE.MathUtils.randFloat(CITY_BOTTOM_Y, CITY_BOTTOM_Y + heightAtDistance);
-            const z = -STAR_DISTANCE;
-            positions[i * 3] = x;
-            positions[i * 3 + 1] = y;
-            positions[i * 3 + 2] = z;
-            const opacity = THREE.MathUtils.randFloat(MIN_OPACITY, MAX_OPACITY);
-            opacityValues[i] = opacity;
-            const color = starColors[Math.floor(Math.random() * starColors.length)];
-            colors[i * 4] = color.r;
-            colors[i * 4 + 1] = color.g;
-            colors[i * 4 + 2] = color.b;
-            colors[i * 4 + 3] = opacity;
+        if (!inCameraPath && !inCubeBounds) {
+            const index = placedStars * 3;
+            offsets[index] = x;
+            offsets[index + 1] = y;
+            offsets[index + 2] = z;
+            const opacity = 0.1 + Math.random() * (0.7 - 0.1);
+            initialOpacities[placedStars] = opacity;
+            dynamicOpacities[placedStars] = opacity; // Start at initial
+            placedStars++;
         }
+    }
 
-        // Test static opacity change
-        colors[3] = 0.5; // Star 0 alpha to 0.5
-        console.log('Star 0 static alpha set to:', colors[3]);
+    geometry.setAttribute('offset', new THREE.InstancedBufferAttribute(offsets, 3));
+    geometry.setAttribute('opacity', new THREE.InstancedBufferAttribute(dynamicOpacities, 1));
 
-        geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-        geometry.setAttribute('color', new THREE.BufferAttribute(colors, 4));
+    // Shader material
+    const material = new THREE.ShaderMaterial({
+        uniforms: {
+            color: { value: new THREE.Color(1, 1, 1) },
+        },
+        vertexShader: `
+      attribute vec3 offset;
+      attribute float opacity;
+      varying vec2 vUv;
+      varying float vOpacity;
 
-        starMaterials = new THREE.PointsMaterial({
-            size: STAR_SIZE,
-            transparent: true,
-            vertexColors: true,
-            fog: false,
-            sizeAttenuation: false,
-            blending: THREE.NormalBlending
-        });
-        console.log('Material transparent:', starMaterials.transparent, 'vertexColors:', starMaterials.vertexColors);
+      void main() {
+        vUv = uv;
+        vOpacity = opacity;
+        vec3 vPosition = position;
+        vec4 mvPosition = modelViewMatrix * vec4(0.0, 0.0, 0.0, 1.0);
+        mvPosition.xyz += vPosition;
+        mvPosition = vec4(mvPosition.xyz + offset, 1.0);
+        gl_Position = projectionMatrix * mvPosition;
+      }
+    `,
+        fragmentShader: `
+      uniform vec3 color;
+      varying vec2 vUv;
+      varying float vOpacity;
 
-        starGroup = new THREE.Points(geometry, starMaterials);
-        scene.add(starGroup);
+      void main() {
+        float dist = distance(vUv, vec2(0.5, 0.5)) * 2.0;
+        float alpha = vOpacity * (1.0 - dist);
+        if (alpha <= 0.0) discard;
+        gl_FragColor = vec4(color, alpha);
+      }
+    `,
+        transparent: true,
+        fog: false,
+        depthWrite: false,
+    });
 
-        setupBlinkingStars(geometry, opacityValues);
-    };
+    const starfield = new THREE.Mesh(geometry, material);
+    starfield.frustumCulled = false;
+    scene.add(starfield);
 
-    const setupBlinkingStars = (geometry: THREE.BufferGeometry, opacityValues: Float32Array) => {
-        const colorAttribute = geometry.getAttribute('color') as THREE.BufferAttribute;
-
-        // Star 0
-        const testIndex = 0;
-        const initialOpacity0 = opacityValues[testIndex];
-        colorAttribute.array[testIndex * 4 + 3] = initialOpacity0;
-        gsap.to(colorAttribute.array, {
-            [testIndex * 4 + 3]: BLINK_FADE_MIN,
-            duration: 3,
-            ease: 'sine.inOut',
-            repeat: -1,
+    // GSAP animation for blinking
+    const opacityAttribute = geometry.attributes.opacity;
+    for (let i = 0; i < STAR_COUNT; i++) {
+        gsap.to({ opacity: initialOpacities[i] }, {
+            opacity: 0.05,
+            duration: 2,
             yoyo: true,
-            onUpdate: () => {
-                colorAttribute.needsUpdate = true;
-                console.log('Star 0 opacity:', colorAttribute.array[testIndex * 4 + 3]);
-            }
+            repeat: -1,
+            ease: 'sine.inOut',
+            delay: Math.random() * 2, // Stagger start times
+            onUpdate: function () {
+                dynamicOpacities[i] = this.targets()[0].opacity;
+                opacityAttribute.needsUpdate = true; // Flag for GPU update
+            },
         });
+    }
 
-        // Other stars
-        const indices = Array.from({ length: STAR_COUNT }, (_, i) => i).slice(1);
-        const blinkingIndices: number[] = [];
-        for (let i = 0; i < BLINKING_STAR_COUNT - 1; i++) {
-            const randomIndex = Math.floor(Math.random() * indices.length);
-            blinkingIndices.push(indices.splice(randomIndex, 1)[0]);
-        }
-
-        blinkingIndices.forEach((starIndex) => {
-            const initialOpacity = opacityValues[starIndex];
-            colorAttribute.array[starIndex * 4 + 3] = initialOpacity;
-            gsap.to(colorAttribute.array, {
-                [starIndex * 4 + 3]: BLINK_FADE_MIN,
-                duration: THREE.MathUtils.randFloat(3, 6),
-                ease: 'sine.inOut',
-                repeat: -1,
-                yoyo: true,
-                onUpdate: () => {
-                    colorAttribute.needsUpdate = true;
-                    console.log('Star', starIndex, 'opacity:', colorAttribute.array[starIndex * 4 + 3]);
-                }
-            });
-        });
-    };
-
-    setupStarfield();
-
+    // Dispose function
     const dispose = () => {
-        scene.remove(starGroup);
-        starMaterials.dispose();
+        gsap.killTweensOf(dynamicOpacities); // Stop GSAP animations
+        scene.remove(starfield);
         geometry.dispose();
-        gsap.killTweensOf(geometry.getAttribute('color')?.array);
+        material.dispose();
+        baseGeometry.dispose();
     };
 
-    return {
-        starGroup,
-        dispose
-    };
+    return { dispose };
 }

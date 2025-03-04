@@ -55,7 +55,7 @@ const init = () => {
     scene.background = new THREE.Color(0x000000);
     scene.fog = new THREE.Fog(0x000000, 700, 4000);
 
-    camera = new THREE.PerspectiveCamera(90, window.innerWidth / window.innerHeight, 1, 60000); // Increased far plane
+    camera = new THREE.PerspectiveCamera(90, window.innerWidth / window.innerHeight, 1, 60000);
     camera.position.set(0, 0, 0);
     camera.lookAt(0, 0, 0);
 
@@ -67,7 +67,7 @@ const init = () => {
     composer.addPass(renderPass);
     bloomPass = new UnrealBloomPass(
         new THREE.Vector2(window.innerWidth, window.innerHeight),
-        1.5,
+        2.5,
         0.4,
         0.0
     );
@@ -99,9 +99,9 @@ const init = () => {
         animate();
     });
 
-    const { dispose } = useStarfield(scene, camera); // Add starfield
+    const { dispose } = useStarfield(scene, camera); // Already correct
     starfieldDispose = dispose;
-}
+};
 
 const animate = (time: number = 0) => {
     animationFrameId = requestAnimationFrame(animate);

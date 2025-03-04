@@ -89,9 +89,10 @@ onMounted(() => {
 
     renderer = new THREE.WebGLRenderer({
         canvas: canvasRef.value,
-        antialias: true
+        antialias: true,
+        alpha: true
     })
-    renderer.setClearColor(0x000000) // Black background to match your logo
+    //renderer.setClearColor(0x000000) // Black background to match your logo
 
     // Use native device pixel ratio for performance (can increase to *2 if needed for sharpness)
     renderer.setPixelRatio(window.devicePixelRatio)
