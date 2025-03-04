@@ -68,7 +68,7 @@ const init = () => {
     bloomPass = new UnrealBloomPass(
         new THREE.Vector2(window.innerWidth, window.innerHeight),
         2.5,
-        0.4,
+        0.6,
         0.0
     );
     bloomPass.renderToScreen = true;

@@ -11,7 +11,7 @@ export function useIntroCubes(
 ) {
     const { CUBE_SIZE, FIRST_CUBE_Z } = config;
     const CUBE_SIZE_STEP = 8;
-    const CUBE_COUNT_INTRO = 16;
+    const CUBE_COUNT_INTRO = 24;
     const CUBE_CYCLE_DURATION = 0.075;
     const MESSAGE_SPACING = 200;
 
