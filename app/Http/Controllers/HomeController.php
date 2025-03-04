@@ -12,45 +12,50 @@ class HomeController extends Controller
 {
     public function index(){
 
+        $fontSize = 7;
+
         $projects = collect([
             [
                 'title' => "SUICIDE SQUAD: KILL THE JUSTICE LEAGUE",
-                'size' => 9,
-                'keyart' => Storage::url('projects/ss.jpg')
+                'size' => $fontSize,
+                'keyart' => Storage::url('projects/ss.jpg'),
+                'keyartLocation' => 'left'
             ],
             [
                 'title' => "MORTAL KOMBAT 1",
-                'size' => 9
+                'size' => $fontSize,
+                'keyart' => Storage::url('projects/mk1.jpg'),
+                'keyartLocation' => 'right'
             ],
             [
                 'title' => "HARRY POTTER: HOGWARTS LEGACY",
-                'size' => 9
+                'size' => 8
             ],
             [
                 'title' => "HARRY POTTER: QUIDDITCH CHAMPIONS",
-                'size' => 9
+                'size' => 8
             ],
             [
                 'title' => "MULTIVERSUS",
-                'size' => 9
+                'size' => 8
             ],
             [
                 'title' => "GOTHAM KNIGHTS",
-                'size' => 9
+                'size' => 8
             ],
             [
                 'title' => "GAME OF THRONES: CONQUEST",
-                'size' => 9 ],
+                'size' => 8 ],
             [
                 'title' => "MARVEL: STRIKE FORCE", 'size' => 9
             ],
             [
                 'title' => "LEAGUE OF LEGENDS: RIOT KING",
-                'size' => 9
+                'size' => 8
             ],
             [
                 'title' => "LEAGUE OF LEGENDS: CONVERGENCE",
-                'size' => 9
+                'size' => 8
             ],
         ]);
 

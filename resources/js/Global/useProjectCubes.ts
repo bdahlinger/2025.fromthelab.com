@@ -6,7 +6,7 @@ export function useProjectCubes(
     sceneNoGlow: THREE.Scene,
     sceneGlow: THREE.Scene,
     config: { CUBE_SIZE: number; CUBE_SPACING: number; FIRST_CUBE_Z: number },
-    projects: { title: string; size: number; keyart?: string }[]
+    projects: { title: string; size: number; keyart?: string; keyartLocation?: 'left' | 'top' | 'right' | 'bottom' }[] // Updated type
 ) {
     const { CUBE_SIZE, CUBE_SPACING, FIRST_CUBE_Z } = config;
 
@@ -20,7 +20,7 @@ export function useProjectCubes(
     let loadedFont: THREE.Font | null = null
     let isInitialized = false;
 
-    const createProjectCube = (size: number, zPosition: number, rotation: number, keyart?: string): THREE.Group => {
+    const createProjectCube = (size: number, zPosition: number, rotation: number, keyart?: string, keyartLocation?: 'left' | 'top' | 'right' | 'bottom'): THREE.Group => {
         const geometry = new THREE.BoxGeometry(size, size, size)
         const edges = new THREE.EdgesGeometry(geometry)
         const material = new THREE.LineBasicMaterial({
@@ -38,17 +38,37 @@ export function useProjectCubes(
         if (keyart) {
             const textureLoader = new THREE.TextureLoader()
             textureLoader.load(keyart, (texture) => {
-                const planeGeometry = new THREE.PlaneGeometry(size * 0.9, size * 0.9)
+                const planeGeometry = new THREE.PlaneGeometry(size - 1, size - 1) // Updated size
                 const planeMaterial = new THREE.MeshBasicMaterial({
                     map: texture,
                     transparent: true,
-                    opacity: 0, // Start invisible
-                    blending: THREE.AdditiveBlending, // Additive blending mode
+                    opacity: 0,
+                    blending: THREE.AdditiveBlending,
                     side: THREE.DoubleSide
                 })
                 const plane = new THREE.Mesh(planeGeometry, planeMaterial)
-                plane.position.set(-size / 2, 0, 0) // Left face (negative X)
-                plane.rotation.y = Math.PI / 2 // Face inward (positive X)
+
+                // Position and rotate based on keyartLocation (default to 'left')
+                const halfSize = size / 2
+                switch (keyartLocation || 'left') {
+                    case 'left':
+                        plane.position.set(-halfSize, 0, 0) // Left face (negative X)
+                        plane.rotation.y = Math.PI / 2 // Face inward (positive X)
+                        break;
+                    case 'top':
+                        plane.position.set(0, halfSize, 0) // Top face (positive Y)
+                        plane.rotation.x = -Math.PI / 2 // Face inward (negative Y)
+                        break;
+                    case 'right':
+                        plane.position.set(halfSize, 0, 0) // Right face (positive X)
+                        plane.rotation.y = -Math.PI / 2 // Face inward (negative X)
+                        break;
+                    case 'bottom':
+                        plane.position.set(0, -halfSize, 0) // Bottom face (negative Y)
+                        plane.rotation.x = Math.PI / 2 // Face inward (positive Y)
+                        break;
+                }
+
                 group.add(plane)
             }, undefined, (error) => {
                 console.error('Error loading keyart texture:', error)
@@ -90,7 +110,7 @@ export function useProjectCubes(
                     projects.forEach((project, index) => {
                         const zPosition = FIRST_CUBE_Z - (index + 1) * CUBE_SPACING
                         const rotation = (index + 1) * ROTATION_INCREMENT
-                        const cube = createProjectCube(CUBE_SIZE, zPosition, rotation, project.keyart)
+                        const cube = createProjectCube(CUBE_SIZE, zPosition, rotation, project.keyart, project.keyartLocation) // Pass keyartLocation
                         sceneNoGlow.add(cube)
                         projectCubes.push(cube)
                         createTextObject(project.title, 0, project.size + 15, zPosition, project.size, font)
@@ -152,11 +172,10 @@ export function useProjectCubes(
                         material.opacity = 0
                     }
                 } else if (child instanceof THREE.Mesh && child.material instanceof THREE.MeshBasicMaterial) {
-                    // Handle keyart plane
                     const material = child.material as THREE.MeshBasicMaterial
                     if (cubeDistance <= PROXIMITY_THRESHOLD) {
                         const progress = 1 - (cubeDistance / PROXIMITY_THRESHOLD)
-                        material.opacity = Math.min(0.7, progress * 2) // Max opacity 0.8
+                        material.opacity = Math.min(0.8, progress * 2)
                     } else {
                         material.opacity = 0
                     }
