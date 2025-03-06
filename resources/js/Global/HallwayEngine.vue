@@ -67,9 +67,9 @@ const init = () => {
     composer.addPass(renderPass);
     bloomPass = new UnrealBloomPass(
         new THREE.Vector2(window.innerWidth, window.innerHeight),
-        3.5, // Lowered initial strength from 2.5
-        0.4, // Reduced radius from 0.6
-        0.0  // Increased threshold to reduce bloom on darker areas
+        3.5,
+        0.4,
+        0.0
     );
     bloomPass.renderToScreen = true;
     composer.addPass(bloomPass);
@@ -131,6 +131,7 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
+    cleanupInteractivity();
     window.removeEventListener('resize', handleResize);
     cancelAnimationFrame(animationFrameId);
     ScrollTrigger.getAll().forEach(trigger => trigger.kill());

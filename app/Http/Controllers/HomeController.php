@@ -1,10 +1,12 @@
 <?php
 
 namespace App\Http\Controllers;
+use App\Data\ProjectRepository;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
+use App\Data\ProjectData;
 
 use Illuminate\Http\Request;
 
@@ -14,7 +16,9 @@ class HomeController extends Controller
 
         $fontSize = 7;
 
-        $projects = collect([
+        $projects = ProjectRepository::all();
+
+        /*$projects = collect([
             [
                 'title' => "SUICIDE SQUAD: KILL THE JUSTICE LEAGUE",
                 'size' => $fontSize,
@@ -29,35 +33,35 @@ class HomeController extends Controller
             ],
             [
                 'title' => "HARRY POTTER: HOGWARTS LEGACY",
-                'size' => 8
+                'size' => $fontSize
             ],
             [
                 'title' => "HARRY POTTER: QUIDDITCH CHAMPIONS",
-                'size' => 8
+                'size' => $fontSize
             ],
             [
                 'title' => "MULTIVERSUS",
-                'size' => 8
+                'size' => $fontSize
             ],
             [
                 'title' => "GOTHAM KNIGHTS",
-                'size' => 8
+                'size' => $fontSize
             ],
             [
                 'title' => "GAME OF THRONES: CONQUEST",
-                'size' => 8 ],
+                'size' => $fontSize ],
             [
-                'title' => "MARVEL: STRIKE FORCE", 'size' => 9
+                'title' => "MARVEL: STRIKE FORCE", 'size' => $fontSize
             ],
             [
                 'title' => "LEAGUE OF LEGENDS: RIOT KING",
-                'size' => 8
+                'size' => $fontSize
             ],
             [
                 'title' => "LEAGUE OF LEGENDS: CONVERGENCE",
-                'size' => 8
+                'size' => $fontSize
             ],
-        ]);
+        ]);*/
 
         return Inertia::render('Welcome', [
             'canLogin' => Route::has('login'),

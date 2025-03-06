@@ -6,22 +6,16 @@ import CubeStrip from "@/Global/CubeStrip.vue";
 //import Hallway from "@/Global/Hallway.vue";
 //import HallwayV2 from "@/Global/HallwayV2.vue";
 import HallwayEngine from "@/Global/HallwayEngine.vue";
+import { ProjectData } from '@/types/generated';
+import GlobalFooter from "@/Global/GlobalFooter.vue";
 
 const props = defineProps<{
     canLogin: boolean
     canRegister: boolean
     laravelVersion: string
     phpVersion: string
-    projects: { title: string; size: number }[] // Type the projects array
+    projects: ProjectData[];
 }>()
-
-function handleImageError() {
-    document.getElementById('screenshot-container')?.classList.add('!hidden');
-    document.getElementById('docs-card')?.classList.add('!row-span-1');
-    document.getElementById('docs-card-content')?.classList.add('!flex-row');
-    document.getElementById('background')?.classList.add('!hidden');
-}
-
 
 /*
     const size = 800;
@@ -79,12 +73,15 @@ scene.add( gridHelper4 );
 
         </div>
 
-        <div class="relative min-h-screen flex flex-col items-center justify-center">
+
+        <global-footer/>
+
+<!--        <div class="relative min-h-screen flex flex-col items-center justify-center">
             <div class="relative w-full max-w-2xl px-2 lg:max-w-7xl">
                 <footer class="py-16 text-center text-xs text-black dark:text-white/70">
                     © Copyright 2025 From the Lab. All rights reserved.
                 </footer>
             </div>
-        </div>
+        </div>-->
     </div>
 </template>
