@@ -1,67 +1,67 @@
-import { Ref } from 'vue'
 import * as THREE from 'three'
 import { gsap } from 'gsap'
-import { ScrollTrigger } from 'gsap/ScrollTrigger'
-
-gsap.registerPlugin(ScrollTrigger)
 
 export function setupScrollAnimation(
-    sceneNoGlow: THREE.Scene,
-    sceneGlow: THREE.Scene,
+    scene: THREE.Scene,
     camera: THREE.PerspectiveCamera,
-    wrapper: Ref<HTMLElement | null>,
-    cubes: THREE.Group[],
+    wrapper: any,
+    allCubes: THREE.Group[],
     updateCubeColors: (camera: THREE.PerspectiveCamera) => void,
     config: { CUBE_SIZE: number; CUBE_SPACING: number; FIRST_CUBE_Z: number },
-    onScrollProgress?: (progress: number) => void // Callback for bloom fade
+    onPortalFocusChange?: (isFocused: boolean, originalPosition?: THREE.Vector3, originalTarget?: THREE.Vector3) => void
 ) {
-    const { CUBE_SIZE, CUBE_SPACING, FIRST_CUBE_Z } = config;
+    const { CUBE_SIZE, CUBE_SPACING, FIRST_CUBE_Z } = config
+    const MAX_Z = FIRST_CUBE_Z - (allCubes.length + 1) * CUBE_SPACING
+    let isInPortalFocus = false
+    let originalCameraPosition: THREE.Vector3 | null = null
+    let originalCameraTarget: THREE.Vector3 | null = null
+    let isReverting = false // Track if we're in the middle of a reversion animation
 
-    const projectCubeCountRaw = cubes.length - 1; // Assuming first is intro cubes group
-    const projectCubeCount = Math.min(projectCubeCountRaw, 10);
-    const firstProjectCubeZ = FIRST_CUBE_Z - CUBE_SPACING;
-    const lastProjectCubeZ = firstProjectCubeZ - (projectCubeCount - 1) * CUBE_SPACING;
-    const lastProjectCubeBackEdge = lastProjectCubeZ - CUBE_SIZE / 2;
+    if (onPortalFocusChange) {
+        onPortalFocusChange((focused, position, target) => {
+            isInPortalFocus = focused
+            originalCameraPosition = position || null
+            originalCameraTarget = target || null
+            isReverting = focused ? false : isReverting // Reset isReverting when entering focus mode
+        })
+    }
 
-    const MAX_Z = lastProjectCubeBackEdge;
-    const scrollDistance = Math.abs(MAX_Z);
-    const SCROLL_BUFFER = 100;
-
-    const tl = gsap.timeline({
+    const timeline = gsap.timeline({
         scrollTrigger: {
             trigger: wrapper.value,
             start: 'top top',
-            end: `+=${scrollDistance + SCROLL_BUFFER}`,
+            end: () => {
+                const totalDistance = Math.abs(MAX_Z)
+                const distancePerCube = CUBE_SPACING
+                const totalCubes = allCubes.length
+                const additionalSpace = totalCubes * distancePerCube
+                return `${totalDistance + additionalSpace}px`
+            },
             scrub: 1,
             pin: true,
-            pinSpacing: true,
-            anticipatePin: 1,
-            refreshPriority: 1,
             onUpdate: (self) => {
-                if (onScrollProgress) {
-                    onScrollProgress(self.progress); // Pass scroll progress for bloom fade
+                // Only update camera position if not in portal focus or during reversion
+                if (!isInPortalFocus && !isReverting) {
+                    const progress = self.progress
+                    const newZ = Math.min(0, THREE.MathUtils.lerp(0, MAX_Z, progress))
+                    camera.position.set(0, 0, newZ)
+                    camera.lookAt(0, 0, MAX_Z)
                 }
-            },
-            onLeaveBack: () => {
-                cubes.forEach(cube => {
-                    cube.children.forEach((child) => {
-                        const material = (child as THREE.LineSegments).material as THREE.LineBasicMaterial;
-                        gsap.to(material, { opacity: 0, duration: 0.5, ease: 'power1.in' });
-                    });
-                });
+                updateCubeColors(camera)
             }
         }
-    });
+    })
 
-    tl.to(camera.position, {
+    timeline.to(camera.position, {
         z: MAX_Z,
-        ease: 'none',
         duration: 1,
-        onUpdate: () => {
-            camera.lookAt(0, 0, MAX_Z);
-            updateCubeColors(camera);
-        }
-    });
+        ease: 'none'
+    })
 
-    return tl;
+    // Expose a method to set isReverting from useProjectCubes
+    const setReverting = (value: boolean) => {
+        isReverting = value
+    }
+
+    return { setReverting }
 }

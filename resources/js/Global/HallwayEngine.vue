@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref, defineProps } from 'vue'
+import { onMounted, onUnmounted, ref } from 'vue'
 import * as THREE from 'three'
 import { gsap } from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
@@ -16,7 +16,7 @@ import { useStarfield } from './useStarfield'
 gsap.registerPlugin(ScrollTrigger)
 
 const props = defineProps<{
-    projects: { title: string; size: number; keyart?: string }[] // Updated prop type
+    projects: App.Data.ProjectData[]
 }>()
 
 const CUBE_SIZE = 250;
@@ -39,6 +39,8 @@ let stats: Stats
 let updateCityParticles: (delta: number) => void
 let lastTime = 0
 let starfieldDispose: (() => void) | null = null;
+let cleanupInteractivity: (() => void) | null = null;
+let setReverting: ((value: boolean) => void) | null = null;
 
 const updateRendererSize = () => {
     const width = tunnelWrapper.value ? tunnelWrapper.value.getBoundingClientRect().width : window.innerWidth;
@@ -57,7 +59,7 @@ const init = () => {
 
     camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 1, 60000);
     camera.position.set(0, 0, 0);
-    camera.lookAt(0, 0, 0);
+    camera.lookAt(0, 0, 1000);
 
     renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setPixelRatio(window.devicePixelRatio);
@@ -92,10 +94,30 @@ const init = () => {
     const { cityGroup, updateParticles } = useCityscape(scene, scene);
     updateCityParticles = updateParticles;
 
-    useProjectCubes(scene, scene, { CUBE_SIZE, CUBE_SPACING, FIRST_CUBE_Z }, props.projects).getInitializedData().then(({ projectCubes, updateCubeColors, loadedFont }) => {
+    const projectCubesInstance = useProjectCubes(scene, { CUBE_SIZE, CUBE_SPACING, FIRST_CUBE_Z }, props.projects);
+    projectCubesInstance.getInitializedData().then(({ projectCubes, updateCubeColors, loadedFont }) => {
         const { introCubes } = useIntroCubes(scene, scene, Promise.resolve(loadedFont), { CUBE_SIZE, FIRST_CUBE_Z });
         const allCubes = [...introCubes, ...projectCubes];
-        setupScrollAnimation(scene, scene, camera, wrapper, allCubes, updateCubeColors, { CUBE_SIZE, CUBE_SPACING, FIRST_CUBE_Z }, () => {});
+        const { setReverting: setRevertingFunc } = setupScrollAnimation(
+            scene,
+            camera,
+            wrapper,
+            allCubes,
+            updateCubeColors,
+            { CUBE_SIZE, CUBE_SPACING, FIRST_CUBE_Z },
+            (isFocused, originalPosition, originalTarget) => {
+                if (setReverting) setReverting(isFocused);
+            }
+        );
+        setReverting = setRevertingFunc;
+        cleanupInteractivity = projectCubesInstance.setupInteractivity(
+            camera,
+            renderer.domElement,
+            (isFocused, originalPosition, originalTarget) => {
+                if (setReverting) setReverting(isFocused);
+            }
+        );
+
         animate();
     });
 
@@ -109,6 +131,7 @@ const animate = (time: number = 0) => {
         const delta = (time - lastTime) / 1000;
         lastTime = time;
         updateCityParticles(delta);
+
         const fadeRange = BLOOM_FADE_END_Z - BLOOM_FADE_START_Z;
         let progress = 0;
         if (camera.position.z >= BLOOM_FADE_START_Z) {
@@ -118,7 +141,7 @@ const animate = (time: number = 0) => {
         } else {
             progress = (camera.position.z - BLOOM_FADE_START_Z) / fadeRange;
         }
-        bloomPass.strength = THREE.MathUtils.lerp(1.0, 0.125, progress); // Adjusted range: 1.0 to 0.25
+        bloomPass.strength = THREE.MathUtils.lerp(1.0, 0.125, progress);
         composer.render();
     }
     ScrollTrigger.update();
@@ -131,7 +154,7 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
-    cleanupInteractivity();
+    if (cleanupInteractivity) cleanupInteractivity();
     window.removeEventListener('resize', handleResize);
     cancelAnimationFrame(animationFrameId);
     ScrollTrigger.getAll().forEach(trigger => trigger.kill());
