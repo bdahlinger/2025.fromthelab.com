@@ -201,4 +201,6 @@ const handleResize = () => {
     max-width: none !important;
     overflow-x: hidden !important;
 }
+
+
 </style>

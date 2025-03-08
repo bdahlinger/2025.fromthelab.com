@@ -17,8 +17,8 @@ export function useProjectCubes(
     const ROTATION_INCREMENT = THREE.MathUtils.degToRad(15);
     const PROXIMITY_THRESHOLD = 1000;
     const ACTIVE_THRESHOLD = 0.5;
-    const NUM_PULSES = 24;
-    const PULSE_WIDTH = 5;
+    const NUM_PULSES = 80;
+    const PULSE_WIDTH = 1;
     const PULSE_HEIGHT = 15;
     const PULSE_OFFSET = 0.1;
 
@@ -65,16 +65,18 @@ export function useProjectCubes(
         const addPortal = () => {
             const innerRadius = 25;
             const outerRadius = 40;
-            const portalGeometry = new THREE.RingGeometry(innerRadius, outerRadius, 24, 2);
+            //const portalGeometry = new THREE.RingGeometry(innerRadius, outerRadius, 24, 2);
+            const portalGeometry = new THREE.CircleGeometry(outerRadius, 24);
             const portalEdges = new THREE.EdgesGeometry(portalGeometry);
             const portalMaterial = new THREE.LineBasicMaterial({
                 color: new THREE.Color(CUBE_COLOR),
                 transparent: true,
-                opacity: 0
+                opacity: 0,
+                visible: true
             });
             const portal = new THREE.LineSegments(portalEdges, portalMaterial);
             portal.userData.isPortal = true;
-            portal.userData.isAnimating = false; // Flag to track animation state
+            portal.userData.isAnimating = false;
 
             const hitboxGeometry = new THREE.PlaneGeometry(120, 120);
             const hitboxMaterial = new THREE.MeshBasicMaterial({ visible: false, side: THREE.DoubleSide });
@@ -82,7 +84,6 @@ export function useProjectCubes(
             hitbox.userData.isPortalHitbox = true;
             hitbox.userData.portal = portal;
 
-            // Add portalPulses with animation support
             const pulsesGroup = new THREE.Group();
             const pulseGeometry = new THREE.PlaneGeometry(PULSE_WIDTH, PULSE_HEIGHT);
             const baseRadius = (innerRadius + outerRadius) / 2;
@@ -90,8 +91,8 @@ export function useProjectCubes(
                 const pulseMaterial = new THREE.MeshBasicMaterial({
                     color: new THREE.Color(CUBE_COLOR_ACTIVE),
                     transparent: true,
-                    opacity: 0, // Start at 0
-                    visible: false, // Start invisible
+                    opacity: 0,
+                    visible: false,
                     side: THREE.DoubleSide
                 });
                 const pulse = new THREE.Mesh(pulseGeometry, pulseMaterial);
@@ -102,10 +103,35 @@ export function useProjectCubes(
                     0
                 );
                 pulse.rotation.z = angle + Math.PI / 2;
-                pulse.userData.baseOpacity = 0.01; // Base opacity for animation
-                pulse.userData.index = i; // For animation order
+                pulse.userData.baseOpacity = 0.01;
+                pulse.userData.index = i;
                 pulsesGroup.add(pulse);
             }
+
+            // Create array of 25 ring portals, initially 2 units apart
+            const ringPortals: THREE.LineSegments[] = [portal];
+            const initialRingSpacing = 2;
+            const numRings = 25;
+            for (let i = 1; i < numRings; i++) {
+                //const newRingGeometry = new THREE.RingGeometry(innerRadius, outerRadius, 24, 2);
+                const newRingGeometry = new THREE.CircleGeometry( outerRadius, 24 );
+                const newRingEdges = new THREE.EdgesGeometry(newRingGeometry);
+                // Interpolate opacity from 1.0 to 0.1 based on index
+                const maxOpacity = THREE.MathUtils.lerp(1.0, 0.1, i / (numRings - 1));
+                const newRingMaterial = new THREE.LineBasicMaterial({
+                    color: new THREE.Color(CUBE_COLOR),
+                    transparent: true,
+                    opacity: 0 // Start at 0, will animate on click
+                });
+                const newRing = new THREE.LineSegments(newRingEdges, newRingMaterial);
+                newRing.userData.isPortal = true;
+                newRing.userData.maxOpacity = maxOpacity; // Store max opacity for fading
+                newRing.position.z = -i * initialRingSpacing; // Initially 2 units apart
+                ringPortals.push(newRing);
+                portal.add(newRing);
+            }
+            // Set maxOpacity for the first ring
+            portal.userData.maxOpacity = 1.0;
 
             // Apply offset based on portalLocation
             switch (portalLocation) {
@@ -127,7 +153,6 @@ export function useProjectCubes(
             group.add(portal);
             group.add(hitbox);
 
-            // Update matrices to ensure world positions are correct
             portal.updateMatrixWorld(true);
             pulsesGroup.updateMatrixWorld(true);
 
@@ -341,7 +366,6 @@ export function useProjectCubes(
             }
         });
 
-        // Set sceneInitialized to true after the first update cycle
         if (!sceneInitialized) {
             sceneInitialized = true;
         }
@@ -385,19 +409,15 @@ export function useProjectCubes(
                 }
                 // Portal and Pulses
                 else if (child instanceof THREE.LineSegments && child.userData.isPortal) {
-                    const material = child.material as THREE.LineBasicMaterial;
-                    material.opacity = Math.min(1, lineProgress * 2);
+                    // Remove distance-based fade, handled in setupInteractivity
 
-                    // Control visibility and animation only after scene initialization
                     if (sceneInitialized) {
-                        if (lineProgress > 0.1) { // Use a threshold to ensure meaningful fade-in
-                            // Set pulses visible and start animation on significant fade-up
+                        if (lineProgress > 0.1) {
                             child.children.forEach((grandchild) => {
                                 if (grandchild instanceof THREE.Group) {
                                     grandchild.children.forEach((pulse) => {
                                         if (pulse instanceof THREE.Mesh) {
                                             pulse.material.visible = true;
-                                            // Start animation only if not already animating
                                             if (!child.userData.animationStarted) {
                                                 animatePulses(child);
                                                 child.userData.animationStarted = true;
@@ -407,7 +427,6 @@ export function useProjectCubes(
                                 }
                             });
                         } else if (lineProgress <= 0.1 && child.userData.animationStarted) {
-                            // Hide pulses and stop animation on fade-out or below threshold
                             child.children.forEach((grandchild) => {
                                 if (grandchild instanceof THREE.Group) {
                                     grandchild.children.forEach((pulse) => {
@@ -451,7 +470,9 @@ export function useProjectCubes(
     const setupInteractivity = (camera: THREE.PerspectiveCamera, domElement: HTMLCanvasElement, onFocusChangeCallback: (isFocused: boolean, originalPosition?: THREE.Vector3, originalTarget?: THREE.Vector3) => void) => {
         onPortalFocusChange = onFocusChangeCallback;
 
-        let lockedScrollY: number | null = null; // Store scroll position when portal is clicked
+        let lockedScrollY: number | null = null;
+        let touchStartY: number | null = null;
+        let activePortal: THREE.LineSegments | null = null;
 
         const onMouseMove = (event: MouseEvent) => {
             mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
@@ -510,6 +531,42 @@ export function useProjectCubes(
             }
         };
 
+        const animatePulsesCorkscrew = (portal: THREE.LineSegments, reverse: boolean = false) => {
+            const pulsesGroup = portal.children.find(child => child instanceof THREE.Group) as THREE.Group;
+            if (!pulsesGroup) return;
+
+            /*const pulses = pulsesGroup.children as THREE.Mesh[];
+            pulses.forEach((pulse, index) => {
+                const targetZ = reverse ? 0 : -(index + 1) * 5;
+                gsap.to(pulse.position, {
+                    z: targetZ,
+                    duration: 1,
+                    ease: 'power3.out'
+                });
+            });*/
+        };
+
+        const animateRings = (portal: THREE.LineSegments, expand: boolean = true) => {
+            const rings = [portal, ...portal.children.filter(child => child instanceof THREE.LineSegments && child.userData.isPortal)] as THREE.LineSegments[];
+            const targetSpacing = expand ? 25 : 2; // Expand to 25 units, collapse to 2 units
+            rings.forEach((ring, index) => {
+                const targetZ = -index * targetSpacing;
+                const targetOpacity = expand ? ring.userData.maxOpacity : 0;
+                gsap.to(ring.position, {
+                    z: targetZ,
+                    duration: 1,
+                    ease: 'power3.out',
+                    delay: 0.5
+                });
+                gsap.to(ring.material, {
+                    opacity: targetOpacity,
+                    duration: 1,
+                    ease: 'power3.out',
+                    delay: 0.5
+                });
+            });
+        };
+
         const onClick = (event: MouseEvent) => {
             if (isInPortalFocus) return;
 
@@ -560,7 +617,10 @@ export function useProjectCubes(
                     onStart: () => {
                         isInPortalFocus = true;
                         lockedScrollY = window.scrollY;
-                        document.body.classList.add('no-scrollbar'); // Hide scrollbar on desktop
+                        document.body.classList.add('no-scrollbar');
+                        activePortal = clickedPortal;
+                        animatePulsesCorkscrew(clickedPortal);
+                        animateRings(clickedPortal, true); // Expand and fade in rings
                     },
                     onUpdate: () => {
                         camera.lookAt(lookAtTarget.x, lookAtTarget.y, lookAtTarget.z);
@@ -573,7 +633,7 @@ export function useProjectCubes(
                     x: newCameraPosition.x,
                     y: newCameraPosition.y,
                     z: newCameraPosition.z,
-                    duration: 1,
+                    duration: 0.5,
                     ease: 'power3.out'
                 });
             }
@@ -610,6 +670,12 @@ export function useProjectCubes(
                 onUpdate: () => {
                     camera.lookAt(lookAtRestore.x, lookAtRestore.y, lookAtRestore.z);
                 },
+                onStart: () => {
+                    if (activePortal) {
+                        animatePulsesCorkscrew(activePortal, true);
+                        animateRings(activePortal, false); // Collapse and fade out rings
+                    }
+                },
                 onComplete: () => {
                     isInPortalFocus = false;
                     if (onPortalFocusChange) {
@@ -617,6 +683,7 @@ export function useProjectCubes(
                     }
                     originalCameraPosition = null;
                     originalCameraTarget = null;
+                    activePortal = null;
                     isReverting = false;
                     lockedScrollY = null;
                     document.body.classList.remove('no-scrollbar');
@@ -629,7 +696,7 @@ export function useProjectCubes(
                 event.preventDefault();
                 event.stopPropagation();
 
-                if (event.deltaY < 0) { // Upward scroll
+                if (event.deltaY < 0) {
                     revertCamera();
                 }
             }
@@ -644,27 +711,27 @@ export function useProjectCubes(
         const onTouchMove = (event: TouchEvent) => {
             if (isInPortalFocus && !isReverting && touchStartY !== null && lockedScrollY !== null) {
                 const touchCurrentY = event.touches[0].clientY;
-                const deltaY = touchStartY - touchCurrentY; // Positive = scroll down, Negative = scroll up
+                const deltaY = touchStartY - touchCurrentY;
 
-                if (deltaY > 0) { // Downward scroll
-                    event.preventDefault(); // Prevent the scroll
-                    window.scrollTo(0, lockedScrollY); // Ensure position stays locked
-                } else if (deltaY < 0) { // Upward scroll
-                    event.preventDefault(); // Prevent default to control animation
+                if (deltaY > 0) {
+                    event.preventDefault();
+                    window.scrollTo(0, lockedScrollY);
+                } else if (deltaY < 0) {
+                    event.preventDefault();
                     revertCamera();
                 }
             }
         };
 
         const onTouchEnd = (event: TouchEvent) => {
-            touchStartY = null; // Reset touch tracking
+            touchStartY = null;
         };
 
         const onScroll = (event: Event) => {
             if (isInPortalFocus && !isReverting && lockedScrollY !== null) {
                 const currentScrollY = window.scrollY;
                 if (currentScrollY > lockedScrollY) {
-                    window.scrollTo(0, lockedScrollY); // Snap back on desktop scrollbar drag
+                    window.scrollTo(0, lockedScrollY);
                 } else if (currentScrollY < lockedScrollY) {
                     revertCamera();
                 }
