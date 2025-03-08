@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Data\ProjectData;
 use App\Data\ProjectRepository;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 
 class ProjectController extends Controller
@@ -19,6 +20,7 @@ class ProjectController extends Controller
 
         return Inertia::render('Project/Show', [
             'project' => $project,
+
         ]);
     }
 }

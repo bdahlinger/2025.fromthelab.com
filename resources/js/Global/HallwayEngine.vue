@@ -17,6 +17,7 @@ gsap.registerPlugin(ScrollTrigger)
 
 const props = defineProps<{
     projects: App.Data.ProjectData[]
+    projectGridFile: string
 }>()
 
 const CUBE_SIZE = 250;
@@ -63,13 +64,16 @@ const init = () => {
 
     renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setPixelRatio(window.devicePixelRatio);
+    renderer.toneMapping = THREE.ACESFilmicToneMapping; // Adds contrast and vibrancy
+    renderer.toneMappingExposure = 1.0; // Adjust this (0.5–2.0) to fine-tune brightness
+    renderer.outputEncoding = THREE.sRGBEncoding; // Ensures colors are output in sRGB
 
     composer = new EffectComposer(renderer);
     const renderPass = new RenderPass(scene, camera);
     composer.addPass(renderPass);
     bloomPass = new UnrealBloomPass(
         new THREE.Vector2(window.innerWidth, window.innerHeight),
-        3.5,
+        6.0,
         0.4,
         0.0
     );
@@ -94,7 +98,7 @@ const init = () => {
     const { cityGroup, updateParticles } = useCityscape(scene, scene);
     updateCityParticles = updateParticles;
 
-    const projectCubesInstance = useProjectCubes(scene, { CUBE_SIZE, CUBE_SPACING, FIRST_CUBE_Z }, props.projects);
+    const projectCubesInstance = useProjectCubes(scene, { CUBE_SIZE, CUBE_SPACING, FIRST_CUBE_Z }, props.projects, props.projectGridFile);
     projectCubesInstance.getInitializedData().then(({ projectCubes, updateCubeColors, loadedFont }) => {
         const { introCubes } = useIntroCubes(scene, scene, Promise.resolve(loadedFont), { CUBE_SIZE, FIRST_CUBE_Z });
         const allCubes = [...introCubes, ...projectCubes];

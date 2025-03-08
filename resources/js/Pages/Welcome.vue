@@ -14,7 +14,8 @@ const props = defineProps<{
     canRegister: boolean
     laravelVersion: string
     phpVersion: string
-    projects: ProjectData[];
+    projects: ProjectData[]
+    projectGridFile: string
 }>()
 
 /*
@@ -57,7 +58,7 @@ scene.add( gridHelper4 );
 		    <!--<hallway/>-->
             <!--<hallway-v2/>-->
 
-            <hallway-engine :projects="projects"/>
+            <hallway-engine :projects="projects" :project-grid-file="projectGridFile" />
 
 	    </div>
 

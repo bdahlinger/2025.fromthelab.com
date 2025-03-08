@@ -69,6 +69,7 @@ class HomeController extends Controller
             'laravelVersion' => Application::VERSION,
             'phpVersion' => PHP_VERSION,
             'projects' => $projects,
+            'projectGridFile' => Storage::url('project-grid.png')
         ]);
     }
 }

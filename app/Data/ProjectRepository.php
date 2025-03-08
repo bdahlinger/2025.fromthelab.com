@@ -7,7 +7,7 @@ use Spatie\LaravelData\DataCollection;
 
 class ProjectRepository
 {
-    protected static float $fontSize = 8.0;
+    protected static float $fontSize = 6.0;
 
     protected static array $projects = [
         [
@@ -25,34 +25,50 @@ class ProjectRepository
         [
             'slug' => 'harry-potter-hogwarts-legacy',
             'title' => 'HARRY POTTER: HOGWARTS LEGACY',
+            'keyart' => 'projects/hl.jpg',
+            'keyartLocation' => 'left',
         ],
         [
             'slug' => 'harry-potter-quidditch-champions',
             'title' => 'HARRY POTTER: QUIDDITCH CHAMPIONS',
+            'keyart' => 'projects/qc.jpg',
+            'keyartLocation' => 'bottom',
         ],
         [
             'slug' => 'multiversus',
             'title' => 'MULTIVERSUS',
+            'keyart' => 'projects/mvs.jpg',
+            'keyartLocation' => 'top',
         ],
         [
             'slug' => 'gotham-knights',
             'title' => 'GOTHAM KNIGHTS',
+            'keyart' => 'projects/gk.jpg',
+            'keyartLocation' => 'bottom',
         ],
         [
             'slug' => 'game-of-thrones-conquest',
             'title' => 'GAME OF THRONES: CONQUEST',
+            'keyart' => 'projects/got.jpg',
+            'keyartLocation' => 'top',
         ],
         [
             'slug' => 'marvel-strike-force',
             'title' => 'MARVEL: STRIKE FORCE',
+            'keyart' => 'projects/msf.jpg',
+            'keyartLocation' => 'bottom',
         ],
         [
             'slug' => 'league-of-legends-riot-king',
             'title' => 'LEAGUE OF LEGENDS: RIOT KING',
+            'keyart' => 'projects/rk.jpg',
+            'keyartLocation' => 'top',
         ],
         [
             'slug' => 'league-of-legends-convergence',
             'title' => 'LEAGUE OF LEGENDS: CONVERGENCE',
+            'keyart' => 'projects/conv.jpg',
+            'keyartLocation' => 'bottom',
         ],
     ];
 

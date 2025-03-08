@@ -6,7 +6,8 @@ import { gsap } from 'gsap';
 export function useProjectCubes(
     scene: THREE.Scene,
     config: { CUBE_SIZE: number; CUBE_SPACING: number; FIRST_CUBE_Z: number },
-    projects: App.Data.ProjectData[]
+    projects: App.Data.ProjectData[],
+    projectGridFile: string
 ) {
     const { CUBE_SIZE, CUBE_SPACING, FIRST_CUBE_Z } = config;
     const MAX_Z = FIRST_CUBE_Z - (projects.length + 1) * CUBE_SPACING;
@@ -188,6 +189,9 @@ export function useProjectCubes(
         if (keyart) {
             const textureLoader = new THREE.TextureLoader();
             textureLoader.load(keyart, (texture) => {
+                texture.encoding = THREE.sRGBEncoding
+
+
                 const planeGeometry = new THREE.PlaneGeometry(size - 1, size - 1);
                 const planeMaterial = new THREE.MeshBasicMaterial({
                     map: texture,
@@ -209,7 +213,8 @@ export function useProjectCubes(
                         break;
                     case 'top':
                         plane.position.set(0, halfSize, 0);
-                        plane.rotation.x = -Math.PI / 2;
+                        plane.rotation.x = Math.PI / 2;
+                        plane.rotation.z = -Math.PI / 2;
                         portalLocation = 'bottom';
                         break;
                     case 'right':
@@ -219,7 +224,8 @@ export function useProjectCubes(
                         break;
                     case 'bottom':
                         plane.position.set(0, -halfSize, 0);
-                        plane.rotation.x = Math.PI / 2;
+                        plane.rotation.x = -Math.PI / 2;
+                        plane.rotation.z = -Math.PI / 2;
                         portalLocation = 'top';
                         break;
                 }
@@ -231,6 +237,26 @@ export function useProjectCubes(
         } else {
             addPortal();
         }
+        // Add project grid plane (camera-facing face)
+        const textureLoader = new THREE.TextureLoader();
+        textureLoader.load(projectGridFile, (texture) => {
+            texture.encoding = THREE.sRGBEncoding;
+            const gridGeometry = new THREE.PlaneGeometry(size - 1, size - 1);
+            const gridMaterial = new THREE.MeshBasicMaterial({
+                map: texture,
+                transparent: true,
+                opacity: 0,
+                blending: THREE.AdditiveBlending,
+                side: THREE.DoubleSide
+            });
+            const gridPlane = new THREE.Mesh(gridGeometry, gridMaterial);
+            gridPlane.position.set(0, 0, -size / 2 - 1); // Slightly offset forward to avoid z-fighting
+            // No rotation needed; faces camera by default (z-axis aligned)
+            gridPlane.userData.isGridPlane = true; // Tag for identification
+            group.add(gridPlane);
+        }, undefined, (error) => {
+            console.error('Error loading projectGridFile:', error);
+        });
 
         return group;
     };
@@ -274,7 +300,7 @@ export function useProjectCubes(
                         const cube = createProjectCube(CUBE_SIZE, zPosition, rotation, project.keyart, project.keyartLocation);
                         scene.add(cube);
                         projectCubes.push(cube);
-                        createTextObject(project.title, 0, project.size - 15, FIRST_CUBE_Z - 120 - (index + 1) * CUBE_SPACING, project.size, font);
+                        createTextObject(project.title, 0, project.size - 15, FIRST_CUBE_Z + 90 - (index + 1) * CUBE_SPACING, project.size, font);
                     });
                     resolve();
                 },
@@ -457,7 +483,7 @@ export function useProjectCubes(
         textMeshes.forEach((mesh) => {
             const textMaterial = mesh.material as THREE.MeshBasicMaterial;
             const meshZ = mesh.position.z;
-            const zDistance = Math.abs(cameraZ - meshZ);
+            const zDistance = Math.abs(cameraZ - meshZ + 120);
             if (zDistance <= PROXIMITY_THRESHOLD) {
                 const progress = 1 - (zDistance / PROXIMITY_THRESHOLD);
                 textMaterial.opacity = Math.min(1.0, progress * 2);
@@ -612,7 +638,7 @@ export function useProjectCubes(
                     x: portalWorldPosition.x,
                     y: portalWorldPosition.y,
                     z: portalWorldPosition.z,
-                    duration: 1,
+                    duration: 2,
                     ease: 'power3.out',
                     onStart: () => {
                         isInPortalFocus = true;
@@ -633,7 +659,7 @@ export function useProjectCubes(
                     x: newCameraPosition.x,
                     y: newCameraPosition.y,
                     z: newCameraPosition.z,
-                    duration: 0.5,
+                    duration: 2,
                     ease: 'power3.out'
                 });
             }
