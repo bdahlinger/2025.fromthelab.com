@@ -12,7 +12,6 @@ export function setupScrollAnimation(
     onPortalFocusChange?: (isFocused: boolean, originalPosition?: THREE.Vector3, originalTarget?: THREE.Vector3) => void
 ) {
     const { CUBE_SIZE, CUBE_SPACING, FIRST_CUBE_Z } = config
-    // Use a default length if allCubes is undefined or empty
     const cubeCount = allCubes?.length || 0;
     const MAX_Z = FIRST_CUBE_Z - (cubeCount + 1) * CUBE_SPACING
     let isInPortalFocus = false
@@ -40,7 +39,7 @@ export function setupScrollAnimation(
                 const additionalSpace = totalCubes * distancePerCube
                 return `${totalDistance + additionalSpace}px`
             },
-            scrub: 1,
+            scrub: 1, // 1-second smoothing
             pin: true,
             onUpdate: (self) => {
                 if (!isInPortalFocus && !isReverting) {
