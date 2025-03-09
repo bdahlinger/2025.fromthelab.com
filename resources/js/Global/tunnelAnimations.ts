@@ -1,3 +1,4 @@
+// tunnelAnimations.ts
 import * as THREE from 'three'
 import { gsap } from 'gsap'
 
@@ -11,18 +12,20 @@ export function setupScrollAnimation(
     onPortalFocusChange?: (isFocused: boolean, originalPosition?: THREE.Vector3, originalTarget?: THREE.Vector3) => void
 ) {
     const { CUBE_SIZE, CUBE_SPACING, FIRST_CUBE_Z } = config
-    const MAX_Z = FIRST_CUBE_Z - (allCubes.length + 1) * CUBE_SPACING
+    // Use a default length if allCubes is undefined or empty
+    const cubeCount = allCubes?.length || 0;
+    const MAX_Z = FIRST_CUBE_Z - (cubeCount + 1) * CUBE_SPACING
     let isInPortalFocus = false
     let originalCameraPosition: THREE.Vector3 | null = null
     let originalCameraTarget: THREE.Vector3 | null = null
-    let isReverting = false // Track if we're in the middle of a reversion animation
+    let isReverting = false
 
     if (onPortalFocusChange) {
         onPortalFocusChange((focused, position, target) => {
             isInPortalFocus = focused
             originalCameraPosition = position || null
             originalCameraTarget = target || null
-            isReverting = focused ? false : isReverting // Reset isReverting when entering focus mode
+            isReverting = focused ? false : isReverting
         })
     }
 
@@ -33,14 +36,13 @@ export function setupScrollAnimation(
             end: () => {
                 const totalDistance = Math.abs(MAX_Z)
                 const distancePerCube = CUBE_SPACING
-                const totalCubes = allCubes.length
+                const totalCubes = cubeCount
                 const additionalSpace = totalCubes * distancePerCube
                 return `${totalDistance + additionalSpace}px`
             },
             scrub: 1,
             pin: true,
             onUpdate: (self) => {
-                // Only update camera position if not in portal focus or during reversion
                 if (!isInPortalFocus && !isReverting) {
                     const progress = self.progress
                     const newZ = Math.min(0, THREE.MathUtils.lerp(0, MAX_Z, progress))
@@ -58,7 +60,6 @@ export function setupScrollAnimation(
         ease: 'none'
     })
 
-    // Expose a method to set isReverting from useProjectCubes
     const setReverting = (value: boolean) => {
         isReverting = value
     }

@@ -1,4 +1,6 @@
 <script setup lang="ts">
+// 3/9/2025 3:00 PM
+
 import { onMounted, onUnmounted, ref } from 'vue'
 import * as THREE from 'three'
 import { gsap } from 'gsap'
@@ -12,12 +14,14 @@ import { useProjectCubes } from './useProjectCubes'
 import { useCityscape } from './useCityscape'
 import { setupScrollAnimation } from '/resources/js/Global/tunnelAnimations'
 import { useStarfield } from './useStarfield'
+import { useChaserPath } from './useChaserPath';
 
 gsap.registerPlugin(ScrollTrigger)
 
 const props = defineProps<{
     projects: App.Data.ProjectData[]
     projectGridFile: string
+    projectGridFile2: string
 }>()
 
 const CUBE_SIZE = 250;
@@ -42,6 +46,8 @@ let lastTime = 0
 let starfieldDispose: (() => void) | null = null;
 let cleanupInteractivity: (() => void) | null = null;
 let setReverting: ((value: boolean) => void) | null = null;
+let chaserPathDispose: (() => void) | null = null;
+let updateChasers: ((delta: number) => void) | null = null;
 
 const updateRendererSize = () => {
     const width = tunnelWrapper.value ? tunnelWrapper.value.getBoundingClientRect().width : window.innerWidth;
@@ -98,7 +104,7 @@ const init = () => {
     const { cityGroup, updateParticles } = useCityscape(scene, scene);
     updateCityParticles = updateParticles;
 
-    const projectCubesInstance = useProjectCubes(scene, { CUBE_SIZE, CUBE_SPACING, FIRST_CUBE_Z }, props.projects, props.projectGridFile);
+    const projectCubesInstance = useProjectCubes(scene, { CUBE_SIZE, CUBE_SPACING, FIRST_CUBE_Z }, props.projects, props.projectGridFile, props.projectGridFile2);
     projectCubesInstance.getInitializedData().then(({ projectCubes, updateCubeColors, loadedFont }) => {
         const { introCubes } = useIntroCubes(scene, scene, Promise.resolve(loadedFont), { CUBE_SIZE, FIRST_CUBE_Z });
         const allCubes = [...introCubes, ...projectCubes];
@@ -127,6 +133,10 @@ const init = () => {
 
     const { dispose } = useStarfield(scene, camera);
     starfieldDispose = dispose;
+
+    const { dispose: chaserDispose, updateChasers: updateChasersFunc } = useChaserPath(scene);
+    chaserPathDispose = chaserDispose;
+    updateChasers = updateChasersFunc;
 };
 
 const animate = (time: number = 0) => {
@@ -135,7 +145,7 @@ const animate = (time: number = 0) => {
         const delta = (time - lastTime) / 1000;
         lastTime = time;
         updateCityParticles(delta);
-
+        updateChasers?.(delta);
         const fadeRange = BLOOM_FADE_END_Z - BLOOM_FADE_START_Z;
         let progress = 0;
         if (camera.position.z >= BLOOM_FADE_START_Z) {
@@ -167,6 +177,7 @@ onUnmounted(() => {
     scene.clear();
     document.body.removeChild(stats.dom);
     if (starfieldDispose) starfieldDispose();
+    if (chaserPathDispose) chaserPathDispose();
 })
 
 const handleResize = () => {

@@ -16,6 +16,7 @@ const props = defineProps<{
     phpVersion: string
     projects: ProjectData[]
     projectGridFile: string
+    projectGridFile2: string
 }>()
 
 /*
@@ -58,7 +59,7 @@ scene.add( gridHelper4 );
 		    <!--<hallway/>-->
             <!--<hallway-v2/>-->
 
-            <hallway-engine :projects="projects" :project-grid-file="projectGridFile" />
+            <hallway-engine :projects="projects" :project-grid-file="projectGridFile" :project-grid-file-2="projectGridFile2" />
 
 	    </div>
 

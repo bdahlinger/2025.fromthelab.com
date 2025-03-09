@@ -70,6 +70,12 @@ class ProjectRepository
             'keyart' => 'projects/conv.jpg',
             'keyartLocation' => 'bottom',
         ],
+        [
+            'slug' => 'pubg',
+            'title' => 'PUBG BATTLEGROUNDS',
+            'keyart' => 'projects/pubg.jpg',
+            'keyartLocation' => 'bottom',
+        ],
     ];
 
     /**

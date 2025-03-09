@@ -4,7 +4,7 @@ export function useCityscape(sceneNoGlow: THREE.Scene, sceneGlow: THREE.Scene) {
     const BUILDING_BASE_SIZE = 100;
     const BUILDING_MIN_HEIGHT = 100;
     const BUILDING_MAX_HEIGHT = 300;
-    const BUILDING_COLOR = 0x222222;
+    const BUILDING_COLOR = 0x333333;
     const BUILDING_COUNT_X = 32;
     const BUILDING_COUNT_Z = 60;
     const CITY_POSITION_Y = -600;
@@ -163,6 +163,7 @@ export function useCityscape(sceneNoGlow: THREE.Scene, sceneGlow: THREE.Scene) {
             const totalLength = path.totalLength;
             const distanceStep = totalLength / PARTICLES_PER_PATH;
 
+            // Red cars (forward)
             for (let j = 0; j < PARTICLES_PER_PATH; j++) {
                 const particleMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000, fog: true });
                 const particle = new THREE.Mesh(particleGeometry, particleMaterial);
@@ -186,10 +187,11 @@ export function useCityscape(sceneNoGlow: THREE.Scene, sceneGlow: THREE.Scene) {
                 particleGroup.add(particle);
             }
 
+            // White cars (backward, offset by half step)
             for (let j = 0; j < PARTICLES_PER_PATH; j++) {
                 const particleMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff, fog: true });
                 const particle = new THREE.Mesh(particleGeometry, particleMaterial);
-                const distance = totalLength - (j * distanceStep);
+                const distance = totalLength - (j * distanceStep + distanceStep / 2); // Offset by half step
                 let traveled = totalLength - distance;
                 const reversedPoints = [...path.points].reverse();
                 for (let k = 0; k < reversedPoints.length - 1; k++) {
@@ -231,32 +233,33 @@ export function useCityscape(sceneNoGlow: THREE.Scene, sceneGlow: THREE.Scene) {
 
         for (let i = 0; i < particles.length; i++) {
             const direction = particleDirections[i];
-            particleDistances[i] += distancePerFrame * direction;
             const pathIndex = particlePaths[i];
             const path = paths[pathIndex];
             const totalLength = path.totalLength;
 
-            if (direction === 1 && particleDistances[i] >= totalLength) {
-                particleDistances[i] = 0;
-                particles[i].position.copy(path.points[0]);
-            } else if (direction === -1 && particleDistances[i] <= 0) {
-                particleDistances[i] = totalLength;
-                particles[i].position.copy(path.points[path.points.length - 1]);
+            // Update distance with wrapping
+            particleDistances[i] += distancePerFrame * direction;
+            if (direction === 1) {
+                particleDistances[i] = particleDistances[i] % totalLength;
+                if (particleDistances[i] < 0) particleDistances[i] += totalLength;
             } else {
-                const distance = particleDistances[i];
-                const points = direction === 1 ? path.points : [...path.points].reverse();
-                let traveled = direction === 1 ? distance : totalLength - distance;
-                for (let j = 0; j < points.length - 1; j++) {
-                    const start = points[j];
-                    const end = points[j + 1];
-                    const segmentLength = start.distanceTo(end);
-                    if (traveled <= segmentLength) {
-                        const t = traveled / segmentLength;
-                        particles[i].position.lerpVectors(start, end, t);
-                        break;
-                    }
-                    traveled -= segmentLength;
+                particleDistances[i] = (particleDistances[i] + totalLength) % totalLength;
+            }
+
+            // Calculate position
+            const distance = particleDistances[i];
+            const points = direction === 1 ? path.points : [...path.points].reverse();
+            let traveled = direction === 1 ? distance : totalLength - distance;
+            for (let j = 0; j < points.length - 1; j++) {
+                const start = points[j];
+                const end = points[j + 1];
+                const segmentLength = start.distanceTo(end);
+                if (traveled <= segmentLength) {
+                    const t = traveled / segmentLength;
+                    particles[i].position.lerpVectors(start, end, t);
+                    break;
                 }
+                traveled -= segmentLength;
             }
         }
     };

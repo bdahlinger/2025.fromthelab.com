@@ -7,7 +7,8 @@ export function useProjectCubes(
     scene: THREE.Scene,
     config: { CUBE_SIZE: number; CUBE_SPACING: number; FIRST_CUBE_Z: number },
     projects: App.Data.ProjectData[],
-    projectGridFile: string
+    projectGridFile: string,
+    projectGridFile2: string
 ) {
     const { CUBE_SIZE, CUBE_SPACING, FIRST_CUBE_Z } = config;
     const MAX_Z = FIRST_CUBE_Z - (projects.length + 1) * CUBE_SPACING;
@@ -27,7 +28,7 @@ export function useProjectCubes(
     let fontLoader: FontLoader | null = null;
     let loadedFont: THREE.Font | null = null;
     let isInitialized = false;
-    let sceneInitialized = false; // Flag to track first update cycle
+    let sceneInitialized = false;
     let raycaster = new THREE.Raycaster();
     let mouse = new THREE.Vector2();
     let hoveredPortal: THREE.LineSegments | null = null;
@@ -46,6 +47,7 @@ export function useProjectCubes(
         keyart: string | null,
         keyartLocation: string | null
     ): THREE.Group => {
+        // ... (your original createProjectCube function remains unchanged)
         const group = new THREE.Group();
         group.position.z = zPosition;
         group.rotation.z = rotation;
@@ -61,12 +63,24 @@ export function useProjectCubes(
         const cube = new THREE.LineSegments(edges, material);
         group.add(cube);
 
-        let portalLocation: 'left' | 'top' | 'right' | 'bottom' = 'right'; // Default to right if no keyart
+        let portalLocation: 'left' | 'top' | 'right' | 'bottom' = 'right';
+        const halfSize = size / 2;
+
+        if (keyart) {
+            const location = (['left', 'top', 'right', 'bottom'] as const).includes(keyartLocation as any)
+                ? keyartLocation as 'left' | 'top' | 'right' | 'bottom'
+                : 'left';
+            switch (location) {
+                case 'left': portalLocation = 'right'; break;
+                case 'top': portalLocation = 'bottom'; break;
+                case 'right': portalLocation = 'left'; break;
+                case 'bottom': portalLocation = 'top'; break;
+            }
+        }
 
         const addPortal = () => {
             const innerRadius = 25;
             const outerRadius = 40;
-            //const portalGeometry = new THREE.RingGeometry(innerRadius, outerRadius, 24, 2);
             const portalGeometry = new THREE.CircleGeometry(outerRadius, 24);
             const portalEdges = new THREE.EdgesGeometry(portalGeometry);
             const portalMaterial = new THREE.LineBasicMaterial({
@@ -98,55 +112,42 @@ export function useProjectCubes(
                 });
                 const pulse = new THREE.Mesh(pulseGeometry, pulseMaterial);
                 const angle = (i / NUM_PULSES) * Math.PI * 2;
-                pulse.position.set(
-                    Math.cos(angle) * baseRadius,
-                    Math.sin(angle) * baseRadius,
-                    0
-                );
+                pulse.position.set(Math.cos(angle) * baseRadius, Math.sin(angle) * baseRadius, 0);
                 pulse.rotation.z = angle + Math.PI / 2;
                 pulse.userData.baseOpacity = 0.01;
                 pulse.userData.index = i;
                 pulsesGroup.add(pulse);
             }
 
-            // Create array of 25 ring portals, initially 2 units apart
             const ringPortals: THREE.LineSegments[] = [portal];
             const initialRingSpacing = 2;
             const numRings = 25;
             for (let i = 1; i < numRings; i++) {
-                //const newRingGeometry = new THREE.RingGeometry(innerRadius, outerRadius, 24, 2);
-                const newRingGeometry = new THREE.CircleGeometry( outerRadius, 24 );
+                const newRingGeometry = new THREE.CircleGeometry(outerRadius, 24);
                 const newRingEdges = new THREE.EdgesGeometry(newRingGeometry);
-                // Interpolate opacity from 1.0 to 0.1 based on index
                 const maxOpacity = THREE.MathUtils.lerp(1.0, 0.1, i / (numRings - 1));
                 const newRingMaterial = new THREE.LineBasicMaterial({
                     color: new THREE.Color(CUBE_COLOR),
                     transparent: true,
-                    opacity: 0 // Start at 0, will animate on click
+                    opacity: 0
                 });
                 const newRing = new THREE.LineSegments(newRingEdges, newRingMaterial);
                 newRing.userData.isPortal = true;
-                newRing.userData.maxOpacity = maxOpacity; // Store max opacity for fading
-                newRing.position.z = -i * initialRingSpacing; // Initially 2 units apart
+                newRing.userData.maxOpacity = maxOpacity;
+                newRing.position.z = -i * initialRingSpacing;
                 ringPortals.push(newRing);
                 portal.add(newRing);
             }
-            // Set maxOpacity for the first ring
             portal.userData.maxOpacity = 1.0;
 
-            // Apply offset based on portalLocation
             switch (portalLocation) {
                 case 'left':
                 case 'right':
-                    pulsesGroup.children.forEach((pulse) => {
-                        pulse.position.x += PULSE_OFFSET;
-                    });
+                    pulsesGroup.children.forEach((pulse) => pulse.position.x += PULSE_OFFSET);
                     break;
                 case 'top':
                 case 'bottom':
-                    pulsesGroup.children.forEach((pulse) => {
-                        pulse.position.y += PULSE_OFFSET;
-                    });
+                    pulsesGroup.children.forEach((pulse) => pulse.position.y += PULSE_OFFSET);
                     break;
             }
 
@@ -157,7 +158,6 @@ export function useProjectCubes(
             portal.updateMatrixWorld(true);
             pulsesGroup.updateMatrixWorld(true);
 
-            const halfSize = size / 2;
             switch (portalLocation) {
                 case 'left':
                     portal.position.set(-halfSize, 0, 0);
@@ -169,7 +169,7 @@ export function useProjectCubes(
                     portal.position.set(0, halfSize, 0);
                     portal.rotation.x = -Math.PI / 2;
                     hitbox.position.set(0, halfSize, 0);
-                    hitbox.rotation.x = -Math.PI / 2;
+                    hitbox.rotation.x = Math.PI / 2;
                     break;
                 case 'right':
                     portal.position.set(halfSize, 0, 0);
@@ -181,7 +181,7 @@ export function useProjectCubes(
                     portal.position.set(0, -halfSize, 0);
                     portal.rotation.x = Math.PI / 2;
                     hitbox.position.set(0, -halfSize, 0);
-                    hitbox.rotation.y = Math.PI / 2;
+                    hitbox.rotation.x = Math.PI / 2;
                     break;
             }
         };
@@ -189,9 +189,7 @@ export function useProjectCubes(
         if (keyart) {
             const textureLoader = new THREE.TextureLoader();
             textureLoader.load(keyart, (texture) => {
-                texture.encoding = THREE.sRGBEncoding
-
-
+                texture.encoding = THREE.sRGBEncoding;
                 const planeGeometry = new THREE.PlaneGeometry(size - 1, size - 1);
                 const planeMaterial = new THREE.MeshBasicMaterial({
                     map: texture,
@@ -201,32 +199,24 @@ export function useProjectCubes(
                     side: THREE.DoubleSide
                 });
                 const plane = new THREE.Mesh(planeGeometry, planeMaterial);
-                const location = (['left', 'top', 'right', 'bottom'] as const).includes(keyartLocation as any)
-                    ? keyartLocation as 'left' | 'top' | 'right' | 'bottom'
-                    : 'left';
-                const halfSize = size / 2;
-                switch (location) {
+                switch (keyartLocation) {
                     case 'left':
                         plane.position.set(-halfSize, 0, 0);
                         plane.rotation.y = Math.PI / 2;
-                        portalLocation = 'right';
                         break;
                     case 'top':
                         plane.position.set(0, halfSize, 0);
                         plane.rotation.x = Math.PI / 2;
                         plane.rotation.z = -Math.PI / 2;
-                        portalLocation = 'bottom';
                         break;
                     case 'right':
                         plane.position.set(halfSize, 0, 0);
                         plane.rotation.y = -Math.PI / 2;
-                        portalLocation = 'left';
                         break;
                     case 'bottom':
                         plane.position.set(0, -halfSize, 0);
                         plane.rotation.x = -Math.PI / 2;
                         plane.rotation.z = -Math.PI / 2;
-                        portalLocation = 'top';
                         break;
                 }
                 group.add(plane);
@@ -237,7 +227,7 @@ export function useProjectCubes(
         } else {
             addPortal();
         }
-        // Add project grid plane (camera-facing face)
+
         const textureLoader = new THREE.TextureLoader();
         textureLoader.load(projectGridFile, (texture) => {
             texture.encoding = THREE.sRGBEncoding;
@@ -247,15 +237,120 @@ export function useProjectCubes(
                 transparent: true,
                 opacity: 0,
                 blending: THREE.AdditiveBlending,
-                side: THREE.DoubleSide
+                side: THREE.DoubleSide,
+                depthWrite: false
             });
             const gridPlane = new THREE.Mesh(gridGeometry, gridMaterial);
-            gridPlane.position.set(0, 0, -size / 2 - 1); // Slightly offset forward to avoid z-fighting
-            // No rotation needed; faces camera by default (z-axis aligned)
-            gridPlane.userData.isGridPlane = true; // Tag for identification
+            gridPlane.position.set(0, 0, -size / 2 - 1);
+            gridPlane.rotation.y = 0;
+            gridPlane.userData.isGridPlane = true;
             group.add(gridPlane);
         }, undefined, (error) => {
             console.error('Error loading projectGridFile:', error);
+        });
+
+        const textureLoader2 = new THREE.TextureLoader();
+        textureLoader2.load(projectGridFile, (texture) => {
+            texture.encoding = THREE.sRGBEncoding;
+            const gridGeometry = new THREE.PlaneGeometry(size - 1, size - 1);
+            const gridMaterial = new THREE.MeshBasicMaterial({
+                map: texture,
+                transparent: true,
+                opacity: 0,
+                blending: THREE.AdditiveBlending,
+                side: THREE.DoubleSide,
+                depthWrite: false,
+                color: new THREE.Color(0xff8000)
+            });
+            const gridPlane = new THREE.Mesh(gridGeometry, gridMaterial);
+            gridPlane.position.set(0, 0, size / 2 + 1);
+            gridPlane.rotation.y = 0;
+            gridPlane.userData.isGridPlane = true;
+            group.add(gridPlane);
+        }, undefined, (error) => {
+            console.error('Error loading projectGridFile:', error);
+        });
+
+        const allFaces = ['left', 'top', 'right', 'bottom'];
+        const keyartFace = keyart ? keyartLocation || 'left' : null;
+        const usedFaces = [keyartFace, portalLocation].filter(Boolean) as string[];
+        const freeFaces = allFaces.filter(face => !usedFaces.includes(face));
+
+        const textureLoader3 = new THREE.TextureLoader();
+        textureLoader3.load(projectGridFile, (texture) => {
+            texture.encoding = THREE.sRGBEncoding;
+            const gridGeometry = new THREE.PlaneGeometry(size - 1, size - 1);
+            const gridMaterial = new THREE.MeshBasicMaterial({
+                map: texture,
+                transparent: true,
+                opacity: 0,
+                blending: THREE.AdditiveBlending,
+                side: THREE.DoubleSide,
+                depthWrite: false,
+                color: new THREE.Color(0x0000ff)
+            });
+            const gridPlane = new THREE.Mesh(gridGeometry, gridMaterial);
+            const blueFace = freeFaces[0];
+            switch (blueFace) {
+                case 'left':
+                    gridPlane.position.set(-halfSize, 0, 0);
+                    gridPlane.rotation.y = -Math.PI / 2;
+                    break;
+                case 'top':
+                    gridPlane.position.set(0, halfSize, 0);
+                    gridPlane.rotation.x = Math.PI / 2;
+                    break;
+                case 'right':
+                    gridPlane.position.set(halfSize, 0, 0);
+                    gridPlane.rotation.y = Math.PI / 2;
+                    break;
+                case 'bottom':
+                    gridPlane.position.set(0, -halfSize, 0);
+                    gridPlane.rotation.x = -Math.PI / 2;
+                    break;
+            }
+            gridPlane.userData.isGridPlane = true;
+            group.add(gridPlane);
+        }, undefined, (error) => {
+            console.error('Error loading projectGridFile:', error);
+        });
+
+        const textureLoader4 = new THREE.TextureLoader();
+        textureLoader4.load(projectGridFile2, (texture) => {
+            texture.encoding = THREE.sRGBEncoding;
+            const gridGeometry = new THREE.PlaneGeometry(size - 1, size - 1);
+            const gridMaterial = new THREE.MeshBasicMaterial({
+                map: texture,
+                transparent: true,
+                opacity: 0,
+                blending: THREE.AdditiveBlending,
+                side: THREE.DoubleSide,
+                depthWrite: false
+            });
+            const gridPlane = new THREE.Mesh(gridGeometry, gridMaterial);
+            const greenFace = freeFaces[1];
+            switch (greenFace) {
+                case 'left':
+                    gridPlane.position.set(-halfSize, 0, 0);
+                    gridPlane.rotation.y = -Math.PI / 2;
+                    break;
+                case 'top':
+                    gridPlane.position.set(0, halfSize, 0);
+                    gridPlane.rotation.x = Math.PI / 2;
+                    break;
+                case 'right':
+                    gridPlane.position.set(halfSize, 0, 0);
+                    gridPlane.rotation.y = Math.PI / 2;
+                    break;
+                case 'bottom':
+                    gridPlane.position.set(0, -halfSize, 0);
+                    gridPlane.rotation.x = -Math.PI / 2;
+                    break;
+            }
+            gridPlane.userData.isGridPlane = true;
+            group.add(gridPlane);
+        }, undefined, (error) => {
+            console.error('Error loading projectGridFile2:', error);
         });
 
         return group;
@@ -279,7 +374,27 @@ export function useProjectCubes(
         });
         const textMesh = new THREE.Mesh(textGeometry, textMaterial);
         textMesh.position.set(x, y, z);
+
+        const boundingBox = textGeometry.boundingBox!;
+        const textWidth = boundingBox.max.x - boundingBox.min.x;
+        const textHeight = boundingBox.max.y - boundingBox.min.y;
+
+        const planeWidth = textWidth + 8;
+        const planeHeight = textHeight + 4;
+        const planeGeometry = new THREE.PlaneGeometry(planeWidth, planeHeight);
+        const planeMaterial = new THREE.MeshBasicMaterial({
+            color: 0x000000,
+            transparent: true,
+            opacity: 0.0,
+            side: THREE.DoubleSide
+        });
+        const planeMesh = new THREE.Mesh(planeGeometry, planeMaterial);
+        planeMesh.position.set(x, y, z - 1);
+
+        scene.add(planeMesh);
         scene.add(textMesh);
+        textMesh.userData.backgroundPlane = planeMesh;
+
         return textMesh;
     };
 
@@ -330,36 +445,30 @@ export function useProjectCubes(
         const pulses = pulsesGroup.children as THREE.Mesh[];
         const numPulses = pulses.length;
 
-        // Create a GSAP timeline to continuously update opacities only if visible
         const tl = gsap.timeline({
-            repeat: -1, // Loop indefinitely
+            repeat: -1,
             defaults: { ease: "none" }
         });
 
-        // Use a dummy object to animate a progress value from 0 to 1
         const progress = { value: 0 };
         tl.to(progress, {
             value: 1,
-            duration: 1.5, // Total duration for one full cycle around the portal
+            duration: 1.5,
             onUpdate: () => {
                 const baseOpacity = 0.01;
                 pulses.forEach((pulse) => {
                     const pulseMaterial = pulse.material as THREE.MeshBasicMaterial;
                     if (pulseMaterial.visible) {
-                        // Calculate the pulse's position in the cycle (0 to 1)
                         const pulsePosition = (pulse.userData.index / numPulses + progress.value) % 1;
-                        // Use a sine wave to create a smooth peak at the leading edge
-                        const wave = Math.sin(pulsePosition * Math.PI * 2); // Sine wave from -1 to 1
-                        const normalizedWave = (wave + 1) / 2; // Normalize to 0 to 1
-                        // Create a sharp peak with a long tail
-                        const opacity = baseOpacity + (1 - baseOpacity) * Math.pow(normalizedWave, 4); // Exponential falloff for sharper peak
+                        const wave = Math.sin(pulsePosition * Math.PI * 2);
+                        const normalizedWave = (wave + 1) / 2;
+                        const opacity = baseOpacity + (1 - baseOpacity) * Math.pow(normalizedWave, 4);
                         pulseMaterial.opacity = opacity;
                     }
                 });
             }
         });
 
-        // Store the timeline for cleanup
         portal.userData.animationTimeline = tl;
     };
 
@@ -370,7 +479,6 @@ export function useProjectCubes(
         const pulsesGroup = portal.children.find(child => child instanceof THREE.Group);
         if (!pulsesGroup) return;
 
-        // Kill the timeline if it exists
         if (portal.userData.animationTimeline) {
             portal.userData.animationTimeline.kill();
             delete portal.userData.animationTimeline;
@@ -378,7 +486,7 @@ export function useProjectCubes(
 
         pulsesGroup.children.forEach((pulse: THREE.Mesh) => {
             const pulseMaterial = pulse.material as THREE.MeshBasicMaterial;
-            pulseMaterial.opacity = 0; // Reset to 0 when outside proximity
+            pulseMaterial.opacity = 0;
         });
     };
 
@@ -408,7 +516,6 @@ export function useProjectCubes(
             cube.userData.isActive = lineProgress >= ACTIVE_THRESHOLD;
 
             cube.children.forEach((child) => {
-                // Cube Edges
                 if (child instanceof THREE.LineSegments && !child.userData.isPortal && !child.userData.isPortalHitbox) {
                     const material = child.material as THREE.LineBasicMaterial;
                     if (cubeDistance <= PROXIMITY_THRESHOLD) {
@@ -433,10 +540,7 @@ export function useProjectCubes(
                         material.opacity = 0;
                     }
                 }
-                // Portal and Pulses
                 else if (child instanceof THREE.LineSegments && child.userData.isPortal) {
-                    // Remove distance-based fade, handled in setupInteractivity
-
                     if (sceneInitialized) {
                         if (lineProgress > 0.1) {
                             child.children.forEach((grandchild) => {
@@ -467,7 +571,6 @@ export function useProjectCubes(
                         }
                     }
                 }
-                // Keyart
                 else if (child instanceof THREE.Mesh && !child.userData.isPortalHitbox) {
                     const material = child.material as THREE.MeshBasicMaterial;
                     if (cubeDistance <= PROXIMITY_THRESHOLD) {
@@ -482,13 +585,22 @@ export function useProjectCubes(
 
         textMeshes.forEach((mesh) => {
             const textMaterial = mesh.material as THREE.MeshBasicMaterial;
+            const planeMesh = mesh.userData.backgroundPlane as THREE.Mesh;
+            const planeMaterial = planeMesh?.material as THREE.MeshBasicMaterial;
             const meshZ = mesh.position.z;
             const zDistance = Math.abs(cameraZ - meshZ + 120);
             if (zDistance <= PROXIMITY_THRESHOLD) {
                 const progress = 1 - (zDistance / PROXIMITY_THRESHOLD);
-                textMaterial.opacity = Math.min(1.0, progress * 2);
+                const opacity = Math.min(1.0, progress * 2);
+                textMaterial.opacity = opacity;
+                if (planeMaterial) {
+                    planeMaterial.opacity = opacity * 0.8;
+                }
             } else {
                 textMaterial.opacity = 0.0;
+                if (planeMaterial) {
+                    planeMaterial.opacity = 0.0;
+                }
             }
         });
     };
@@ -560,23 +672,18 @@ export function useProjectCubes(
         const animatePulsesCorkscrew = (portal: THREE.LineSegments, reverse: boolean = false) => {
             const pulsesGroup = portal.children.find(child => child instanceof THREE.Group) as THREE.Group;
             if (!pulsesGroup) return;
-
-            /*const pulses = pulsesGroup.children as THREE.Mesh[];
-            pulses.forEach((pulse, index) => {
-                const targetZ = reverse ? 0 : -(index + 1) * 5;
-                gsap.to(pulse.position, {
-                    z: targetZ,
-                    duration: 1,
-                    ease: 'power3.out'
-                });
-            });*/
         };
 
         const animateRings = (portal: THREE.LineSegments, expand: boolean = true) => {
             const rings = [portal, ...portal.children.filter(child => child instanceof THREE.LineSegments && child.userData.isPortal)] as THREE.LineSegments[];
-            const targetSpacing = expand ? 25 : 2; // Expand to 25 units, collapse to 2 units
+            const targetSpacing = expand ? 25 : 2;
             rings.forEach((ring, index) => {
-                const targetZ = -index * targetSpacing;
+                let targetZ = -index * targetSpacing;
+                if (portal.position.y > 0 && portal.rotation.x === -Math.PI / 2) {
+                    targetZ = index * targetSpacing;
+                } else if (portal.position.y < 0 && portal.rotation.x === Math.PI / 2) {
+                    targetZ = index * targetSpacing;
+                }
                 const targetOpacity = expand ? ring.userData.maxOpacity : 0;
                 gsap.to(ring.position, {
                     z: targetZ,
@@ -646,7 +753,7 @@ export function useProjectCubes(
                         document.body.classList.add('no-scrollbar');
                         activePortal = clickedPortal;
                         animatePulsesCorkscrew(clickedPortal);
-                        animateRings(clickedPortal, true); // Expand and fade in rings
+                        animateRings(clickedPortal, true);
                     },
                     onUpdate: () => {
                         camera.lookAt(lookAtTarget.x, lookAtTarget.y, lookAtTarget.z);
@@ -699,7 +806,7 @@ export function useProjectCubes(
                 onStart: () => {
                     if (activePortal) {
                         animatePulsesCorkscrew(activePortal, true);
-                        animateRings(activePortal, false); // Collapse and fade out rings
+                        animateRings(activePortal, false);
                     }
                 },
                 onComplete: () => {

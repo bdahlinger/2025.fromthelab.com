@@ -4,7 +4,7 @@ import { gsap } from 'gsap';
 
 export function useStarfield(scene: THREE.Scene, camera: THREE.PerspectiveCamera) {
     const STAR_SIZE = 20;
-    const STAR_COUNT = 1000;
+    const STAR_COUNT = 2000;
     const FIELD_XY_SIZE = 4000; // X/Y: ±2000, fits FOV
     const FIELD_Z_MIN = -1000;
     const FIELD_Z_MAX = -9000; // 2000 past -7200
