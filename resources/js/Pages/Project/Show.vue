@@ -6,6 +6,7 @@ import GlobalFooter from "@/Global/GlobalFooter.vue";
 
 
 const props = defineProps<{
+    projects: ProjectData[];
     project: ProjectData;
 }>();
 

@@ -2,6 +2,8 @@ import * as THREE from 'three';
 import { FontLoader } from 'three/examples/jsm/loaders/FontLoader';
 import { TextGeometry } from 'three/examples/jsm/geometries/TextGeometry';
 import { gsap } from 'gsap';
+import { router } from '@inertiajs/vue3';
+import { useTunnelStore } from '@/Stores/tunnelStore';
 
 export function useProjectCubes(
     scene: THREE.Scene,
@@ -40,14 +42,16 @@ export function useProjectCubes(
     let lastScrollY: number = window.scrollY;
     let isReverting = false;
 
+    const tunnelStore = useTunnelStore();
+
     const createProjectCube = (
+        project: App.Data.ProjectData,
         size: number,
         zPosition: number,
         rotation: number,
         keyart: string | null,
         keyartLocation: string | null
     ): THREE.Group => {
-        // ... (your original createProjectCube function remains unchanged)
         const group = new THREE.Group();
         group.position.z = zPosition;
         group.rotation.z = rotation;
@@ -202,7 +206,12 @@ export function useProjectCubes(
                 switch (keyartLocation) {
                     case 'left':
                         plane.position.set(-halfSize, 0, 0);
-                        plane.rotation.y = Math.PI / 2;
+                        if (rotation >= THREE.MathUtils.degToRad(120)) {
+                            plane.rotation.y = Math.PI / 2;
+                            plane.rotation.z = -Math.PI;
+                        } else {
+                            plane.rotation.y = Math.PI / 2;
+                        }
                         break;
                     case 'top':
                         plane.position.set(0, halfSize, 0);
@@ -211,12 +220,22 @@ export function useProjectCubes(
                         break;
                     case 'right':
                         plane.position.set(halfSize, 0, 0);
-                        plane.rotation.y = -Math.PI / 2;
+                        if (rotation >= THREE.MathUtils.degToRad(120)) {
+                            plane.rotation.y = -Math.PI / 2;
+                            plane.rotation.z = -Math.PI;
+                        } else {
+                            plane.rotation.y = -Math.PI / 2;
+                        }
                         break;
                     case 'bottom':
                         plane.position.set(0, -halfSize, 0);
-                        plane.rotation.x = -Math.PI / 2;
-                        plane.rotation.z = -Math.PI / 2;
+                        if (rotation >= THREE.MathUtils.degToRad(120)) {
+                            plane.rotation.x = -Math.PI / 2;
+                            plane.rotation.z = Math.PI / 2;
+                        } else {
+                            plane.rotation.x = -Math.PI / 2;
+                            plane.rotation.z = -Math.PI / 2;
+                        }
                         break;
                 }
                 group.add(plane);
@@ -412,7 +431,7 @@ export function useProjectCubes(
                     projectArray.forEach((project, index) => {
                         const zPosition = FIRST_CUBE_Z - (index + 1) * CUBE_SPACING;
                         const rotation = (index + 1) * ROTATION_INCREMENT;
-                        const cube = createProjectCube(CUBE_SIZE, zPosition, rotation, project.keyart, project.keyartLocation);
+                        const cube = createProjectCube(project, CUBE_SIZE, zPosition, rotation, project.keyart, project.keyartLocation);
                         scene.add(cube);
                         projectCubes.push(cube);
                         createTextObject(project.title, 0, project.size - 15, FIRST_CUBE_Z + 90 - (index + 1) * CUBE_SPACING, project.size, font);
@@ -425,13 +444,23 @@ export function useProjectCubes(
         });
     };
 
-    const getInitializedData = (): Promise<{ projectCubes: THREE.Group[]; updateCubeColors: (camera: THREE.PerspectiveCamera) => void; loadedFont: THREE.Font }> => {
+    const getInitializedData = (): Promise<{
+        projectCubes: THREE.Group[];
+        updateCubeColors: (camera: THREE.PerspectiveCamera) => void;
+        loadedFont: THREE.Font;
+        maxZ: number;
+    }> => {
         if (isInitialized) {
-            return Promise.resolve({ projectCubes, updateCubeColors, loadedFont: loadedFont as THREE.Font });
+            //console.log('Returning cached data with MAX_Z:', MAX_Z);
+            return Promise.resolve({ projectCubes, updateCubeColors, loadedFont: loadedFont as THREE.Font, maxZ: MAX_Z });
         }
         return loadFontAndText().then(() => {
             isInitialized = true;
-            return { projectCubes, updateCubeColors, loadedFont: loadedFont as THREE.Font };
+            //console.log('MAX_Z calculated:', MAX_Z);
+            return { projectCubes, updateCubeColors, loadedFont: loadedFont as THREE.Font, maxZ: MAX_Z };
+        }).catch(error => {
+            console.error('Error in loadFontAndText:', error);
+            throw error;
         });
     };
 
@@ -539,8 +568,7 @@ export function useProjectCubes(
                     } else {
                         material.opacity = 0;
                     }
-                }
-                else if (child instanceof THREE.LineSegments && child.userData.isPortal) {
+                } else if (child instanceof THREE.LineSegments && child.userData.isPortal) {
                     if (sceneInitialized) {
                         if (lineProgress > 0.1) {
                             child.children.forEach((grandchild) => {
@@ -570,8 +598,7 @@ export function useProjectCubes(
                             delete child.userData.animationStarted;
                         }
                     }
-                }
-                else if (child instanceof THREE.Mesh && !child.userData.isPortalHitbox) {
+                } else if (child instanceof THREE.Mesh && !child.userData.isPortalHitbox) {
                     const material = child.material as THREE.MeshBasicMaterial;
                     if (cubeDistance <= PROXIMITY_THRESHOLD) {
                         const progress = 1 - (cubeDistance / PROXIMITY_THRESHOLD);
@@ -605,30 +632,57 @@ export function useProjectCubes(
         });
     };
 
-    const setupInteractivity = (camera: THREE.PerspectiveCamera, domElement: HTMLCanvasElement, onFocusChangeCallback: (isFocused: boolean, originalPosition?: THREE.Vector3, originalTarget?: THREE.Vector3) => void) => {
+    const setupInteractivity = (
+      camera: THREE.PerspectiveCamera,
+      domElement: HTMLCanvasElement,
+      onFocusChangeCallback: (isFocused: boolean, originalPosition?: THREE.Vector3, originalTarget?: THREE.Vector3) => void,
+      onCubeClick?: (cubeIndex: number) => void
+    ) => {
         onPortalFocusChange = onFocusChangeCallback;
 
         let lockedScrollY: number | null = null;
         let touchStartY: number | null = null;
         let activePortal: THREE.LineSegments | null = null;
 
+        const animateRings = (portal: THREE.LineSegments, expand: boolean = true) => {
+            const rings = [portal, ...portal.children.filter(child => child instanceof THREE.LineSegments && child.userData.isPortal)] as THREE.LineSegments[];
+            const targetSpacing = expand ? 25 : 2;
+            rings.forEach((ring, index) => {
+                let targetZ = -index * targetSpacing;
+                if (portal.position.y > 0 && portal.rotation.x === -Math.PI / 2) {
+                    targetZ = index * targetSpacing;
+                } else if (portal.position.y < 0 && portal.rotation.x === Math.PI / 2) {
+                    targetZ = index * targetSpacing;
+                }
+                const targetOpacity = expand ? ring.userData.maxOpacity : 0;
+                gsap.to(ring.position, {
+                    z: targetZ,
+                    duration: 1,
+                    ease: 'power3.out',
+                    delay: 0.5
+                });
+                gsap.to(ring.material, {
+                    opacity: targetOpacity,
+                    duration: 1,
+                    ease: 'power3.out',
+                    delay: 0.5
+                });
+            });
+        };
+
+        const animatePulsesCorkscrew = (portal: THREE.LineSegments, reverse: boolean = false) => {
+            const pulsesGroup = portal.children.find(child => child instanceof THREE.Group) as THREE.Group;
+            if (!pulsesGroup) return;
+            // Add corkscrew animation if needed
+        };
+
         const onMouseMove = (event: MouseEvent) => {
             mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
             mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
-
             raycaster.setFromCamera(mouse, camera);
-
-            const hitboxes: THREE.Mesh[] = [];
-            projectCubes.forEach((cube) => {
-                if (cube.userData.isActive) {
-                    cube.children.forEach((child) => {
-                        if (child instanceof THREE.Mesh && child.userData.isPortalHitbox) {
-                            hitboxes.push(child);
-                        }
-                    });
-                }
-            });
-
+            const hitboxes = projectCubes.flatMap(cube =>
+              cube.userData.isActive ? cube.children.filter(child => child instanceof THREE.Mesh && child.userData.isPortalHitbox) : []
+            ) as THREE.Mesh[];
             const intersects = raycaster.intersectObjects(hitboxes);
 
             if (intersects.length > 0) {
@@ -669,78 +723,66 @@ export function useProjectCubes(
             }
         };
 
-        const animatePulsesCorkscrew = (portal: THREE.LineSegments, reverse: boolean = false) => {
-            const pulsesGroup = portal.children.find(child => child instanceof THREE.Group) as THREE.Group;
-            if (!pulsesGroup) return;
-        };
-
-        const animateRings = (portal: THREE.LineSegments, expand: boolean = true) => {
-            const rings = [portal, ...portal.children.filter(child => child instanceof THREE.LineSegments && child.userData.isPortal)] as THREE.LineSegments[];
-            const targetSpacing = expand ? 25 : 2;
-            rings.forEach((ring, index) => {
-                let targetZ = -index * targetSpacing;
-                if (portal.position.y > 0 && portal.rotation.x === -Math.PI / 2) {
-                    targetZ = index * targetSpacing;
-                } else if (portal.position.y < 0 && portal.rotation.x === Math.PI / 2) {
-                    targetZ = index * targetSpacing;
-                }
-                const targetOpacity = expand ? ring.userData.maxOpacity : 0;
-                gsap.to(ring.position, {
-                    z: targetZ,
-                    duration: 1,
-                    ease: 'power3.out',
-                    delay: 0.5
-                });
-                gsap.to(ring.material, {
-                    opacity: targetOpacity,
-                    duration: 1,
-                    ease: 'power3.out',
-                    delay: 0.5
-                });
-            });
-        };
-
         const onClick = (event: MouseEvent) => {
-            if (isInPortalFocus) return;
-
             mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
             mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
-
             raycaster.setFromCamera(mouse, camera);
-
-            const hitboxes: THREE.Mesh[] = [];
-            projectCubes.forEach((cube) => {
-                if (cube.userData.isActive) {
-                    cube.children.forEach((child) => {
-                        if (child instanceof THREE.Mesh && child.userData.isPortalHitbox) {
-                            hitboxes.push(child);
-                        }
-                    });
-                }
-            });
-
+            const hitboxes = projectCubes.flatMap(cube =>
+              cube.userData.isActive ? cube.children.filter(child => child instanceof THREE.Mesh && child.userData.isPortalHitbox) : []
+            ) as THREE.Mesh[];
             const intersects = raycaster.intersectObjects(hitboxes);
-            if (intersects.length > 0) {
-                const clickedHitbox = intersects[0].object as THREE.Mesh;
-                const clickedPortal = clickedHitbox.userData.portal as THREE.LineSegments;
-                const cube = clickedHitbox.parent as THREE.Group;
 
+            if (intersects.length === 0) return;
+
+            const clickedHitbox = intersects[0].object as THREE.Mesh;
+            const clickedPortal = clickedHitbox.userData.portal as THREE.LineSegments;
+            const cube = clickedHitbox.parent as THREE.Group;
+            const cubeIndex = projectCubes.indexOf(cube);
+            const project = projects[cubeIndex];
+
+            if (isInPortalFocus && clickedPortal === activePortal) {
+                const numRings = 25;
+                const ringSpacing = 25;
+                const travelDistance = numRings * ringSpacing + 50;
+                const portalWorldPosition = clickedPortal.getWorldPosition(new THREE.Vector3());
+                let portalDirection = new THREE.Vector3();
+                const halfSize = config.CUBE_SIZE / 2;
+
+                if (clickedPortal.position.x === halfSize) portalDirection.set(-1, 0, 0);
+                else if (clickedPortal.position.x === -halfSize) portalDirection.set(1, 0, 0);
+                else if (clickedPortal.position.y === halfSize) portalDirection.set(0, -1, 0);
+                else if (clickedPortal.position.y === -halfSize) portalDirection.set(0, 1, 0);
+
+                portalDirection.applyQuaternion(cube.getWorldQuaternion(new THREE.Quaternion())).normalize();
+                const startPosition = camera.position.clone();
+                const endPosition = startPosition.clone().add(portalDirection.clone().multiplyScalar(-travelDistance));
+                const lookAtOffset = portalDirection.clone().multiplyScalar(-1000);
+                const lookAtTarget = endPosition.clone().add(lookAtOffset);
+
+                gsap.to(camera.position, {
+                    x: endPosition.x,
+                    y: endPosition.y,
+                    z: endPosition.z,
+                    duration: 1,
+                    ease: 'power2.in',
+                    onUpdate: () => camera.lookAt(lookAtTarget),
+                    onComplete: () => {
+                        if (project?.slug) {
+                            tunnelStore.setScrollPosition(window.scrollY);
+                            router.visit(route('project.show', { project: project.slug }), { preserveScroll: false });
+                        }
+                    }
+                });
+            } else if (!isInPortalFocus) {
                 if (!originalCameraPosition) {
                     originalCameraPosition = camera.position.clone();
                     originalCameraTarget = new THREE.Vector3(0, 0, MAX_Z);
                 }
-
-                if (onPortalFocusChange) {
-                    onPortalFocusChange(true, originalCameraPosition, originalCameraTarget);
-                }
+                if (onPortalFocusChange) onPortalFocusChange(true, originalCameraPosition, originalCameraTarget);
 
                 const portalWorldPosition = clickedPortal.getWorldPosition(new THREE.Vector3());
+                const lookAtTarget = { x: originalCameraTarget.x, y: originalCameraTarget.y, z: originalCameraTarget.z };
 
-                const lookAtTarget = {
-                    x: originalCameraTarget.x,
-                    y: originalCameraTarget.y,
-                    z: originalCameraTarget.z
-                };
                 gsap.to(lookAtTarget, {
                     x: portalWorldPosition.x,
                     y: portalWorldPosition.y,
@@ -752,144 +794,30 @@ export function useProjectCubes(
                         lockedScrollY = window.scrollY;
                         document.body.classList.add('no-scrollbar');
                         activePortal = clickedPortal;
-                        animatePulsesCorkscrew(clickedPortal);
                         animateRings(clickedPortal, true);
                     },
-                    onUpdate: () => {
-                        camera.lookAt(lookAtTarget.x, lookAtTarget.y, lookAtTarget.z);
-                    }
+                    onUpdate: () => camera.lookAt(lookAtTarget.x, lookAtTarget.y, lookAtTarget.z)
                 });
 
                 const cubeWorldPosition = cube.getWorldPosition(new THREE.Vector3());
-                const newCameraPosition = new THREE.Vector3(0, 0, cubeWorldPosition.z);
                 gsap.to(camera.position, {
-                    x: newCameraPosition.x,
-                    y: newCameraPosition.y,
-                    z: newCameraPosition.z,
+                    x: 0,
+                    y: 0,
+                    z: cubeWorldPosition.z,
                     duration: 2,
                     ease: 'power3.out'
                 });
             }
         };
 
-        const revertCamera = () => {
-            if (!originalCameraPosition || !originalCameraTarget) return;
-
-            isReverting = true;
-            const targetToRestore = originalCameraTarget.clone();
-            const currentLookAt = new THREE.Vector3();
-            camera.getWorldDirection(currentLookAt);
-            currentLookAt.multiplyScalar(1000).add(camera.position);
-            const lookAtRestore = {
-                x: currentLookAt.x,
-                y: currentLookAt.y,
-                z: currentLookAt.z
-            };
-
-            gsap.to(camera.position, {
-                x: originalCameraPosition.x,
-                y: originalCameraPosition.y,
-                z: originalCameraPosition.z,
-                duration: 1,
-                ease: 'power3.out'
-            });
-
-            gsap.to(lookAtRestore, {
-                x: targetToRestore.x,
-                y: targetToRestore.y,
-                z: targetToRestore.z,
-                duration: 1,
-                ease: 'power3.out',
-                onUpdate: () => {
-                    camera.lookAt(lookAtRestore.x, lookAtRestore.y, lookAtRestore.z);
-                },
-                onStart: () => {
-                    if (activePortal) {
-                        animatePulsesCorkscrew(activePortal, true);
-                        animateRings(activePortal, false);
-                    }
-                },
-                onComplete: () => {
-                    isInPortalFocus = false;
-                    if (onPortalFocusChange) {
-                        onPortalFocusChange(false);
-                    }
-                    originalCameraPosition = null;
-                    originalCameraTarget = null;
-                    activePortal = null;
-                    isReverting = false;
-                    lockedScrollY = null;
-                    document.body.classList.remove('no-scrollbar');
-                }
-            });
-        };
-
-        const onWheel = (event: WheelEvent) => {
-            if (isInPortalFocus && !isReverting && originalCameraPosition && originalCameraTarget) {
-                event.preventDefault();
-                event.stopPropagation();
-
-                if (event.deltaY < 0) {
-                    revertCamera();
-                }
-            }
-        };
-
-        const onTouchStart = (event: TouchEvent) => {
-            if (isInPortalFocus && !isReverting) {
-                touchStartY = event.touches[0].clientY;
-            }
-        };
-
-        const onTouchMove = (event: TouchEvent) => {
-            if (isInPortalFocus && !isReverting && touchStartY !== null && lockedScrollY !== null) {
-                const touchCurrentY = event.touches[0].clientY;
-                const deltaY = touchStartY - touchCurrentY;
-
-                if (deltaY > 0) {
-                    event.preventDefault();
-                    window.scrollTo(0, lockedScrollY);
-                } else if (deltaY < 0) {
-                    event.preventDefault();
-                    revertCamera();
-                }
-            }
-        };
-
-        const onTouchEnd = (event: TouchEvent) => {
-            touchStartY = null;
-        };
-
-        const onScroll = (event: Event) => {
-            if (isInPortalFocus && !isReverting && lockedScrollY !== null) {
-                const currentScrollY = window.scrollY;
-                if (currentScrollY > lockedScrollY) {
-                    window.scrollTo(0, lockedScrollY);
-                } else if (currentScrollY < lockedScrollY) {
-                    revertCamera();
-                }
-            }
-            lastScrollY = window.scrollY;
-        };
-
         domElement.addEventListener('mousemove', onMouseMove);
         domElement.addEventListener('click', onClick);
-        domElement.addEventListener('wheel', onWheel, { passive: false });
-        domElement.addEventListener('touchstart', onTouchStart, { passive: false });
-        domElement.addEventListener('touchmove', onTouchMove, { passive: false });
-        domElement.addEventListener('touchend', onTouchEnd);
-        window.addEventListener('scroll', onScroll);
+        //console.log('Interactivity listeners attached to', domElement);
 
         return () => {
             domElement.removeEventListener('mousemove', onMouseMove);
             domElement.removeEventListener('click', onClick);
-            domElement.removeEventListener('wheel', onWheel);
-            domElement.removeEventListener('touchstart', onTouchStart);
-            domElement.removeEventListener('touchmove', onTouchMove);
-            domElement.removeEventListener('touchend', onTouchEnd);
-            window.removeEventListener('scroll', onScroll);
-            domElement.style.cursor = 'auto';
-            document.body.classList.remove('no-scrollbar');
+            //console.log('Interactivity listeners removed');
         };
     };
 

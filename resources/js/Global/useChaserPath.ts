@@ -1,9 +1,8 @@
-// useChaserPath.ts
 import * as THREE from 'three';
 
-export function useChaserPath(scene: THREE.Scene) {
+export function useChaserPath(scene: THREE.Scene, projectMaxZ: number) {
     const CHASER_PATH_Z_START = 0;
-    const CHASER_PATH_Z_END = -8500;
+    const CHASER_PATH_Z_END = projectMaxZ - 1500;
     const POINTS_COUNT = 100;
     const CHASER_SIZE = 2;
     const CHASERS_PER_SET = 64;
@@ -18,45 +17,48 @@ export function useChaserPath(scene: THREE.Scene) {
     let chaserPathLine: THREE.Line;
     let chaserPathLine2: THREE.Line;
     let chaserPathLine3: THREE.Line;
-    let chaserGroups: THREE.Group[] = [];
-    let chasers: THREE.Mesh[][] = [];
-    let distances: number[][] = [];
-    let activeChasers: boolean[][] = [];
+    const chaserGroups: THREE.Group[] = [];
+    const chasers: THREE.Mesh[][] = [[], [], []];
+    const distances: number[][] = [[], [], []];
+    const activeChasers: boolean[][] = [[], [], []];
     let lastEmitTimes: number[] = [0, 0, 0];
 
     const setupChaserPaths = () => {
         const zRange = CHASER_PATH_Z_START - CHASER_PATH_Z_END;
-        const zStep = zRange / (POINTS_COUNT - 1);
-
-        // Path 1: 5 turns, radius 72–108
         const points1: THREE.Vector3[] = [];
         for (let i = 0; i < POINTS_COUNT; i++) {
             const t = i / (POINTS_COUNT - 1);
             const z = CHASER_PATH_Z_START - t * zRange;
             const theta = t * 5 * 2 * Math.PI;
             const radius = 90 * (0.8 + 0.2 * Math.sin(theta * 2));
-            points1.push(new THREE.Vector3(radius * Math.cos(theta), radius * Math.sin(theta), z));
+            const point = new THREE.Vector3(radius * Math.cos(theta), radius * Math.sin(theta), z); // Define point here
+            if (isNaN(point.x) || isNaN(point.y) || isNaN(point.z)) {
+                console.error('NaN in chaserPath points', { t, z, projectMaxZ });
+            }
+            points1.push(point);
         }
         chaserPath = new THREE.CatmullRomCurve3(points1);
         const geometry1 = new THREE.BufferGeometry().setFromPoints(chaserPath.getPoints(200));
         chaserPathLine = new THREE.Line(geometry1, new THREE.LineBasicMaterial({ color: 0xff00ff, linewidth: 2, visible: false }));
         scene.add(chaserPathLine);
 
-        // Path 2: 3 turns, radius 48–72, wavy
         const points2: THREE.Vector3[] = [];
         for (let i = 0; i < POINTS_COUNT; i++) {
             const t = i / (POINTS_COUNT - 1);
             const z = CHASER_PATH_Z_START - t * zRange;
             const theta = t * 3 * 2 * Math.PI;
             const radius = 60 * (0.8 + 0.2 * Math.sin(theta * 4));
-            points2.push(new THREE.Vector3(radius * Math.cos(theta), radius * Math.sin(theta), z));
+            const point = new THREE.Vector3(radius * Math.cos(theta), radius * Math.sin(theta), z);
+            if (isNaN(point.x) || isNaN(point.y) || isNaN(point.z)) {
+                console.error('NaN in chaserPath2 points', { t, z, projectMaxZ });
+            }
+            points2.push(point);
         }
         chaserPath2 = new THREE.CatmullRomCurve3(points2);
         const geometry2 = new THREE.BufferGeometry().setFromPoints(chaserPath2.getPoints(200));
         chaserPathLine2 = new THREE.Line(geometry2, new THREE.LineBasicMaterial({ color: 0x00ffff, linewidth: 2, visible: false }));
         scene.add(chaserPathLine2);
 
-        // Path 3: 7 turns, radius 81–110, elliptical
         const points3: THREE.Vector3[] = [];
         for (let i = 0; i < POINTS_COUNT; i++) {
             const t = i / (POINTS_COUNT - 1);
@@ -65,7 +67,11 @@ export function useChaserPath(scene: THREE.Scene) {
             const baseRadiusX = 100;
             const baseRadiusY = 90;
             const modulation = 0.1 * Math.sin(theta);
-            points3.push(new THREE.Vector3(baseRadiusX * (1 + modulation) * Math.cos(theta), baseRadiusY * (1 - modulation) * Math.sin(theta), z));
+            const point = new THREE.Vector3(baseRadiusX * (1 + modulation) * Math.cos(theta), baseRadiusY * (1 - modulation) * Math.sin(theta), z);
+            if (isNaN(point.x) || isNaN(point.y) || isNaN(point.z)) {
+                console.error('NaN in chaserPath3 points', { t, z, projectMaxZ });
+            }
+            points3.push(point);
         }
         chaserPath3 = new THREE.CatmullRomCurve3(points3);
         const geometry3 = new THREE.BufferGeometry().setFromPoints(chaserPath3.getPoints(200));
@@ -82,10 +88,8 @@ export function useChaserPath(scene: THREE.Scene) {
         for (let pathIdx = 0; pathIdx < 3; pathIdx++) {
             const group = new THREE.Group();
             group.opacity = 1;
-            chaserGroups.push(group);
-            chasers[pathIdx] = [];
-            distances[pathIdx] = [];
-            activeChasers[pathIdx] = [];
+            group.renderOrder = 1;
+            chaserGroups[pathIdx] = group;
             scene.add(group);
 
             for (let i = 0; i < POOL_SIZE; i++) {
@@ -101,32 +105,30 @@ export function useChaserPath(scene: THREE.Scene) {
                 chaser.renderOrder = 1;
                 chaser.visible = false;
                 group.add(chaser);
-                chasers[pathIdx].push(chaser);
-                distances[pathIdx].push(0);
-                activeChasers[pathIdx].push(false);
+                chasers[pathIdx][i] = chaser;
+                distances[pathIdx][i] = 0;
+                activeChasers[pathIdx][i] = false;
             }
-        }
-
-        for (let pathIdx = 0; pathIdx < 3; pathIdx++) {
-            chaserGroups[pathIdx].renderOrder = 1;
-            scene.add(chaserGroups[pathIdx]);
         }
     };
 
     const emitChaserSet = (pathIdx: number) => {
         const path = [chaserPath, chaserPath2, chaserPath3][pathIdx];
         const totalLength = path.getLength();
-        let activeCount = activeChasers[pathIdx].filter(active => active).length;
+        const activeCount = activeChasers[pathIdx].filter(active => active).length;
         const available = POOL_SIZE - activeCount;
 
         if (available >= CHASERS_PER_SET) {
+            let emitted = 0;
             for (let i = 0; i < CHASERS_PER_SET; i++) {
-                const chaserIdx = chasers[pathIdx].findIndex((_, idx) => !activeChasers[pathIdx][idx]);
-                if (chaserIdx === -1) break;
+                const chaserIdx = activeChasers[pathIdx].findIndex((active) => !active);
+                if (chaserIdx === -1) {
+                    console.warn(`No available chasers for path ${pathIdx}, emitted ${emitted}/${CHASERS_PER_SET}`);
+                    break;
+                }
 
-                // Sharper exponential fade from 0.05 to 1.0
-                const t = i / (CHASERS_PER_SET - 1);
-                const opacity = 0.05 + (1.0 - 0.05) * Math.pow(t, 3); // Cubic curve for dramatic fade
+                const t = emitted / (CHASERS_PER_SET - 1);
+                const opacity = 0.05 + (1.0 - 0.05) * Math.pow(t, 3);
                 const material = new THREE.MeshBasicMaterial({
                     color: [0xff0000, 0x00ff00, 0x0000ff][pathIdx],
                     transparent: true,
@@ -138,13 +140,14 @@ export function useChaserPath(scene: THREE.Scene) {
                 chasers[pathIdx][chaserIdx].material = material;
 
                 chasers[pathIdx][chaserIdx].visible = true;
-                const offset = i * TRAIL_SPACING;
+                const offset = emitted * TRAIL_SPACING;
                 distances[pathIdx][chaserIdx] = offset;
                 activeChasers[pathIdx][chaserIdx] = true;
 
                 const tParam = offset / totalLength;
                 const point = path.getPointAt(tParam);
                 chasers[pathIdx][chaserIdx].position.copy(point);
+                emitted++;
             }
         }
     };

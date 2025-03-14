@@ -282,7 +282,9 @@ const logout = () => {
 
             <!-- Page Content -->
             <main>
-                <slot />
+                <KeepAlive>
+                    <slot />
+                </KeepAlive>
             </main>
         </div>
     </div>

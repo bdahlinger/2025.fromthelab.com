@@ -9,6 +9,25 @@ class ProjectRepository
 {
     protected static float $fontSize = 6.0;
 
+    // projects to add:
+    /*
+     * Invocure's provider site
+     * Larry's record label shopify site
+     * Jade Complexions
+     * Paws Up
+     * the greeno
+     * St. James
+     * Public Sq.
+     *
+     * [Entertainment]
+     * Mortal Kombat 11
+     * HP Magic Awakened
+     * Rumbleverse
+     * Stray
+     * Pysconauts 2
+     * Crystal Dynamics
+     */
+
     protected static array $projects = [
         [
             'slug' => 'suicide-squad-kill-the-justice-league',
@@ -68,12 +87,42 @@ class ProjectRepository
             'slug' => 'league-of-legends-convergence',
             'title' => 'LEAGUE OF LEGENDS: CONVERGENCE',
             'keyart' => 'projects/conv.jpg',
-            'keyartLocation' => 'bottom',
+            'keyartLocation' => 'right',
         ],
         [
             'slug' => 'pubg',
             'title' => 'PUBG BATTLEGROUNDS',
             'keyart' => 'projects/pubg.jpg',
+            'keyartLocation' => 'left',
+        ],
+        [
+            'slug' => 'injustice-2',
+            'title' => 'INJUSTICE 2',
+            'keyart' => 'projects/inj.jpg',
+            'keyartLocation' => 'right',
+        ],
+        [
+            'slug' => 'lego-star-wars',
+            'title' => 'LEGO STAR WARS',
+            'keyart' => 'projects/lego-star-wars.jpg',
+            'keyartLocation' => 'left',
+        ],
+        [
+            'slug' => 'back-4-blood',
+            'title' => 'BACK 4 BLOOD',
+            'keyart' => 'projects/back-4-blood.jpg',
+            'keyartLocation' => 'right',
+        ],
+        [
+            'slug' => 'hitman-2',
+            'title' => 'HITMAN 2',
+            'keyart' => 'projects/hitman-2.jpg',
+            'keyartLocation' => 'left',
+        ],
+        [
+            'slug' => 'shadow-of-war',
+            'title' => 'MIDDLE EARTH: SHADOW OF WAR',
+            'keyart' => 'projects/shadow-of-war.jpg',
             'keyartLocation' => 'bottom',
         ],
     ];

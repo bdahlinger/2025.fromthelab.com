@@ -13,6 +13,7 @@ class ProjectController extends Controller
     public function show(string $project){
 
         $project = ProjectRepository::find($project);
+        $projects = ProjectRepository::all();
 
         if (!$project) {
             abort(404, 'Project not found');
@@ -20,7 +21,9 @@ class ProjectController extends Controller
 
         return Inertia::render('Project/Show', [
             'project' => $project,
-
-        ]);
+            'projects' => $projects,
+            'projectGridFile' => Storage::url('project-grid.png'),
+            'projectGridFile2' => Storage::url('project-grid2.png'),
+    ]);
     }
 }

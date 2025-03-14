@@ -1,14 +1,14 @@
-import * as THREE from 'three'
+import * as THREE from 'three';
 
-export function useCityscape(sceneNoGlow: THREE.Scene, sceneGlow: THREE.Scene) {
+export function useCityscape(sceneNoGlow: THREE.Scene, sceneGlow: THREE.Scene, projectMaxZ: number) {
     const BUILDING_BASE_SIZE = 100;
     const BUILDING_MIN_HEIGHT = 100;
     const BUILDING_MAX_HEIGHT = 300;
     const BUILDING_COLOR = 0x333333;
     const BUILDING_COUNT_X = 32;
-    const BUILDING_COUNT_Z = 60;
     const CITY_POSITION_Y = -600;
     const CITY_POSITION_Z = -500;
+    const CITY_BUFFER = 1000;
     const FADE_COLUMNS = 10;
     const MIN_OPACITY = 0.05;
     const MAX_OPACITY = 1.0;
@@ -17,20 +17,22 @@ export function useCityscape(sceneNoGlow: THREE.Scene, sceneGlow: THREE.Scene) {
     const EMITTER_COUNT = 6;
     const PARTICLE_SPEED = 100;
     const EMITTER_Y = -450;
-    const CITY_END_Z = -6500;
     const PARTICLES_PER_PATH = 60;
 
-    let cityGroup: THREE.Group;
-    let instancedLines: THREE.LineSegments;
-    let particleGroup: THREE.Group;
-    let particles: THREE.Mesh[] = [];
-    let paths: { points: THREE.Vector3[], totalLength: number }[] = [];
-    let particleDistances: number[] = [];
-    let particlePaths: number[] = [];
-    let particleDirections: number[] = [];
+    const CITY_END_Z = projectMaxZ - CITY_BUFFER;
+    const totalDepth = Math.abs(CITY_POSITION_Z - CITY_END_Z);
+    const BUILDING_COUNT_Z = Math.ceil(totalDepth / BUILDING_BASE_SIZE);
 
     const setupCityscape = () => {
-        cityGroup = new THREE.Group();
+        // Declare and initialize all variables within the function
+        const cityGroup = new THREE.Group();
+        let instancedLines: THREE.LineSegments;
+        const particleGroup = new THREE.Group();
+        const particles: THREE.Mesh[] = [];
+        const paths: { points: THREE.Vector3[], totalLength: number }[] = [];
+        const particleDistances: number[] = [];
+        const particlePaths: number[] = [];
+        const particleDirections: number[] = [];
 
         const baseGeometry = new THREE.BoxGeometry(BUILDING_BASE_SIZE, BUILDING_BASE_SIZE, BUILDING_BASE_SIZE);
         const edgesGeometry = new THREE.EdgesGeometry(baseGeometry);
@@ -48,7 +50,6 @@ export function useCityscape(sceneNoGlow: THREE.Scene, sceneGlow: THREE.Scene) {
         const scales = new Float32Array(totalInstances * 3);
         const colors = new Float32Array(totalInstances * 3);
         const totalWidth = BUILDING_COUNT_X * BUILDING_BASE_SIZE;
-        const totalDepth = BUILDING_COUNT_Z * BUILDING_BASE_SIZE;
         const startX = -totalWidth / 2 + BUILDING_BASE_SIZE / 2;
         const startZ = CITY_POSITION_Z;
 
@@ -92,19 +93,17 @@ export function useCityscape(sceneNoGlow: THREE.Scene, sceneGlow: THREE.Scene) {
 
         instancedLines = new THREE.LineSegments(instancedGeometry, material);
 
-        // Dynamic bounding box calculation
         const minX = -totalWidth / 2;
         const maxX = totalWidth / 2;
-        const minY = CITY_POSITION_Y; // Base of the shortest building
-        const maxY = CITY_POSITION_Y + BUILDING_MAX_HEIGHT; // Top of the tallest building
-        const minZ = CITY_END_Z; // Farthest Z (end of city)
-        const maxZ = CITY_POSITION_Z; // Nearest Z (start of city)
+        const minY = CITY_POSITION_Y;
+        const maxY = CITY_POSITION_Y + BUILDING_MAX_HEIGHT;
+        const minZ = CITY_END_Z;
+        const maxZ = CITY_POSITION_Z;
         instancedGeometry.boundingBox = new THREE.Box3(
             new THREE.Vector3(minX, minY, minZ),
             new THREE.Vector3(maxX, maxY, maxZ)
         );
 
-        // Dynamic bounding sphere calculation
         const centerX = (minX + maxX) / 2;
         const centerY = (minY + maxY) / 2;
         const centerZ = (minZ + maxZ) / 2;
@@ -118,10 +117,7 @@ export function useCityscape(sceneNoGlow: THREE.Scene, sceneGlow: THREE.Scene) {
         );
 
         cityGroup.add(instancedLines);
-        sceneGlow.add(cityGroup); // Single scene usage, but keeping glow intent
-
-        // Particle setup (unchanged)
-        particleGroup = new THREE.Group();
+        sceneGlow.add(cityGroup);
 
         const emitterSpacing = totalWidth / (EMITTER_COUNT - 1);
         const startXBase = -totalWidth / 2;
@@ -163,7 +159,6 @@ export function useCityscape(sceneNoGlow: THREE.Scene, sceneGlow: THREE.Scene) {
             const totalLength = path.totalLength;
             const distanceStep = totalLength / PARTICLES_PER_PATH;
 
-            // Red cars (forward)
             for (let j = 0; j < PARTICLES_PER_PATH; j++) {
                 const particleMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000, fog: true });
                 const particle = new THREE.Mesh(particleGeometry, particleMaterial);
@@ -187,11 +182,10 @@ export function useCityscape(sceneNoGlow: THREE.Scene, sceneGlow: THREE.Scene) {
                 particleGroup.add(particle);
             }
 
-            // White cars (backward, offset by half step)
             for (let j = 0; j < PARTICLES_PER_PATH; j++) {
                 const particleMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff, fog: true });
                 const particle = new THREE.Mesh(particleGeometry, particleMaterial);
-                const distance = totalLength - (j * distanceStep + distanceStep / 2); // Offset by half step
+                const distance = totalLength - (j * distanceStep + distanceStep / 2);
                 let traveled = totalLength - distance;
                 const reversedPoints = [...path.points].reverse();
                 for (let k = 0; k < reversedPoints.length - 1; k++) {
@@ -213,7 +207,9 @@ export function useCityscape(sceneNoGlow: THREE.Scene, sceneGlow: THREE.Scene) {
             }
         }
 
-        sceneGlow.add(particleGroup); // Single scene usage
+        sceneGlow.add(particleGroup);
+
+        return { cityGroup, instancedLines, particles, paths, particleDistances, particlePaths, particleDirections };
     };
 
     const calculateOpacity = (columnIndex: number): number => {
@@ -228,6 +224,8 @@ export function useCityscape(sceneNoGlow: THREE.Scene, sceneGlow: THREE.Scene) {
         return MAX_OPACITY;
     };
 
+    const { cityGroup, instancedLines, particles, paths, particleDistances, particlePaths, particleDirections } = setupCityscape();
+
     const updateParticles = (delta: number) => {
         const distancePerFrame = PARTICLE_SPEED * delta;
 
@@ -237,7 +235,6 @@ export function useCityscape(sceneNoGlow: THREE.Scene, sceneGlow: THREE.Scene) {
             const path = paths[pathIndex];
             const totalLength = path.totalLength;
 
-            // Update distance with wrapping
             particleDistances[i] += distancePerFrame * direction;
             if (direction === 1) {
                 particleDistances[i] = particleDistances[i] % totalLength;
@@ -246,7 +243,6 @@ export function useCityscape(sceneNoGlow: THREE.Scene, sceneGlow: THREE.Scene) {
                 particleDistances[i] = (particleDistances[i] + totalLength) % totalLength;
             }
 
-            // Calculate position
             const distance = particleDistances[i];
             const points = direction === 1 ? path.points : [...path.points].reverse();
             let traveled = direction === 1 ? distance : totalLength - distance;
@@ -263,8 +259,6 @@ export function useCityscape(sceneNoGlow: THREE.Scene, sceneGlow: THREE.Scene) {
             }
         }
     };
-
-    setupCityscape();
 
     return {
         cityGroup,
