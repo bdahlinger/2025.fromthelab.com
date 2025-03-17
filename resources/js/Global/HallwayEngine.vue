@@ -37,8 +37,10 @@ const BLOOM_FADE_END_Z = -720;
 
 // Centralized settings for debugging scene components
 const settings = {
-    showChasers: true,
-    showStarfield: false,
+    showChasers: false, // Already set for debugging
+    showStarfield: false, // Already set for debugging
+    showCars: false, // Enable cars by default, toggle for debugging
+    showBuildings: true, // Enable buildings by default, toggle for debugging
 };
 
 const tunnelWrapper = ref<HTMLElement | null>(null);
@@ -63,6 +65,7 @@ let cleanupInteractivity: (() => void) | null = null;
 let setReverting: ((value: boolean) => void) | null = null;
 let chaserPathDispose: (() => void) | null = null;
 let updateChasers: ((delta: number) => void) | null = null;
+let cityscapeDispose: (() => void) | null = null;
 let allCubes: THREE.Group[] = [];
 let updateCubeColors: ((camera: THREE.PerspectiveCamera) => void) | null = null;
 
@@ -169,16 +172,16 @@ const init = async () => {
         allCubes = [...introCubes, ...data.projectCubes];
         updateCubeColors = data.updateCubeColors;
 
-        const { cityGroup, updateParticles } = useCityscape(scene, scene, projectMaxZ);
+        // Pass settings to useCityscape
+        const { cityGroup, updateParticles, dispose: cityscapeDisposeFunc } = useCityscape(scene, scene, projectMaxZ, settings);
         updateCityParticles = updateParticles;
+        cityscapeDispose = cityscapeDisposeFunc;
 
-        // Conditionally initialize starfield based on settings
         if (settings.showStarfield) {
             const { dispose } = useStarfield(scene, camera, projectMaxZ);
             starfieldDispose = dispose;
         }
 
-        // Conditionally initialize chasers based on settings
         if (settings.showChasers) {
             const { dispose: chaserDispose, updateChasers: updateChasersFunc } = useChaserPath(scene, projectMaxZ);
             chaserPathDispose = chaserDispose;
@@ -200,7 +203,6 @@ const animate = (time: number = 0) => {
         const delta = (time - lastTime) / 1000;
         lastTime = time;
         updateCityParticles(delta);
-        // Only update chasers if enabled
         if (settings.showChasers && updateChasers) {
             updateChasers(delta);
         }
@@ -320,10 +322,9 @@ onUnmounted(() => {
     composer.dispose();
     scene.clear();
     document.body.removeChild(stats.dom);
-    // Conditionally dispose starfield if enabled
     if (settings.showStarfield && starfieldDispose) starfieldDispose();
-    // Conditionally dispose chasers if enabled
     if (settings.showChasers && chaserPathDispose) chaserPathDispose();
+    if (cityscapeDispose) cityscapeDispose();
 });
 
 const handleResize = () => {
