@@ -10,6 +10,7 @@ export function useChaserPath(scene: THREE.Scene, projectMaxZ: number) {
     const POOL_SIZE = CHASERS_PER_SET * 3;
     const EMIT_INTERVALS = [4, 4.5, 5];
     const TRAIL_SPACING = 6;
+    const showChasers = false; // Toggle to disable chasers for debugging
 
     let chaserPath: THREE.CatmullRomCurve3;
     let chaserPath2: THREE.CatmullRomCurve3;
@@ -24,6 +25,8 @@ export function useChaserPath(scene: THREE.Scene, projectMaxZ: number) {
     let lastEmitTimes: number[] = [0, 0, 0];
 
     const setupChaserPaths = () => {
+        if (!showChasers) return; // Skip setup if chasers are disabled
+
         const zRange = CHASER_PATH_Z_START - CHASER_PATH_Z_END;
         const points1: THREE.Vector3[] = [];
         for (let i = 0; i < POINTS_COUNT; i++) {
@@ -31,7 +34,7 @@ export function useChaserPath(scene: THREE.Scene, projectMaxZ: number) {
             const z = CHASER_PATH_Z_START - t * zRange;
             const theta = t * 5 * 2 * Math.PI;
             const radius = 90 * (0.8 + 0.2 * Math.sin(theta * 2));
-            const point = new THREE.Vector3(radius * Math.cos(theta), radius * Math.sin(theta), z); // Define point here
+            const point = new THREE.Vector3(radius * Math.cos(theta), radius * Math.sin(theta), z);
             if (isNaN(point.x) || isNaN(point.y) || isNaN(point.z)) {
                 console.error('NaN in chaserPath points', { t, z, projectMaxZ });
             }
@@ -113,6 +116,8 @@ export function useChaserPath(scene: THREE.Scene, projectMaxZ: number) {
     };
 
     const emitChaserSet = (pathIdx: number) => {
+        if (!showChasers) return; // Skip emission if chasers are disabled
+
         const path = [chaserPath, chaserPath2, chaserPath3][pathIdx];
         const totalLength = path.getLength();
         const activeCount = activeChasers[pathIdx].filter(active => active).length;
@@ -153,6 +158,8 @@ export function useChaserPath(scene: THREE.Scene, projectMaxZ: number) {
     };
 
     const updateChasers = (delta: number) => {
+        if (!showChasers) return; // Skip updates if chasers are disabled
+
         const currentTime = performance.now() / 1000;
         const paths = [chaserPath, chaserPath2, chaserPath3];
 
@@ -184,9 +191,12 @@ export function useChaserPath(scene: THREE.Scene, projectMaxZ: number) {
         }
     };
 
+    // Initialize chaser paths only if enabled
     setupChaserPaths();
 
     const dispose = () => {
+        if (!showChasers) return; // Skip disposal if chasers were never created
+
         scene.remove(chaserPathLine);
         scene.remove(chaserPathLine2);
         scene.remove(chaserPathLine3);
