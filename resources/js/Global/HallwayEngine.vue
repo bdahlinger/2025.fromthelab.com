@@ -37,10 +37,11 @@ const BLOOM_FADE_END_Z = -720;
 
 // Centralized settings for debugging scene components
 const settings = {
-    showChasers: false, // Already set for debugging
-    showStarfield: false, // Already set for debugging
-    showCars: false, // Enable cars by default, toggle for debugging
-    showBuildings: false, // Enable buildings by default, toggle for debugging
+    showChasers: false,
+    showStarfield: false,
+    showCars: false,
+    showBuildings: false,
+    showPortalPulses: false, // New setting to toggle portal pulse animations
 };
 
 const tunnelWrapper = ref<HTMLElement | null>(null);
@@ -161,7 +162,7 @@ const init = async () => {
         }
     }
 
-    const projectCubesInstance = useProjectCubes(scene, { CUBE_SIZE, CUBE_SPACING, FIRST_CUBE_Z }, props.projects, props.projectGridFile, props.projectGridFile2);
+    const projectCubesInstance = useProjectCubes(scene, { CUBE_SIZE, CUBE_SPACING, FIRST_CUBE_Z }, props.projects, props.projectGridFile, props.projectGridFile2, settings);
     let projectMaxZ: number = -8500;
     try {
         const data = await projectCubesInstance.getInitializedData();
@@ -172,7 +173,6 @@ const init = async () => {
         allCubes = [...introCubes, ...data.projectCubes];
         updateCubeColors = data.updateCubeColors;
 
-        // Pass settings to useCityscape
         const { cityGroup, updateParticles, dispose: cityscapeDisposeFunc } = useCityscape(scene, scene, projectMaxZ, settings);
         updateCityParticles = updateParticles;
         cityscapeDispose = cityscapeDisposeFunc;
@@ -230,7 +230,7 @@ onMounted(() => {
         if (isLoaded.value) {
             animationFrameId = requestAnimationFrame(animate);
 
-            const projectCubesInstance = useProjectCubes(scene, { CUBE_SIZE, CUBE_SPACING, FIRST_CUBE_Z }, props.projects, props.projectGridFile, props.projectGridFile2);
+            const projectCubesInstance = useProjectCubes(scene, { CUBE_SIZE, CUBE_SPACING, FIRST_CUBE_Z }, props.projects, props.projectGridFile, props.projectGridFile2, settings);
             let scrollTimeline = null;
             let setReverting = null;
 

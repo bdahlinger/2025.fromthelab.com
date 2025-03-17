@@ -10,7 +10,8 @@ export function useProjectCubes(
     config: { CUBE_SIZE: number; CUBE_SPACING: number; FIRST_CUBE_Z: number },
     projects: App.Data.ProjectData[],
     projectGridFile: string,
-    projectGridFile2: string
+    projectGridFile2: string,
+    settings: { showPortalPulses: boolean } // Add settings parameter
 ) {
     const { CUBE_SIZE, CUBE_SPACING, FIRST_CUBE_Z } = config;
     const MAX_Z = FIRST_CUBE_Z - (projects.length + 1) * CUBE_SPACING;
@@ -451,12 +452,10 @@ export function useProjectCubes(
         maxZ: number;
     }> => {
         if (isInitialized) {
-            //console.log('Returning cached data with MAX_Z:', MAX_Z);
             return Promise.resolve({ projectCubes, updateCubeColors, loadedFont: loadedFont as THREE.Font, maxZ: MAX_Z });
         }
         return loadFontAndText().then(() => {
             isInitialized = true;
-            //console.log('MAX_Z calculated:', MAX_Z);
             return { projectCubes, updateCubeColors, loadedFont: loadedFont as THREE.Font, maxZ: MAX_Z };
         }).catch(error => {
             console.error('Error in loadFontAndText:', error);
@@ -465,7 +464,7 @@ export function useProjectCubes(
     };
 
     const animatePulses = (portal: THREE.LineSegments) => {
-        if (portal.userData.isAnimating) return;
+        if (!settings.showPortalPulses || portal.userData.isAnimating) return; // Skip if pulses are disabled or already animating
 
         portal.userData.isAnimating = true;
         const pulsesGroup = portal.children.find(child => child instanceof THREE.Group);
@@ -576,7 +575,7 @@ export function useProjectCubes(
                                     grandchild.children.forEach((pulse) => {
                                         if (pulse instanceof THREE.Mesh) {
                                             pulse.material.visible = true;
-                                            if (!child.userData.animationStarted) {
+                                            if (!child.userData.animationStarted && settings.showPortalPulses) { // Only animate if enabled
                                                 animatePulses(child);
                                                 child.userData.animationStarted = true;
                                             }
@@ -739,8 +738,6 @@ export function useProjectCubes(
                 const ringSpacing = 25;
                 const travelDistance = numRings * ringSpacing + 50;
                 const portalWorldPosition = clickedPortal.getWorldPosition(new THREE.Vector3());
-
-
 
                 let portalDirection = new THREE.Vector3();
                 const halfSize = config.CUBE_SIZE / 2;
