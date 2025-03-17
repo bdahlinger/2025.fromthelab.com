@@ -37,7 +37,7 @@ const BLOOM_FADE_END_Z = -720;
 
 // Centralized settings for debugging scene components
 const settings = {
-    showChasers: false,
+    showChasers: true,
     showStarfield: false,
 };
 
