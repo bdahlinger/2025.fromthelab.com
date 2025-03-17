@@ -40,7 +40,7 @@ const settings = {
     showChasers: false, // Already set for debugging
     showStarfield: false, // Already set for debugging
     showCars: false, // Enable cars by default, toggle for debugging
-    showBuildings: true, // Enable buildings by default, toggle for debugging
+    showBuildings: false, // Enable buildings by default, toggle for debugging
 };
 
 const tunnelWrapper = ref<HTMLElement | null>(null);
