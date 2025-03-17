@@ -633,15 +633,15 @@ export function useProjectCubes(
     };
 
     const setupInteractivity = (
-      camera: THREE.PerspectiveCamera,
-      domElement: HTMLCanvasElement,
-      onFocusChangeCallback: (isFocused: boolean, originalPosition?: THREE.Vector3, originalTarget?: THREE.Vector3) => void,
-      onCubeClick?: (cubeIndex: number) => void
+        camera: THREE.PerspectiveCamera,
+        domElement: HTMLCanvasElement,
+        onFocusChangeCallback: (isFocused: boolean, originalPosition?: THREE.Vector3, originalTarget?: THREE.Vector3) => void,
+        onCubeClick?: (cubeIndex: number) => void,
+        scrollTrigger?: ScrollTrigger
     ) => {
         onPortalFocusChange = onFocusChangeCallback;
 
         let lockedScrollY: number | null = null;
-        let touchStartY: number | null = null;
         let activePortal: THREE.LineSegments | null = null;
 
         const animateRings = (portal: THREE.LineSegments, expand: boolean = true) => {
@@ -670,18 +670,12 @@ export function useProjectCubes(
             });
         };
 
-        const animatePulsesCorkscrew = (portal: THREE.LineSegments, reverse: boolean = false) => {
-            const pulsesGroup = portal.children.find(child => child instanceof THREE.Group) as THREE.Group;
-            if (!pulsesGroup) return;
-            // Add corkscrew animation if needed
-        };
-
         const onMouseMove = (event: MouseEvent) => {
             mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
             mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
             raycaster.setFromCamera(mouse, camera);
             const hitboxes = projectCubes.flatMap(cube =>
-              cube.userData.isActive ? cube.children.filter(child => child instanceof THREE.Mesh && child.userData.isPortalHitbox) : []
+                cube.userData.isActive ? cube.children.filter(child => child instanceof THREE.Mesh && child.userData.isPortalHitbox) : []
             ) as THREE.Mesh[];
             const intersects = raycaster.intersectObjects(hitboxes);
 
@@ -728,7 +722,7 @@ export function useProjectCubes(
             mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
             raycaster.setFromCamera(mouse, camera);
             const hitboxes = projectCubes.flatMap(cube =>
-              cube.userData.isActive ? cube.children.filter(child => child instanceof THREE.Mesh && child.userData.isPortalHitbox) : []
+                cube.userData.isActive ? cube.children.filter(child => child instanceof THREE.Mesh && child.userData.isPortalHitbox) : []
             ) as THREE.Mesh[];
             const intersects = raycaster.intersectObjects(hitboxes);
 
@@ -745,6 +739,9 @@ export function useProjectCubes(
                 const ringSpacing = 25;
                 const travelDistance = numRings * ringSpacing + 50;
                 const portalWorldPosition = clickedPortal.getWorldPosition(new THREE.Vector3());
+
+
+
                 let portalDirection = new THREE.Vector3();
                 const halfSize = config.CUBE_SIZE / 2;
 
@@ -776,48 +773,107 @@ export function useProjectCubes(
             } else if (!isInPortalFocus) {
                 if (!originalCameraPosition) {
                     originalCameraPosition = camera.position.clone();
-                    originalCameraTarget = new THREE.Vector3(0, 0, MAX_Z);
+                    originalCameraTarget = new THREE.Vector3(0, 0, MAX_Z); // Tunnel center
                 }
                 if (onPortalFocusChange) onPortalFocusChange(true, originalCameraPosition, originalCameraTarget);
 
                 const portalWorldPosition = clickedPortal.getWorldPosition(new THREE.Vector3());
-                const lookAtTarget = { x: originalCameraTarget.x, y: originalCameraTarget.y, z: originalCameraTarget.z };
+                if (scrollTrigger) scrollTrigger.disable(false); // Disable ScrollTrigger without killing
 
-                gsap.to(lookAtTarget, {
-                    x: portalWorldPosition.x,
-                    y: portalWorldPosition.y,
-                    z: portalWorldPosition.z,
+                gsap.to(camera.position, {
+                    x: 0,
+                    y: 0,
+                    z: cube.getWorldPosition(new THREE.Vector3()).z,
+                    duration: 2,
+                    ease: 'power3.out'
+                });
+                gsap.to({}, {
                     duration: 2,
                     ease: 'power3.out',
+                    onUpdate: function() {
+                        const progress = this.progress();
+                        const startLookAt = camera.getWorldDirection(new THREE.Vector3()).multiplyScalar(1000).add(camera.position);
+                        const lookAtX = THREE.MathUtils.lerp(startLookAt.x, portalWorldPosition.x, progress);
+                        const lookAtY = THREE.MathUtils.lerp(startLookAt.y, portalWorldPosition.y, progress);
+                        const lookAtZ = THREE.MathUtils.lerp(startLookAt.z, portalWorldPosition.z, progress);
+                        camera.lookAt(lookAtX, lookAtY, lookAtZ);
+                    },
                     onStart: () => {
                         isInPortalFocus = true;
                         lockedScrollY = window.scrollY;
                         document.body.classList.add('no-scrollbar');
                         activePortal = clickedPortal;
                         animateRings(clickedPortal, true);
-                    },
-                    onUpdate: () => camera.lookAt(lookAtTarget.x, lookAtTarget.y, lookAtTarget.z)
+                    }
                 });
+            }
+        };
 
-                const cubeWorldPosition = cube.getWorldPosition(new THREE.Vector3());
+        const handleScroll = (event: WheelEvent | Event) => {
+            if (!isInPortalFocus || !activePortal || !originalCameraPosition || !originalCameraTarget) return;
+
+            let deltaY = 0;
+            if (event instanceof WheelEvent) {
+                deltaY = event.deltaY; // Positive = down, Negative = up
+            } else {
+                const currentScrollY = window.scrollY;
+                deltaY = currentScrollY - (lockedScrollY || 0);
+            }
+
+            if (deltaY > 0) { // Downward scroll
+                event.preventDefault();
+                window.scrollTo(0, lockedScrollY!);
+                return;
+            }
+
+            if (deltaY < 0) { // Upward scroll
+                event.preventDefault();
+                const exitingPortal = activePortal; // Store reference before clearing
+                const targetLookAt = originalCameraTarget.clone(); // Store target before animation
+
                 gsap.to(camera.position, {
-                    x: 0,
-                    y: 0,
-                    z: cubeWorldPosition.z,
-                    duration: 2,
+                    x: originalCameraPosition.x,
+                    y: originalCameraPosition.y,
+                    z: originalCameraPosition.z,
+                    duration: 1,
                     ease: 'power3.out'
+                });
+                gsap.to({}, {
+                    duration: 1,
+                    ease: 'power3.out',
+                    onUpdate: function() {
+                        const progress = this.progress();
+                        const startLookAt = camera.getWorldDirection(new THREE.Vector3()).multiplyScalar(1000).add(camera.position);
+                        const lookAtX = THREE.MathUtils.lerp(startLookAt.x, targetLookAt.x, progress);
+                        const lookAtY = THREE.MathUtils.lerp(startLookAt.y, targetLookAt.y, progress);
+                        const lookAtZ = THREE.MathUtils.lerp(startLookAt.z, targetLookAt.z, progress);
+                        camera.lookAt(lookAtX, lookAtY, lookAtZ);
+                    },
+                    onComplete: () => {
+                        isInPortalFocus = false;
+                        activePortal = null;
+                        lockedScrollY = null;
+                        document.body.classList.remove('no-scrollbar');
+                        if (onPortalFocusChange) onFocusChangeCallback(false);
+                        if (scrollTrigger) scrollTrigger.enable();
+                        animateRings(exitingPortal!, false); // Collapse rings
+                        originalCameraPosition = null;
+                        originalCameraTarget = null; // Safe to clear now
+                    }
                 });
             }
         };
 
         domElement.addEventListener('mousemove', onMouseMove);
         domElement.addEventListener('click', onClick);
-        //console.log('Interactivity listeners attached to', domElement);
+        window.addEventListener('wheel', handleScroll, { passive: false });
+        window.addEventListener('scroll', handleScroll, { passive: false });
 
         return () => {
             domElement.removeEventListener('mousemove', onMouseMove);
             domElement.removeEventListener('click', onClick);
-            //console.log('Interactivity listeners removed');
+            window.removeEventListener('wheel', handleScroll);
+            window.removeEventListener('scroll', handleScroll);
         };
     };
 

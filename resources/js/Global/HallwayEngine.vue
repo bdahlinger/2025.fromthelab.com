@@ -253,6 +253,8 @@ onMounted(() => {
 							if (setReverting) setReverting(isFocused);
 						}
 					);
+                    undefined, // onCubeClick (optional)
+                    scrollTimeline?.scrollTrigger // Pass the ScrollTrigger instance
 				}
 
 				window.scrollTo({ top: 0, behavior: 'auto' });
