@@ -50,7 +50,34 @@ export function useStarfield(scene: THREE.Scene, camera: THREE.PerspectiveCamera
     geometry.setAttribute('opacity', new THREE.BufferAttribute(dynamicOpacities, 1));
 
     const material = new THREE.ShaderMaterial({
-        // ... (unchanged)
+        uniforms: {
+            color: { value: new THREE.Color(1, 1, 1) },
+            size: { value: STAR_SIZE },
+        },
+        vertexShader: `
+            attribute float opacity;
+            varying float vOpacity;
+            uniform float size;
+            void main() {
+                vOpacity = opacity;
+                vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+                gl_PointSize = size * (300.0 / -mvPosition.z); // Size attenuation
+                gl_Position = projectionMatrix * mvPosition;
+            }
+        `,
+        fragmentShader: `
+            uniform vec3 color;
+            varying float vOpacity;
+            void main() {
+                float dist = distance(gl_PointCoord, vec2(0.5, 0.5)) * 2.0;
+                float alpha = vOpacity * (1.0 - dist);
+                if (alpha <= 0.0) discard;
+                gl_FragColor = vec4(color, alpha);
+            }
+        `,
+        transparent: true,
+        fog: false,
+        depthWrite: false,
     });
 
     const starfield = new THREE.Points(geometry, material);
@@ -59,7 +86,16 @@ export function useStarfield(scene: THREE.Scene, camera: THREE.PerspectiveCamera
     const opacityAttribute = geometry.attributes.opacity;
     for (let i = 0; i < STAR_COUNT; i++) {
         gsap.to({ opacity: initialOpacities[i] }, {
-            // ... (unchanged)
+            opacity: 0.05,
+            duration: 1 + Math.random(), // 1 to 2 seconds
+            yoyo: true,
+            repeat: -1,
+            ease: 'sine.inOut',
+            delay: Math.random() * 2,
+            onUpdate: function () {
+                dynamicOpacities[i] = this.targets()[0].opacity;
+                opacityAttribute.needsUpdate = true;
+            },
         });
     }
 

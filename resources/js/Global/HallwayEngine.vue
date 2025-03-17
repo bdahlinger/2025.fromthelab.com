@@ -1,6 +1,5 @@
 <!-- resources/js/Global/HallwayEngine.vue -->
 <script setup lang="ts">
-
 import { onMounted, onUnmounted, ref } from 'vue';
 import { useTunnelStore } from '@/Stores/tunnelStore';
 import * as THREE from 'three';
@@ -35,6 +34,12 @@ const FIRST_CUBE_Z = -500;
 const SCROLL_BUFFER = 100;
 const BLOOM_FADE_START_Z = -520;
 const BLOOM_FADE_END_Z = -720;
+
+// Centralized settings for debugging scene components
+const settings = {
+    showChasers: false,
+    showStarfield: false,
+};
 
 const tunnelWrapper = ref<HTMLElement | null>(null);
 const wrapper = ref<HTMLElement | null>(null);
@@ -167,12 +172,18 @@ const init = async () => {
         const { cityGroup, updateParticles } = useCityscape(scene, scene, projectMaxZ);
         updateCityParticles = updateParticles;
 
-        const { dispose } = useStarfield(scene, camera, projectMaxZ);
-        starfieldDispose = dispose;
+        // Conditionally initialize starfield based on settings
+        if (settings.showStarfield) {
+            const { dispose } = useStarfield(scene, camera, projectMaxZ);
+            starfieldDispose = dispose;
+        }
 
-        const { dispose: chaserDispose, updateChasers: updateChasersFunc } = useChaserPath(scene, projectMaxZ);
-        chaserPathDispose = chaserDispose;
-        updateChasers = updateChasersFunc;
+        // Conditionally initialize chasers based on settings
+        if (settings.showChasers) {
+            const { dispose: chaserDispose, updateChasers: updateChasersFunc } = useChaserPath(scene, projectMaxZ);
+            chaserPathDispose = chaserDispose;
+            updateChasers = updateChasersFunc;
+        }
 
         updateRendererSize();
     } catch (error) {
@@ -184,142 +195,135 @@ let lockedZ = null; // Global lock for camera z
 let hasScrolled = false;
 
 const animate = (time: number = 0) => {
-	animationFrameId = requestAnimationFrame(animate);
-	if (renderer && composer) {
-		const delta = (time - lastTime) / 1000;
-		lastTime = time;
-		updateCityParticles(delta);
-		updateChasers?.(delta);
-		const fadeRange = BLOOM_FADE_END_Z - BLOOM_FADE_START_Z;
-		let progress = 0;
-		if (camera.position.z >= BLOOM_FADE_START_Z) {
-			progress = 0;
-		} else if (camera.position.z <= BLOOM_FADE_END_Z) {
-			progress = 1;
-		} else {
-			progress = (camera.position.z - BLOOM_FADE_START_Z) / fadeRange;
-		}
-		bloomPass.strength = THREE.MathUtils.lerp(1.0, 0.125, progress);
-		if (isIntroComplete.value) {
-			updateCubeColors(camera);
-			ScrollTrigger.update();
-			//console.log('Animate frame post-intro, camera z:', camera.position.z);
-		}
-		composer.render();
-	}
-	stats.update();
+    animationFrameId = requestAnimationFrame(animate);
+    if (renderer && composer) {
+        const delta = (time - lastTime) / 1000;
+        lastTime = time;
+        updateCityParticles(delta);
+        // Only update chasers if enabled
+        if (settings.showChasers && updateChasers) {
+            updateChasers(delta);
+        }
+        const fadeRange = BLOOM_FADE_END_Z - BLOOM_FADE_START_Z;
+        let progress = 0;
+        if (camera.position.z >= BLOOM_FADE_START_Z) {
+            progress = 0;
+        } else if (camera.position.z <= BLOOM_FADE_END_Z) {
+            progress = 1;
+        } else {
+            progress = (camera.position.z - BLOOM_FADE_START_Z) / fadeRange;
+        }
+        bloomPass.strength = THREE.MathUtils.lerp(1.0, 0.125, progress);
+        if (isIntroComplete.value) {
+            updateCubeColors(camera);
+            ScrollTrigger.update();
+        }
+        composer.render();
+    }
+    stats.update();
 };
 
 onMounted(() => {
-	init().then(() => {
-		if (isLoaded.value) {
-			animationFrameId = requestAnimationFrame(animate);
+    init().then(() => {
+        if (isLoaded.value) {
+            animationFrameId = requestAnimationFrame(animate);
 
-			const projectCubesInstance = useProjectCubes(scene, { CUBE_SIZE, CUBE_SPACING, FIRST_CUBE_Z }, props.projects, props.projectGridFile, props.projectGridFile2);
-			let scrollTimeline = null;
-			let setReverting = null;
+            const projectCubesInstance = useProjectCubes(scene, { CUBE_SIZE, CUBE_SPACING, FIRST_CUBE_Z }, props.projects, props.projectGridFile, props.projectGridFile2);
+            let scrollTimeline = null;
+            let setReverting = null;
 
-			const setupPromise = projectCubesInstance.getInitializedData().then(({ projectCubes }) => {
-				projectCubes.forEach((cube) => {
-					cube.userData.isActive = true;
-				});
+            const setupPromise = projectCubesInstance.getInitializedData().then(({ projectCubes }) => {
+                projectCubes.forEach((cube) => {
+                    cube.userData.isActive = true;
+                });
 
-				const maxZ = FIRST_CUBE_Z - (props.projects.length - 1) * CUBE_SPACING;
+                const maxZ = FIRST_CUBE_Z - (props.projects.length - 1) * CUBE_SPACING;
 
-				camera.position.set(0, 0, 5000);
-				camera.lookAt(0, 0, maxZ);
-				camera.updateProjectionMatrix();
-				updateCubeColors(camera);
-				composer.render();
+                camera.position.set(0, 0, 5000);
+                camera.lookAt(0, 0, maxZ);
+                camera.updateProjectionMatrix();
+                updateCubeColors(camera);
+                composer.render();
 
-				if (allCubes.length && updateCubeColors) {
-					const { setReverting: setRevertingFunc, timeline } = setupScrollAnimation(
-						scene,
-						camera,
-						wrapper,
-						allCubes,
-						updateCubeColors,
-						{ CUBE_SIZE, CUBE_SPACING, FIRST_CUBE_Z }
-					);
-					setReverting = setRevertingFunc;
-					scrollTimeline = timeline;
-				}
+                if (allCubes.length && updateCubeColors) {
+                    const { setReverting: setRevertingFunc, timeline } = setupScrollAnimation(
+                        scene,
+                        camera,
+                        wrapper,
+                        allCubes,
+                        updateCubeColors,
+                        { CUBE_SIZE, CUBE_SPACING, FIRST_CUBE_Z }
+                    );
+                    setReverting = setRevertingFunc;
+                    scrollTimeline = timeline;
+                }
 
-				if (renderer && cleanupInteractivity === null) {
-					cleanupInteractivity = projectCubesInstance.setupInteractivity(
-						camera,
-						renderer.domElement,
-						(isFocused, originalPosition, originalTarget) => {
-							if (setReverting) setReverting(isFocused);
-						}
-					);
-                    undefined, // onCubeClick (optional)
-                    scrollTimeline?.scrollTrigger // Pass the ScrollTrigger instance
-				}
+                if (renderer && cleanupInteractivity === null) {
+                    cleanupInteractivity = projectCubesInstance.setupInteractivity(
+                        camera,
+                        renderer.domElement,
+                        (isFocused, originalPosition, originalTarget) => {
+                            if (setReverting) setReverting(isFocused);
+                        },
+                        undefined,
+                        scrollTimeline?.scrollTrigger
+                    );
+                }
 
-				window.scrollTo({ top: 0, behavior: 'auto' });
-			});
+                window.scrollTo({ top: 0, behavior: 'auto' });
+            });
 
-			const startIntro = () => {
-				setupPromise.then(() => {
-					showPreloader.value = false;
+            const startIntro = () => {
+                setupPromise.then(() => {
+                    showPreloader.value = false;
 
-					camera.position.set(0, 0, 5000);
-					camera.updateProjectionMatrix();
+                    camera.position.set(0, 0, 5000);
+                    camera.updateProjectionMatrix();
 
-					gsap.to(renderer.domElement, {
-						opacity: 1,
-						duration: 0.5,
-						ease: 'power4.out'
-					});
+                    gsap.to(renderer.domElement, {
+                        opacity: 1,
+                        duration: 0.5,
+                        ease: 'power4.out'
+                    });
 
-					const cameraPos = { z: 5000 };
-					gsap.to(cameraPos, {
-						z: 0,
-						duration: 2,
-						ease: 'power4.out',
-						onUpdate: () => {
-							camera.position.z = cameraPos.z;
-							camera.updateProjectionMatrix();
-						},
-						onComplete: () => {
-							camera.position.z = 0;
-							isIntroComplete.value = true;
-						}
-					});
-				});
-			};
+                    const cameraPos = { z: 5000 };
+                    gsap.to(cameraPos, {
+                        z: 0,
+                        duration: 2,
+                        ease: 'power4.out',
+                        onUpdate: () => {
+                            camera.position.z = cameraPos.z;
+                            camera.updateProjectionMatrix();
+                        },
+                        onComplete: () => {
+                            camera.position.z = 0;
+                            isIntroComplete.value = true;
+                        }
+                    });
+                });
+            };
 
-			gsap.delayedCall(0.1, startIntro);
-		}
-	}).catch((error) => {
-		// Keep error logging for now
-		console.error('Initialization failed:', error);
-	});
-	window.addEventListener('resize', handleResize);
+            gsap.delayedCall(0.1, startIntro);
+        }
+    }).catch((error) => {
+        console.error('Initialization failed:', error);
+    });
+    window.addEventListener('resize', handleResize);
 });
 
-// Clean up on unmount
-/*onUnmounted(() => {
-	if (animationFrameId) cancelAnimationFrame(animationFrameId);
-	if (cleanupInteractivity) cleanupInteractivity();
-	if (cleanupScroll) cleanupScroll();
-	window.removeEventListener('resize', handleResize);
-	console.log('HallwayEngine unmounted');
-});*/
-
 onUnmounted(() => {
-    //console.log('HallwayEngine unmounted');
+    if (animationFrameId) cancelAnimationFrame(animationFrameId);
     if (cleanupInteractivity) cleanupInteractivity();
     window.removeEventListener('resize', handleResize);
-    cancelAnimationFrame(animationFrameId);
     ScrollTrigger.getAll().forEach(trigger => trigger.kill());
     renderer.dispose();
     composer.dispose();
     scene.clear();
     document.body.removeChild(stats.dom);
-    if (starfieldDispose) starfieldDispose();
-    if (chaserPathDispose) chaserPathDispose();
+    // Conditionally dispose starfield if enabled
+    if (settings.showStarfield && starfieldDispose) starfieldDispose();
+    // Conditionally dispose chasers if enabled
+    if (settings.showChasers && chaserPathDispose) chaserPathDispose();
 });
 
 const handleResize = () => {
