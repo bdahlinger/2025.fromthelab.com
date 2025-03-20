@@ -145,7 +145,7 @@ const init = async () => {
         0.0
     );
     bloomPass.renderToScreen = true;
-    if(!tunnelStore.isMobile) composer.addPass(bloomPass);
+    composer.addPass(bloomPass);
 
     if (tunnelWrapper.value) {
         tunnelWrapper.value.appendChild(renderer.domElement);
@@ -190,10 +190,8 @@ const init = async () => {
         projectMaxZ = data.maxZ !== undefined && !isNaN(data.maxZ) ? data.maxZ : -8500;
         updateProgress();
 
-        //if( settings.showIntroCubes ){
-            const { introCubes } = useIntroCubes(scene, scene, { CUBE_SIZE, FIRST_CUBE_Z }, settings);
-            allCubes = [...introCubes, ...data.projectCubes];
-        //}
+        const { introCubes } = useIntroCubes(scene, scene, { CUBE_SIZE, FIRST_CUBE_Z }, settings);
+        allCubes = [...introCubes, ...data.projectCubes];
 
         updateCubeColors = data.updateCubeColors;
 
@@ -220,7 +218,7 @@ const init = async () => {
     }
 };
 
-let frameCount = 0;
+
 const animate = (time: number = 0) => {
     //console.log('RAF Frame:', time);
     if (renderer && composer) {
