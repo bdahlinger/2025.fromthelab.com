@@ -197,8 +197,13 @@ const init = async () => {
     }
 };
 
+let frameCount = 0;
 const animate = (time: number = 0) => {
     animationFrameId = requestAnimationFrame(animate);
+    if(tunnelStore.isMobile) {
+        frameCount++;
+        if (frameCount % 2 === 0) return;
+    }
     if (renderer && composer) {
         const delta = (time - lastTime) / 1000;
         lastTime = time;
@@ -206,19 +211,20 @@ const animate = (time: number = 0) => {
         if (settings.showChasers && updateChasers) {
             updateChasers(delta);
         }
-        const fadeRange = BLOOM_FADE_END_Z - BLOOM_FADE_START_Z;
-        let progress = 0;
-        if (camera.position.z >= BLOOM_FADE_START_Z) {
-            progress = 0;
-        } else if (camera.position.z <= BLOOM_FADE_END_Z) {
-            progress = 1;
-        } else {
-            progress = (camera.position.z - BLOOM_FADE_START_Z) / fadeRange;
+        if(!tunnelStore.isMobile){
+            const fadeRange = BLOOM_FADE_END_Z - BLOOM_FADE_START_Z;
+            let progress = 0;
+            if (camera.position.z >= BLOOM_FADE_START_Z) {
+                progress = 0;
+            } else if (camera.position.z <= BLOOM_FADE_END_Z) {
+                progress = 1;
+            } else {
+                progress = (camera.position.z - BLOOM_FADE_START_Z) / fadeRange;
+            }
+            bloomPass.strength = THREE.MathUtils.lerp(1.0, 0.125, progress);
         }
-        bloomPass.strength = THREE.MathUtils.lerp(1.0, 0.125, progress);
         if (isIntroComplete.value) {
             updateCubeColors(camera);
-            //console.log(`[animate] Camera Z during render: ${camera.position.z}`);
             ScrollTrigger.update();
         }
         composer.render();
