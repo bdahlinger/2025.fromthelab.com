@@ -124,7 +124,7 @@ const init = async () => {
         0.0
     );
     bloomPass.renderToScreen = true;
-    composer.addPass(bloomPass);
+    //composer.addPass(bloomPass);
 
     if (tunnelWrapper.value) {
         tunnelWrapper.value.appendChild(renderer.domElement);
