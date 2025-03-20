@@ -240,7 +240,7 @@ const animate = (time: number = 0) => {
             bloomPass.strength = THREE.MathUtils.lerp(1.0, 0.125, progress);
         }
         if (isIntroComplete.value) {
-            updateCubeColors(camera);
+            //updateCubeColors(camera);
             ScrollTrigger.update();
         }
         composer.render();
