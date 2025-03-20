@@ -37,13 +37,13 @@ const props = defineProps<{
 
         <div class="flex justify-center items-center">
 
-            <cube-strip :particle-width="20" :particle-height="20" />
+<!--            <cube-strip :particle-width="20" :particle-height="20" />-->
 
         </div>
 
         <div class="flex justify-center items-center -mt-24 mix-blend-screen">
 
-            <cube-strip :particle-width="15" :particle-height="160" />
+<!--            <cube-strip :particle-width="15" :particle-height="160" />-->
 
         </div>
 

@@ -24,7 +24,7 @@ export function setupScrollAnimation(
 
     const scrollRange = Math.abs(MAX_Z) + (cubeCount - 1) * CUBE_SPACING;
     const timeline = gsap.timeline();
-    
+
     if (settings.showScrollTrigger) {
         const timeline = gsap.timeline({
             scrollTrigger: {

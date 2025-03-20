@@ -216,10 +216,10 @@ const init = async () => {
 let frameCount = 0;
 const animate = (time: number = 0) => {
     animationFrameId = requestAnimationFrame(animate);
-    if(tunnelStore.isMobile) {
+    /*if(tunnelStore.isMobile) {
         frameCount++;
         if (frameCount % 2 === 0) return;
-    }
+    }*/
     if (renderer && composer) {
         const delta = (time - lastTime) / 1000;
         lastTime = time;
