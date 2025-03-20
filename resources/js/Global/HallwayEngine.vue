@@ -74,11 +74,17 @@ let updateCubeColors: ((camera: THREE.PerspectiveCamera) => void) | null = null;
 const updateRendererSize = () => {
     const width = tunnelWrapper.value ? tunnelWrapper.value.getBoundingClientRect().width : window.innerWidth;
     const height = window.innerHeight;
-    renderer.setSize(width, height);
-    composer.setSize(width, height);
+    const scaleFactor = tunnelStore.isMobile ? 0.75 : 1.0;
+
+    renderer.setSize(width * scaleFactor, height * scaleFactor);
+    composer.setSize(width * scaleFactor, height * scaleFactor);
+
     camera.aspect = width / height;
     camera.far = 60000;
     camera.updateProjectionMatrix();
+
+    renderer.domElement.style.width = `${width}px`;
+    renderer.domElement.style.height = `${height}px`;
 };
 
 const loadTexture = (url: string): Promise<THREE.Texture> => {
@@ -110,7 +116,13 @@ const init = async () => {
     camera.lookAt(0, 0, 1000);
 
     renderer = new THREE.WebGLRenderer({ antialias: true });
-    renderer.setPixelRatio(window.devicePixelRatio);
+
+    if(tunnelStore.isMobile){
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5))
+    }else{
+        renderer.setPixelRatio(window.devicePixelRatio);
+    }
+
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.0;
     renderer.outputEncoding = THREE.sRGBEncoding;
