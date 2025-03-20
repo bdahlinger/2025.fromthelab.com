@@ -239,16 +239,17 @@ const animate = (time: number = 0) => {
             }
             bloomPass.strength = THREE.MathUtils.lerp(1.0, 0.125, progress);
         }
-        if (isIntroComplete.value) {
+        //if (isIntroComplete.value) {
             //updateCubeColors(camera);
             //ScrollTrigger.update();
-        }
+        //}
         composer.render();
     }
     stats.update();
 };
 
 onMounted(() => {
+    console.log('start.')
     init().then(() => {
         if (isLoaded.value) {
             animationFrameId = requestAnimationFrame(animate);
