@@ -11,7 +11,8 @@ export function setupScrollAnimation(
     allCubes: THREE.Group[],
     updateCubeColors: (camera: THREE.PerspectiveCamera) => void,
     config: { CUBE_SIZE: number; CUBE_SPACING: number; FIRST_CUBE_Z: number },
-    options: { scrub?: number } = {} // Add options parameter
+    options: { scrub?: number } = {},
+    settings: { showScrollTrigger: boolean }
 ) {
 
     ScrollTrigger.config({ syncTouch: true });
@@ -22,31 +23,38 @@ export function setupScrollAnimation(
     let isReverting = false;
 
     const scrollRange = Math.abs(MAX_Z) + (cubeCount - 1) * CUBE_SPACING;
-
-    const timeline = gsap.timeline({
-        scrollTrigger: {
-            trigger: wrapper.value,
-            start: 'top top',
-            end: `+=${scrollRange}`,
-            scrub: options.scrub || 0.5,
-            pin: true,
-            onUpdate: (self) => {
-                if (!isReverting) { // Only update if not in portal mode
-                    const progress = self.progress;
-                    const newZ = THREE.MathUtils.lerp(0, MAX_Z, progress);
-                    camera.position.set(0, 0, newZ);
-                    camera.lookAt(0, 0, MAX_Z);
+    const timeline = gsap.timeline();
+    
+    if (settings.showScrollTrigger) {
+        const timeline = gsap.timeline({
+            scrollTrigger: {
+                trigger: wrapper.value,
+                start: 'top top',
+                end: `+=${scrollRange}`,
+                scrub: options.scrub || 0.5,
+                pin: true,
+                onUpdate: (self) => {
+                    if (!isReverting) { // Only update if not in portal mode
+                        const progress = self.progress;
+                        const newZ = THREE.MathUtils.lerp(0, MAX_Z, progress);
+                        camera.position.set(0, 0, newZ);
+                        camera.lookAt(0, 0, MAX_Z);
+                        // Log update frequency and performance
+                        console.log(`ScrollTrigger onUpdate - Progress: ${progress.toFixed(3)}, Camera Z: ${newZ.toFixed(1)}, FPS: ${stats.fps.toFixed(1)}`);
+                    }
+                    updateCubeColors(camera);
                 }
-                updateCubeColors(camera);
             }
-        }
-    });
+        });
 
-    timeline.fromTo(camera.position,
-        { z: 0 },
-        { z: MAX_Z, duration: 1, ease: 'none' }
-    );
+        timeline.fromTo(camera.position,
+            { z: 0 },
+            { z: MAX_Z, duration: 1, ease: 'none' }
+        );
 
+    } else {
+        console.log('ScrollTrigger disabled - Camera movement paused');
+    }
     const setReverting = (value: boolean) => {
         isReverting = value;
     };

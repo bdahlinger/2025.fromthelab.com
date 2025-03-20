@@ -46,6 +46,7 @@ const settings = {
     showKeyarts: false,
     showProjectGrids: false,
     showProjectTitles: false,
+    showScrollTrigger: false,
 };
 
 const tunnelWrapper = ref<HTMLElement | null>(null);
@@ -278,7 +279,8 @@ onMounted(() => {
                         allCubes,
                         updateCubeColors,
                         { CUBE_SIZE, CUBE_SPACING, FIRST_CUBE_Z },
-                        { scrub: 1 }
+                        { scrub: 1 },
+                        settings
                     );
                     setReverting = result.setReverting;
                     scrollTimeline = result.timeline;
