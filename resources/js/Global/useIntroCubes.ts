@@ -6,9 +6,17 @@ import { SVGLoader } from 'three/examples/jsm/loaders/SVGLoader'
 export function useIntroCubes(
     sceneNoGlow: THREE.Scene,
     sceneGlow: THREE.Scene,
-    fontPromise: Promise<THREE.Font>,
-    config: { CUBE_SIZE: number; FIRST_CUBE_Z: number }
+    config: { CUBE_SIZE: number; FIRST_CUBE_Z: number },
+    settings: {
+        showIntroCubes: boolean
+    }
 ) {
+
+    if (!settings.showIntroCubes) {
+        return { introCubes: [] };
+    }
+
+
     const { CUBE_SIZE, FIRST_CUBE_Z } = config;
     const CUBE_SIZE_STEP = 8;
     const CUBE_COUNT_INTRO = 24;
@@ -134,12 +142,6 @@ export function useIntroCubes(
 
     setupIntro()
 
-    fontPromise.then((font) => {
-        if (font) {
-            const messageGroup = createMessageGroup(font)
-            sceneNoGlow.add(messageGroup) // Single scene usage
-        }
-    })
 
     return { introCubes }
 

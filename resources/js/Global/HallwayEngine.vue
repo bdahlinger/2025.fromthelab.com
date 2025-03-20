@@ -47,6 +47,7 @@ const settings = {
     showProjectGrids: false,
     showProjectTitles: false,
     showScrollTrigger: true,
+    showIntroCubes: false,
 };
 
 const tunnelWrapper = ref<HTMLElement | null>(null);
@@ -186,8 +187,11 @@ const init = async () => {
         projectMaxZ = data.maxZ !== undefined && !isNaN(data.maxZ) ? data.maxZ : -8500;
         updateProgress();
 
-        const { introCubes } = useIntroCubes(scene, scene, Promise.resolve(data.loadedFont), { CUBE_SIZE, FIRST_CUBE_Z });
-        allCubes = [...introCubes, ...data.projectCubes];
+        //if( settings.showIntroCubes ){
+            const { introCubes } = useIntroCubes(scene, scene, { CUBE_SIZE, FIRST_CUBE_Z }, settings);
+            allCubes = [...introCubes, ...data.projectCubes];
+        //}
+
         updateCubeColors = data.updateCubeColors;
 
         if( settings.showCars ){
