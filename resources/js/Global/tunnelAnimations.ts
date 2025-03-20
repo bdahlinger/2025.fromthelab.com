@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import Stats from 'three/examples/jsm/libs/stats.module';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -12,7 +13,8 @@ export function setupScrollAnimation(
     updateCubeColors: (camera: THREE.PerspectiveCamera) => void,
     config: { CUBE_SIZE: number; CUBE_SPACING: number; FIRST_CUBE_Z: number },
     options: { scrub?: number } = {},
-    settings: { showScrollTrigger: boolean }
+    settings: { showScrollTrigger: boolean },
+    stats?: Stats
 ) {
 
     ScrollTrigger.config({ syncTouch: true });
@@ -34,16 +36,15 @@ export function setupScrollAnimation(
                 scrub: options.scrub || 0.5,
                 pin: true,
                 onUpdate: (self) => {
-                    if (!isReverting) { // Only update if not in portal mode
+                    if (!isReverting) {
                         const progress = self.progress;
                         const newZ = THREE.MathUtils.lerp(0, MAX_Z, progress);
                         camera.position.set(0, 0, newZ);
                         camera.lookAt(0, 0, MAX_Z);
-                        // Log update frequency and performance
-                        console.log(`ScrollTrigger onUpdate - Progress: ${progress.toFixed(3)}, Camera Z: ${newZ.toFixed(1)}, FPS: ${stats.fps.toFixed(1)}`);
                     }
-                    updateCubeColors(camera);
+                    //updateCubeColors(camera);
                 }
+
             }
         });
 

@@ -280,7 +280,8 @@ onMounted(() => {
                         updateCubeColors,
                         { CUBE_SIZE, CUBE_SPACING, FIRST_CUBE_Z },
                         { scrub: 1 },
-                        settings
+                        settings,
+                        stats
                     );
                     setReverting = result.setReverting;
                     scrollTimeline = result.timeline;
