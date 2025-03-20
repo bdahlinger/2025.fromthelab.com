@@ -42,7 +42,9 @@ const settings = {
     showStarfield: false,
     showCars: false,
     showBuildings: false,
-    showPortalPulses: false, // New setting to toggle portal pulse animations
+    showPortalPulses: false,
+    showKeyarts: false,
+    showProjectGrids: false,
 };
 
 const tunnelWrapper = ref<HTMLElement | null>(null);
@@ -381,7 +383,11 @@ const handleResize = () => {
     overflow-x: hidden;
     max-width: none;
 }
-
+.tunnel-wrapper canvas {
+    width: 100% !important;
+    height: 100% !important;
+    display: block;
+}
 .pin-spacer {
     width: 100% !important;
     max-width: none !important;

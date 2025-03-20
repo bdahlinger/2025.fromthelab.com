@@ -14,7 +14,11 @@ export function useProjectCubes(
     projects: App.Data.ProjectData[],
     projectGridFile: string,
     projectGridFile2: string,
-    settings: { showPortalPulses: boolean } // Add settings parameter
+    settings: {
+        showPortalPulses: boolean
+        showKeyarts: boolean;
+        showProjectGrids: boolean;
+    } // Add settings parameter
 ) {
     const { CUBE_SIZE, CUBE_SPACING, FIRST_CUBE_Z } = config;
     const MAX_Z = FIRST_CUBE_Z - (projects.length + 1) * CUBE_SPACING;
@@ -70,13 +74,13 @@ export function useProjectCubes(
             opacity: 0
         });
         const cube = new THREE.LineSegments(edges, material);
-        cube.geometry.computeBoundingSphere(); // Compute bounds for edges
+        cube.geometry.computeBoundingSphere();
         group.add(cube);
 
         let portalLocation: 'left' | 'top' | 'right' | 'bottom' = 'right';
         const halfSize = size / 2;
 
-        if (keyart) {
+        if (keyart && settings.showKeyarts) {
             const location = (['left', 'top', 'right', 'bottom'] as const).includes(keyartLocation as any)
                 ? keyartLocation as 'left' | 'top' | 'right' | 'bottom'
                 : 'left';
@@ -102,14 +106,14 @@ export function useProjectCubes(
             const portal = new THREE.LineSegments(portalEdges, portalMaterial);
             portal.userData.isPortal = true;
             portal.userData.isAnimating = false;
-            portal.geometry.computeBoundingSphere(); // Compute bounds for portal edges
+            portal.geometry.computeBoundingSphere();
 
             const hitboxGeometry = new THREE.PlaneGeometry(120, 120);
             const hitboxMaterial = new THREE.MeshBasicMaterial({ visible: false, side: THREE.DoubleSide });
             const hitbox = new THREE.Mesh(hitboxGeometry, hitboxMaterial);
             hitbox.userData.isPortalHitbox = true;
             hitbox.userData.portal = portal;
-            hitbox.geometry.computeBoundingSphere(); // Compute bounds for hitbox
+            hitbox.geometry.computeBoundingSphere();
 
             const pulsesGroup = new THREE.Group();
             const pulseGeometry = new THREE.PlaneGeometry(PULSE_WIDTH, PULSE_HEIGHT);
@@ -128,7 +132,7 @@ export function useProjectCubes(
                 pulse.rotation.z = angle + Math.PI / 2;
                 pulse.userData.baseOpacity = 0.01;
                 pulse.userData.index = i;
-                pulse.geometry.computeBoundingSphere(); // Compute bounds for pulse
+                pulse.geometry.computeBoundingSphere();
                 pulsesGroup.add(pulse);
             }
 
@@ -148,7 +152,7 @@ export function useProjectCubes(
                 newRing.userData.isPortal = true;
                 newRing.userData.maxOpacity = maxOpacity;
                 newRing.position.z = -i * initialRingSpacing;
-                newRing.geometry.computeBoundingSphere(); // Compute bounds for ring
+                newRing.geometry.computeBoundingSphere();
                 ringPortals.push(newRing);
                 portal.add(newRing);
             }
@@ -200,7 +204,6 @@ export function useProjectCubes(
             }
         };
 
-        // Helper to add children with bounds computation
         const addChildWithBounds = (child: THREE.Object3D) => {
             if (child instanceof THREE.LineSegments || child instanceof THREE.Mesh) {
                 if (child.geometry) {
@@ -210,7 +213,7 @@ export function useProjectCubes(
             group.add(child);
         };
 
-        if (keyart) {
+        if (keyart && settings.showKeyarts) {
             const textureLoader = new THREE.TextureLoader();
             textureLoader.load(
                 keyart,
@@ -260,7 +263,7 @@ export function useProjectCubes(
                             }
                             break;
                     }
-                    plane.geometry.computeBoundingSphere(); // Compute bounds for keyart plane
+                    plane.geometry.computeBoundingSphere();
                     addChildWithBounds(plane);
                     addPortal();
                 },
@@ -274,156 +277,157 @@ export function useProjectCubes(
             addPortal();
         }
 
-        const textureLoader = new THREE.TextureLoader();
-        textureLoader.load(
-            projectGridFile,
-            (texture) => {
-                texture.encoding = THREE.sRGBEncoding;
-                const gridGeometry = new THREE.PlaneGeometry(size - 1, size - 1);
-                const gridMaterial = new THREE.MeshBasicMaterial({
-                    map: texture,
-                    transparent: true,
-                    opacity: 0,
-                    blending: THREE.AdditiveBlending,
-                    side: THREE.DoubleSide,
-                    depthWrite: false
-                });
-                const gridPlane = new THREE.Mesh(gridGeometry, gridMaterial);
-                gridPlane.position.set(0, 0, -size / 2 - 1);
-                gridPlane.rotation.y = 0;
-                gridPlane.userData.isGridPlane = true;
-                gridPlane.geometry.computeBoundingSphere(); // Compute bounds for grid plane
-                addChildWithBounds(gridPlane);
-            },
-            undefined,
-            (error) => {
-                console.error('Error loading projectGridFile:', error);
-            }
-        );
-
-        const textureLoader2 = new THREE.TextureLoader();
-        textureLoader2.load(
-            projectGridFile,
-            (texture) => {
-                texture.encoding = THREE.sRGBEncoding;
-                const gridGeometry = new THREE.PlaneGeometry(size - 1, size - 1);
-                const gridMaterial = new THREE.MeshBasicMaterial({
-                    map: texture,
-                    transparent: true,
-                    opacity: 0,
-                    blending: THREE.AdditiveBlending,
-                    side: THREE.DoubleSide,
-                    depthWrite: false,
-                    color: new THREE.Color(0xff8000)
-                });
-                const gridPlane = new THREE.Mesh(gridGeometry, gridMaterial);
-                gridPlane.position.set(0, 0, size / 2 + 1);
-                gridPlane.rotation.y = 0;
-                gridPlane.userData.isGridPlane = true;
-                gridPlane.geometry.computeBoundingSphere(); // Compute bounds for grid plane
-                addChildWithBounds(gridPlane);
-            },
-            undefined,
-            (error) => {
-                console.error('Error loading projectGridFile:', error);
-            }
-        );
-
-        const allFaces = ['left', 'top', 'right', 'bottom'];
-        const keyartFace = keyart ? keyartLocation || 'left' : null;
-        const usedFaces = [keyartFace, portalLocation].filter(Boolean) as string[];
-        const freeFaces = allFaces.filter(face => !usedFaces.includes(face));
-
-        const textureLoader3 = new THREE.TextureLoader();
-        textureLoader3.load(
-            projectGridFile,
-            (texture) => {
-                texture.encoding = THREE.sRGBEncoding;
-                const gridGeometry = new THREE.PlaneGeometry(size - 1, size - 1);
-                const gridMaterial = new THREE.MeshBasicMaterial({
-                    map: texture,
-                    transparent: true,
-                    opacity: 0,
-                    blending: THREE.AdditiveBlending,
-                    side: THREE.DoubleSide,
-                    depthWrite: false,
-                    color: new THREE.Color(0x0000ff)
-                });
-                const gridPlane = new THREE.Mesh(gridGeometry, gridMaterial);
-                const blueFace = freeFaces[0];
-                switch (blueFace) {
-                    case 'left':
-                        gridPlane.position.set(-halfSize, 0, 0);
-                        gridPlane.rotation.y = -Math.PI / 2;
-                        break;
-                    case 'top':
-                        gridPlane.position.set(0, halfSize, 0);
-                        gridPlane.rotation.x = Math.PI / 2;
-                        break;
-                    case 'right':
-                        gridPlane.position.set(halfSize, 0, 0);
-                        gridPlane.rotation.y = Math.PI / 2;
-                        break;
-                    case 'bottom':
-                        gridPlane.position.set(0, -halfSize, 0);
-                        gridPlane.rotation.x = -Math.PI / 2;
-                        break;
+        if (settings.showProjectGrids) {
+            const textureLoader = new THREE.TextureLoader();
+            textureLoader.load(
+                projectGridFile,
+                (texture) => {
+                    texture.encoding = THREE.sRGBEncoding;
+                    const gridGeometry = new THREE.PlaneGeometry(size - 1, size - 1);
+                    const gridMaterial = new THREE.MeshBasicMaterial({
+                        map: texture,
+                        transparent: true,
+                        opacity: 0,
+                        blending: THREE.AdditiveBlending,
+                        side: THREE.DoubleSide,
+                        depthWrite: false
+                    });
+                    const gridPlane = new THREE.Mesh(gridGeometry, gridMaterial);
+                    gridPlane.position.set(0, 0, -size / 2 - 1);
+                    gridPlane.rotation.y = 0;
+                    gridPlane.userData.isGridPlane = true;
+                    gridPlane.geometry.computeBoundingSphere();
+                    addChildWithBounds(gridPlane);
+                },
+                undefined,
+                (error) => {
+                    console.error('Error loading projectGridFile:', error);
                 }
-                gridPlane.userData.isGridPlane = true;
-                gridPlane.geometry.computeBoundingSphere(); // Compute bounds for grid plane
-                addChildWithBounds(gridPlane);
-            },
-            undefined,
-            (error) => {
-                console.error('Error loading projectGridFile:', error);
-            }
-        );
+            );
 
-        const textureLoader4 = new THREE.TextureLoader();
-        textureLoader4.load(
-            projectGridFile2,
-            (texture) => {
-                texture.encoding = THREE.sRGBEncoding;
-                const gridGeometry = new THREE.PlaneGeometry(size - 1, size - 1);
-                const gridMaterial = new THREE.MeshBasicMaterial({
-                    map: texture,
-                    transparent: true,
-                    opacity: 0,
-                    blending: THREE.AdditiveBlending,
-                    side: THREE.DoubleSide,
-                    depthWrite: false
-                });
-                const gridPlane = new THREE.Mesh(gridGeometry, gridMaterial);
-                const greenFace = freeFaces[1];
-                switch (greenFace) {
-                    case 'left':
-                        gridPlane.position.set(-halfSize, 0, 0);
-                        gridPlane.rotation.y = -Math.PI / 2;
-                        break;
-                    case 'top':
-                        gridPlane.position.set(0, halfSize, 0);
-                        gridPlane.rotation.x = Math.PI / 2;
-                        break;
-                    case 'right':
-                        gridPlane.position.set(halfSize, 0, 0);
-                        gridPlane.rotation.y = Math.PI / 2;
-                        break;
-                    case 'bottom':
-                        gridPlane.position.set(0, -halfSize, 0);
-                        gridPlane.rotation.x = -Math.PI / 2;
-                        break;
+            const textureLoader2 = new THREE.TextureLoader();
+            textureLoader2.load(
+                projectGridFile,
+                (texture) => {
+                    texture.encoding = THREE.sRGBEncoding;
+                    const gridGeometry = new THREE.PlaneGeometry(size - 1, size - 1);
+                    const gridMaterial = new THREE.MeshBasicMaterial({
+                        map: texture,
+                        transparent: true,
+                        opacity: 0,
+                        blending: THREE.AdditiveBlending,
+                        side: THREE.DoubleSide,
+                        depthWrite: false,
+                        color: new THREE.Color(0xff8000)
+                    });
+                    const gridPlane = new THREE.Mesh(gridGeometry, gridMaterial);
+                    gridPlane.position.set(0, 0, size / 2 + 1);
+                    gridPlane.rotation.y = 0;
+                    gridPlane.userData.isGridPlane = true;
+                    gridPlane.geometry.computeBoundingSphere();
+                    addChildWithBounds(gridPlane);
+                },
+                undefined,
+                (error) => {
+                    console.error('Error loading projectGridFile:', error);
                 }
-                gridPlane.userData.isGridPlane = true;
-                gridPlane.geometry.computeBoundingSphere(); // Compute bounds for grid plane
-                addChildWithBounds(gridPlane);
-            },
-            undefined,
-            (error) => {
-                console.error('Error loading projectGridFile2:', error);
-            }
-        );
+            );
 
-        // Compute group-level bounding sphere for synchronous children
+            const allFaces = ['left', 'top', 'right', 'bottom'];
+            const keyartFace = keyart && settings.showKeyarts ? keyartLocation || 'left' : null;
+            const usedFaces = [keyartFace, portalLocation].filter(Boolean) as string[];
+            const freeFaces = allFaces.filter(face => !usedFaces.includes(face));
+
+            const textureLoader3 = new THREE.TextureLoader();
+            textureLoader3.load(
+                projectGridFile,
+                (texture) => {
+                    texture.encoding = THREE.sRGBEncoding;
+                    const gridGeometry = new THREE.PlaneGeometry(size - 1, size - 1);
+                    const gridMaterial = new THREE.MeshBasicMaterial({
+                        map: texture,
+                        transparent: true,
+                        opacity: 0,
+                        blending: THREE.AdditiveBlending,
+                        side: THREE.DoubleSide,
+                        depthWrite: false,
+                        color: new THREE.Color(0x0000ff)
+                    });
+                    const gridPlane = new THREE.Mesh(gridGeometry, gridMaterial);
+                    const blueFace = freeFaces[0];
+                    switch (blueFace) {
+                        case 'left':
+                            gridPlane.position.set(-halfSize, 0, 0);
+                            gridPlane.rotation.y = -Math.PI / 2;
+                            break;
+                        case 'top':
+                            gridPlane.position.set(0, halfSize, 0);
+                            gridPlane.rotation.x = Math.PI / 2;
+                            break;
+                        case 'right':
+                            gridPlane.position.set(halfSize, 0, 0);
+                            gridPlane.rotation.y = Math.PI / 2;
+                            break;
+                        case 'bottom':
+                            gridPlane.position.set(0, -halfSize, 0);
+                            gridPlane.rotation.x = -Math.PI / 2;
+                            break;
+                    }
+                    gridPlane.userData.isGridPlane = true;
+                    gridPlane.geometry.computeBoundingSphere();
+                    addChildWithBounds(gridPlane);
+                },
+                undefined,
+                (error) => {
+                    console.error('Error loading projectGridFile:', error);
+                }
+            );
+
+            const textureLoader4 = new THREE.TextureLoader();
+            textureLoader4.load(
+                projectGridFile2,
+                (texture) => {
+                    texture.encoding = THREE.sRGBEncoding;
+                    const gridGeometry = new THREE.PlaneGeometry(size - 1, size - 1);
+                    const gridMaterial = new THREE.MeshBasicMaterial({
+                        map: texture,
+                        transparent: true,
+                        opacity: 0,
+                        blending: THREE.AdditiveBlending,
+                        side: THREE.DoubleSide,
+                        depthWrite: false
+                    });
+                    const gridPlane = new THREE.Mesh(gridGeometry, gridMaterial);
+                    const greenFace = freeFaces[1];
+                    switch (greenFace) {
+                        case 'left':
+                            gridPlane.position.set(-halfSize, 0, 0);
+                            gridPlane.rotation.y = -Math.PI / 2;
+                            break;
+                        case 'top':
+                            gridPlane.position.set(0, halfSize, 0);
+                            gridPlane.rotation.x = Math.PI / 2;
+                            break;
+                        case 'right':
+                            gridPlane.position.set(halfSize, 0, 0);
+                            gridPlane.rotation.y = Math.PI / 2;
+                            break;
+                        case 'bottom':
+                            gridPlane.position.set(0, -halfSize, 0);
+                            gridPlane.rotation.x = -Math.PI / 2;
+                            break;
+                    }
+                    gridPlane.userData.isGridPlane = true;
+                    gridPlane.geometry.computeBoundingSphere();
+                    addChildWithBounds(gridPlane);
+                },
+                undefined,
+                (error) => {
+                    console.error('Error loading projectGridFile2:', error);
+                }
+            );
+        }
+
         group.children.forEach((child) => {
             if (child instanceof THREE.LineSegments || child instanceof THREE.Mesh) {
                 if (child.geometry && !child.geometry.boundingSphere) {
@@ -431,7 +435,7 @@ export function useProjectCubes(
                 }
             }
         });
-        group.updateMatrixWorld(true); // Ensure transforms are applied
+        group.updateMatrixWorld(true);
         const box = new THREE.Box3().setFromObject(group);
         const sphere = new THREE.Sphere();
         box.getBoundingSphere(sphere);
@@ -439,6 +443,7 @@ export function useProjectCubes(
 
         return group;
     };
+
 
     const createTextObject = (text: string, x: number, y: number, z: number, size: number, font: THREE.Font): THREE.Mesh => {
         const textGeometry = new TextGeometry(text, {

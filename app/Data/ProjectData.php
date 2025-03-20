@@ -14,6 +14,7 @@ class ProjectData extends Data
         public string $title,
         public float $size,
         public ?string $keyart = null,
+        public ?string $keyartMobile = null,
         public ?string $keyartLocation = null,
     ) {}
 
