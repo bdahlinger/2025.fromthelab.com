@@ -51,6 +51,7 @@ const loadingProgress = ref(0);
 const isIntroComplete = ref(false);
 const showPreloader = ref(true);
 const textureCache = new Map<string, THREE.Texture>();
+const updateCubeColorsRef = ref<((camera: THREE.PerspectiveCamera) => void) | null>(null);
 
 let scene: THREE.Scene;
 let camera: THREE.PerspectiveCamera;
@@ -69,7 +70,6 @@ let updateChasers: ((delta: number) => void) | null = null;
 let cityscapeDispose: (() => void) | null = null;
 let allCubes: THREE.Group[] = [];
 let updateCubeColors: ((camera: THREE.PerspectiveCamera) => void) | null = null;
-
 const updateRendererSize = () => {
     const width = tunnelWrapper.value ? tunnelWrapper.value.getBoundingClientRect().width : window.innerWidth;
     const height = window.innerHeight;
@@ -194,9 +194,6 @@ const init = async () => {
     }
 };
 
-let lockedZ = null; // Global lock for camera z
-let hasScrolled = false;
-
 const animate = (time: number = 0) => {
     animationFrameId = requestAnimationFrame(animate);
     if (renderer && composer) {
@@ -218,6 +215,7 @@ const animate = (time: number = 0) => {
         bloomPass.strength = THREE.MathUtils.lerp(1.0, 0.125, progress);
         if (isIntroComplete.value) {
             updateCubeColors(camera);
+            //console.log(`[animate] Camera Z during render: ${camera.position.z}`);
             ScrollTrigger.update();
         }
         composer.render();
@@ -232,6 +230,7 @@ onMounted(() => {
 
             const projectCubesInstance = useProjectCubes(scene, { CUBE_SIZE, CUBE_SPACING, FIRST_CUBE_Z }, props.projects, props.projectGridFile, props.projectGridFile2, settings);
             let scrollTimeline = null;
+            let scrollTrigger = null;
             let setReverting = null;
 
             const setupPromise = projectCubesInstance.getInitializedData().then(({ projectCubes }) => {
@@ -248,32 +247,33 @@ onMounted(() => {
                 composer.render();
 
                 if (allCubes.length && updateCubeColors) {
-                    const { setReverting: setRevertingFunc, timeline } = setupScrollAnimation(
+                    const result = setupScrollAnimation(
                         scene,
                         camera,
                         wrapper,
                         allCubes,
                         updateCubeColors,
-                        { CUBE_SIZE, CUBE_SPACING, FIRST_CUBE_Z }
+                        { CUBE_SIZE, CUBE_SPACING, FIRST_CUBE_Z },
+                        { scrub: 0.5 }
                     );
-                    setReverting = setRevertingFunc;
-                    scrollTimeline = timeline;
+                    setReverting = result.setReverting;
+                    scrollTimeline = result.timeline;
+                    scrollTrigger = result.scrollTrigger;
                 }
 
                 if (renderer && cleanupInteractivity === null) {
                     cleanupInteractivity = projectCubesInstance.setupInteractivity(
                         camera,
                         renderer.domElement,
-                        (isFocused, originalPosition, originalTarget) => {
+                        (isFocused) => {
                             if (setReverting) setReverting(isFocused);
-                        },
-                        undefined,
-                        scrollTimeline?.scrollTrigger
+                        }
                     );
                 }
 
                 window.scrollTo({ top: 0, behavior: 'auto' });
             });
+
 
             const startIntro = () => {
                 setupPromise.then(() => {

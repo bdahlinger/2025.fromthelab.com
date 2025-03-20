@@ -2,8 +2,11 @@ import * as THREE from 'three';
 import { FontLoader } from 'three/examples/jsm/loaders/FontLoader';
 import { TextGeometry } from 'three/examples/jsm/geometries/TextGeometry';
 import { gsap } from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { router } from '@inertiajs/vue3';
 import { useTunnelStore } from '@/Stores/tunnelStore';
+import { setupScrollAnimation } from './tunnelAnimations';
+import { Ref } from 'vue';
 
 export function useProjectCubes(
     scene: THREE.Scene,
@@ -42,6 +45,7 @@ export function useProjectCubes(
     let onPortalFocusChange: ((isFocused: boolean, originalPosition?: THREE.Vector3, originalTarget?: THREE.Vector3) => void) | null = null;
     let lastScrollY: number = window.scrollY;
     let isReverting = false;
+    let lockCameraZ: number | null = null;
 
     const tunnelStore = useTunnelStore();
 
@@ -522,6 +526,12 @@ export function useProjectCubes(
         const cameraZ = camera.position.z;
         let textMeshes: THREE.Mesh[] = [];
 
+        // Enforce locked camera Z position if set
+        if (lockCameraZ !== null && Math.abs(camera.position.z - lockCameraZ) > 0.001) {
+            console.log(`[updateCubeColors] Camera Z enforced from ${camera.position.z} to ${lockCameraZ}`);
+            camera.position.z = lockCameraZ;
+        }
+
         scene.traverse((object) => {
             if (object instanceof THREE.Mesh && object.geometry && object.geometry.type === 'TextGeometry') {
                 textMeshes.push(object);
@@ -575,7 +585,7 @@ export function useProjectCubes(
                                     grandchild.children.forEach((pulse) => {
                                         if (pulse instanceof THREE.Mesh) {
                                             pulse.material.visible = true;
-                                            if (!child.userData.animationStarted && settings.showPortalPulses) { // Only animate if enabled
+                                            if (!child.userData.animationStarted && settings.showPortalPulses) {
                                                 animatePulses(child);
                                                 child.userData.animationStarted = true;
                                             }
@@ -634,9 +644,7 @@ export function useProjectCubes(
     const setupInteractivity = (
         camera: THREE.PerspectiveCamera,
         domElement: HTMLCanvasElement,
-        onFocusChangeCallback: (isFocused: boolean, originalPosition?: THREE.Vector3, originalTarget?: THREE.Vector3) => void,
-        onCubeClick?: (cubeIndex: number) => void,
-        scrollTrigger?: ScrollTrigger
+        onFocusChangeCallback: (isFocused: boolean, originalPosition?: THREE.Vector3, originalTarget?: THREE.Vector3) => void
     ) => {
         onPortalFocusChange = onFocusChangeCallback;
 
@@ -770,12 +778,11 @@ export function useProjectCubes(
             } else if (!isInPortalFocus) {
                 if (!originalCameraPosition) {
                     originalCameraPosition = camera.position.clone();
-                    originalCameraTarget = new THREE.Vector3(0, 0, MAX_Z); // Tunnel center
+                    originalCameraTarget = new THREE.Vector3(0, 0, MAX_Z);
                 }
-                if (onPortalFocusChange) onPortalFocusChange(true, originalCameraPosition, originalCameraTarget);
+                if (onPortalFocusChange) onFocusChangeCallback(true, originalCameraPosition, originalCameraTarget);
 
                 const portalWorldPosition = clickedPortal.getWorldPosition(new THREE.Vector3());
-                if (scrollTrigger) scrollTrigger.disable(false); // Disable ScrollTrigger without killing
 
                 gsap.to(camera.position, {
                     x: 0,
@@ -807,33 +814,37 @@ export function useProjectCubes(
         };
 
         const handleScroll = (event: WheelEvent | Event) => {
-            if (!isInPortalFocus || !activePortal || !originalCameraPosition || !originalCameraTarget) return;
+            if (!isInPortalFocus || !activePortal || !originalCameraPosition || !originalCameraTarget) {
+                return;
+            }
 
             let deltaY = 0;
             if (event instanceof WheelEvent) {
-                deltaY = event.deltaY; // Positive = down, Negative = up
+                deltaY = event.deltaY;
             } else {
                 const currentScrollY = window.scrollY;
                 deltaY = currentScrollY - (lockedScrollY || 0);
             }
 
-            if (deltaY > 0) { // Downward scroll
-                event.preventDefault();
+            event.preventDefault();
+            event.stopPropagation();
+
+            if (deltaY > 0) {
                 window.scrollTo(0, lockedScrollY!);
                 return;
             }
 
-            if (deltaY < 0) { // Upward scroll
-                event.preventDefault();
-                const exitingPortal = activePortal; // Store reference before clearing
-                const targetLookAt = originalCameraTarget.clone(); // Store target before animation
+            if (deltaY < 0) {
+                const exitingPortal = activePortal;
+                const targetLookAt = originalCameraTarget.clone();
+                const originalZ = originalCameraPosition!.z;
 
                 gsap.to(camera.position, {
                     x: originalCameraPosition.x,
                     y: originalCameraPosition.y,
-                    z: originalCameraPosition.z,
+                    z: originalZ,
                     duration: 1,
-                    ease: 'power3.out'
+                    ease: 'power3.out',
                 });
                 gsap.to({}, {
                     duration: 1,
@@ -847,15 +858,15 @@ export function useProjectCubes(
                         camera.lookAt(lookAtX, lookAtY, lookAtZ);
                     },
                     onComplete: () => {
+                        camera.lookAt(targetLookAt);
                         isInPortalFocus = false;
                         activePortal = null;
-                        lockedScrollY = null;
                         document.body.classList.remove('no-scrollbar');
                         if (onPortalFocusChange) onFocusChangeCallback(false);
-                        if (scrollTrigger) scrollTrigger.enable();
-                        animateRings(exitingPortal!, false); // Collapse rings
+                        animateRings(exitingPortal!, false);
+                        lockedScrollY = null;
                         originalCameraPosition = null;
-                        originalCameraTarget = null; // Safe to clear now
+                        originalCameraTarget = null;
                     }
                 });
             }
