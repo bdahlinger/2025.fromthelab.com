@@ -592,6 +592,9 @@ export function useProjectCubes(
 
     const frustum = new THREE.Frustum();
     const updateCubeColors = (camera: THREE.PerspectiveCamera) => {
+        const start = performance.now();
+
+
 
         frustum.setFromProjectionMatrix(camera.projectionMatrix.clone().multiply(camera.matrixWorldInverse));
 
@@ -724,6 +727,9 @@ export function useProjectCubes(
                 }
             }
         });
+
+        const end = performance.now();
+        if (end - start > 16) console.log(`updateCubeColors: ${end - start}ms`);
     };
 
     const setupInteractivity = (

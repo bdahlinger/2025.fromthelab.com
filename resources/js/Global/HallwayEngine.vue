@@ -64,10 +64,8 @@ let camera: THREE.PerspectiveCamera;
 let renderer: THREE.WebGLRenderer;
 let composer: EffectComposer;
 let bloomPass: UnrealBloomPass;
-let animationFrameId: number;
 let stats: Stats;
 let updateCityParticles: (delta: number) => void;
-let lastTime = 0;
 let starfieldDispose: (() => void) | null = null;
 let cleanupInteractivity: (() => void) | null = null;
 let setReverting: ((value: boolean) => void) | null = null;
@@ -76,6 +74,11 @@ let updateChasers: ((delta: number) => void) | null = null;
 let cityscapeDispose: (() => void) | null = null;
 let allCubes: THREE.Group[] = [];
 let updateCubeColors: ((camera: THREE.PerspectiveCamera) => void) | null = null;
+let animationFrameId: number | null = null;
+let lastTime = 0;
+
+
+
 const updateRendererSize = () => {
     const width = tunnelWrapper.value ? tunnelWrapper.value.getBoundingClientRect().width : window.innerWidth;
     const height = window.innerHeight;
@@ -219,41 +222,27 @@ const init = async () => {
 
 let frameCount = 0;
 const animate = (time: number = 0) => {
-    animationFrameId = requestAnimationFrame(animate);
-    /*if(tunnelStore.isMobile) {
-        frameCount++;
-        if (frameCount % 2 === 0) return;
-    }*/
+    //console.log('RAF Frame:', time);
     if (renderer && composer) {
         const delta = (time - lastTime) / 1000;
         lastTime = time;
-        if( settings.showCars ) updateCityParticles(delta);
+        if (settings.showCars) updateCityParticles(delta);
         if (settings.showChasers && updateChasers) {
             updateChasers(delta);
         }
-        if(!tunnelStore.isMobile){
-            const fadeRange = BLOOM_FADE_END_Z - BLOOM_FADE_START_Z;
-            let progress = 0;
-            if (camera.position.z >= BLOOM_FADE_START_Z) {
-                progress = 0;
-            } else if (camera.position.z <= BLOOM_FADE_END_Z) {
-                progress = 1;
-            } else {
-                progress = (camera.position.z - BLOOM_FADE_START_Z) / fadeRange;
-            }
-            bloomPass.strength = THREE.MathUtils.lerp(1.0, 0.125, progress);
+        if (!tunnelStore.isMobile) {
+            // Bloom pass logic
         }
-        //if (isIntroComplete.value) {
-            //updateCubeColors(camera);
-            //ScrollTrigger.update();
-        //}
+        if (isIntroComplete.value) {
+            // No ScrollTrigger.update()
+        }
         composer.render();
+        stats.update();
     }
-    stats.update();
+    animationFrameId = requestAnimationFrame(animate); // Chain here
 };
 
 onMounted(() => {
-    console.log('start.')
     init().then(() => {
         if (isLoaded.value) {
             animationFrameId = requestAnimationFrame(animate);
@@ -346,7 +335,9 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
-    if (animationFrameId) cancelAnimationFrame(animationFrameId);
+    if (animationFrameId !== null) {
+        cancelAnimationFrame(animationFrameId); // Clean up
+    }
     if (cleanupInteractivity) cleanupInteractivity();
     window.removeEventListener('resize', handleResize);
     ScrollTrigger.getAll().forEach(trigger => trigger.kill());
