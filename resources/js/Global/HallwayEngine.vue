@@ -241,7 +241,7 @@ const animate = (time: number = 0) => {
         }
         if (isIntroComplete.value) {
             //updateCubeColors(camera);
-            ScrollTrigger.update();
+            //ScrollTrigger.update();
         }
         composer.render();
     }
