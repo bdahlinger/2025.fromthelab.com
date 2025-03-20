@@ -42,7 +42,7 @@ export function setupScrollAnimation(
                         camera.position.set(0, 0, newZ);
                         camera.lookAt(0, 0, MAX_Z);
                     }
-                    //updateCubeColors(camera);
+                    updateCubeColors(camera);
                 }
 
             }
