@@ -46,7 +46,7 @@ const settings = {
     showKeyarts: false,
     showProjectGrids: false,
     showProjectTitles: false,
-    showScrollTrigger: false,
+    showScrollTrigger: true,
 };
 
 const tunnelWrapper = ref<HTMLElement | null>(null);
