@@ -13,6 +13,9 @@ export function setupScrollAnimation(
     config: { CUBE_SIZE: number; CUBE_SPACING: number; FIRST_CUBE_Z: number },
     options: { scrub?: number } = {} // Add options parameter
 ) {
+
+    ScrollTrigger.config({ syncTouch: true });
+
     const { CUBE_SIZE, CUBE_SPACING, FIRST_CUBE_Z } = config;
     const cubeCount = allCubes?.length || 0;
     const MAX_Z = FIRST_CUBE_Z - (cubeCount + 1) * CUBE_SPACING;
