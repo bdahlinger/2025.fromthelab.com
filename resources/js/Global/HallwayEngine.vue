@@ -45,6 +45,7 @@ const settings = {
     showPortalPulses: false,
     showKeyarts: false,
     showProjectGrids: false,
+    showProjectTitles: false,
 };
 
 const tunnelWrapper = ref<HTMLElement | null>(null);

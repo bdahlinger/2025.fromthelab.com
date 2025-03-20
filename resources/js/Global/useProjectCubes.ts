@@ -18,7 +18,8 @@ export function useProjectCubes(
         showPortalPulses: boolean
         showKeyarts: boolean;
         showProjectGrids: boolean;
-    } // Add settings parameter
+        showProjectTitles: boolean;
+    }
 ) {
     const { CUBE_SIZE, CUBE_SPACING, FIRST_CUBE_Z } = config;
     const MAX_Z = FIRST_CUBE_Z - (projects.length + 1) * CUBE_SPACING;
@@ -504,7 +505,9 @@ export function useProjectCubes(
                         const cube = createProjectCube(project, CUBE_SIZE, zPosition, rotation, project.keyart, project.keyartLocation);
                         scene.add(cube);
                         projectCubes.push(cube);
-                        createTextObject(project.title, 0, project.size - 15, FIRST_CUBE_Z + 90 - (index + 1) * CUBE_SPACING, project.size, font);
+                        if (settings.showProjectTitles) { // Only create titles if enabled
+                            createTextObject(project.title, 0, project.size - 15, FIRST_CUBE_Z + 90 - (index + 1) * CUBE_SPACING, project.size, font);
+                        }
                     });
                     resolve();
                 },
