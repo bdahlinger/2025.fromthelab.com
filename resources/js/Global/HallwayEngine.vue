@@ -279,7 +279,7 @@ onMounted(() => {
                         allCubes,
                         updateCubeColors,
                         { CUBE_SIZE, CUBE_SPACING, FIRST_CUBE_Z },
-                        { scrub: 1 },
+                        { scrub: tunnelStore.isMobile ? 3 : 1 },
                         settings,
                         stats
                     );
