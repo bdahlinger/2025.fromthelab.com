@@ -43,11 +43,11 @@ const settings = {
     showCars: false,
     showBuildings: false,
     showPortalPulses: false,
-    showKeyarts: false,
-    showProjectGrids: false,
-    showProjectTitles: false,
+    showKeyarts: true,
+    showProjectGrids: true,
+    showProjectTitles: true,
+    showIntroCubes: true,
     showScrollTrigger: true,
-    showIntroCubes: false,
 };
 
 const tunnelWrapper = ref<HTMLElement | null>(null);
