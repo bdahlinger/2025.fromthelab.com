@@ -20,6 +20,7 @@ import Preloader from './Preloader.vue';
 gsap.registerPlugin(ScrollTrigger);
 
 const tunnelStore = useTunnelStore();
+tunnelStore.isMobile = /iPhone|iPad|Android/i.test(navigator.userAgent);
 
 const props = defineProps<{
     projects: App.Data.ProjectData[];
@@ -124,7 +125,7 @@ const init = async () => {
         0.0
     );
     bloomPass.renderToScreen = true;
-    //composer.addPass(bloomPass);
+    if(!tunnelStore.isMobile) composer.addPass(bloomPass);
 
     if (tunnelWrapper.value) {
         tunnelWrapper.value.appendChild(renderer.domElement);
@@ -173,9 +174,11 @@ const init = async () => {
         allCubes = [...introCubes, ...data.projectCubes];
         updateCubeColors = data.updateCubeColors;
 
-        const { cityGroup, updateParticles, dispose: cityscapeDisposeFunc } = useCityscape(scene, scene, projectMaxZ, settings);
-        updateCityParticles = updateParticles;
-        cityscapeDispose = cityscapeDisposeFunc;
+        if( settings.showCars ){
+            const { cityGroup, updateParticles, dispose: cityscapeDisposeFunc } = useCityscape(scene, scene, projectMaxZ, settings);
+            updateCityParticles = updateParticles;
+            cityscapeDispose = cityscapeDisposeFunc;
+        }
 
         if (settings.showStarfield) {
             const { dispose } = useStarfield(scene, camera, projectMaxZ);
@@ -199,7 +202,7 @@ const animate = (time: number = 0) => {
     if (renderer && composer) {
         const delta = (time - lastTime) / 1000;
         lastTime = time;
-        updateCityParticles(delta);
+        if( settings.showCars ) updateCityParticles(delta);
         if (settings.showChasers && updateChasers) {
             updateChasers(delta);
         }
@@ -254,7 +257,7 @@ onMounted(() => {
                         allCubes,
                         updateCubeColors,
                         { CUBE_SIZE, CUBE_SPACING, FIRST_CUBE_Z },
-                        { scrub: 0.5 }
+                        { scrub: 1 }
                     );
                     setReverting = result.setReverting;
                     scrollTimeline = result.timeline;
