@@ -141,7 +141,7 @@ const init = async () => {
     if(tunnelStore.isMobile){
         bloomPass = new UnrealBloomPass(
             new THREE.Vector2(window.innerWidth, window.innerHeight),
-            1.0,
+            1.3,
             0.2,
             0.0
         );
@@ -251,7 +251,7 @@ const animate = (time: number = 0) => {
         }
 
         if (tunnelStore.isMobile) {
-            bloomPass.strength = THREE.MathUtils.lerp(0.5, 0.0, progress);
+            bloomPass.strength = THREE.MathUtils.lerp(1.3, 0.0, progress);
         } else {
             bloomPass.strength = THREE.MathUtils.lerp(1.6, 0.125, progress); // Was static 6.0
         }

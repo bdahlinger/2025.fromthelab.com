@@ -591,13 +591,24 @@ export function useProjectCubes(
     };
 
     const frustum = new THREE.Frustum();
+
+
+    type CubeRefs = {
+        edge: THREE.LineSegments;
+        portal?: THREE.LineSegments;
+        grid?: THREE.Mesh;
+    };
+    const cubeRefs: CubeRefs[] = projectCubes.map(cube => ({
+        edge: cube.children.find(c => c instanceof THREE.LineSegments && !c.userData.isPortal && !c.userData.isPortalHitbox) as THREE.LineSegments,
+        portal: cube.children.find(c => c instanceof THREE.LineSegments && c.userData.isPortal) as THREE.LineSegments,
+        grid: cube.children.find(c => c instanceof THREE.Mesh && !c.userData.isPortalHitbox) as THREE.Mesh,
+    }));
+
+
     const updateCubeColors = (camera: THREE.PerspectiveCamera) => {
         const start = performance.now();
 
-
-
         frustum.setFromProjectionMatrix(camera.projectionMatrix.clone().multiply(camera.matrixWorldInverse));
-
 
         const cameraZ = camera.position.z;
         let textMeshes: THREE.Mesh[] = [];
