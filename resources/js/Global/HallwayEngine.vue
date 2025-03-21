@@ -38,11 +38,11 @@ const BLOOM_FADE_END_Z = -720;
 
 // Centralized settings for debugging scene components
 const settings = {
-    showChasers: false,
-    showStarfield: false,
-    showCars: false,
-    showBuildings: false,
-    showPortalPulses: false,
+    showChasers: true,
+    showStarfield: true,
+    showCars: true,
+    showBuildings: true,
+    showPortalPulses: true,
     showKeyarts: true,
     showProjectGrids: true,
     showProjectTitles: true,
@@ -138,12 +138,22 @@ const init = async () => {
     composer = new EffectComposer(renderer);
     const renderPass = new RenderPass(scene, camera);
     composer.addPass(renderPass);
-    bloomPass = new UnrealBloomPass(
-        new THREE.Vector2(window.innerWidth, window.innerHeight),
-        6.0,
-        0.4,
-        0.0
-    );
+    if(tunnelStore.isMobile){
+        bloomPass = new UnrealBloomPass(
+            new THREE.Vector2(window.innerWidth, window.innerHeight),
+            1.0,
+            0.2,
+            0.0
+        );
+    }else{
+        bloomPass = new UnrealBloomPass(
+            new THREE.Vector2(window.innerWidth, window.innerHeight),
+            1.6,
+            0.2,
+            0.0
+        );
+    }
+
     bloomPass.renderToScreen = true;
     composer.addPass(bloomPass);
 
@@ -220,7 +230,8 @@ const init = async () => {
 
 
 const animate = (time: number = 0) => {
-    //console.log('RAF Frame:', time);
+    animationFrameId = requestAnimationFrame(animate); // Chain here
+
     if (renderer && composer) {
         const delta = (time - lastTime) / 1000;
         lastTime = time;
@@ -228,16 +239,27 @@ const animate = (time: number = 0) => {
         if (settings.showChasers && updateChasers) {
             updateChasers(delta);
         }
-        if (!tunnelStore.isMobile) {
-            // Bloom pass logic
+
+        const fadeRange = BLOOM_FADE_END_Z - BLOOM_FADE_START_Z;
+        let progress = 0;
+        if (camera.position.z >= BLOOM_FADE_START_Z) {
+            progress = 0; // Full bloom
+        } else if (camera.position.z <= BLOOM_FADE_END_Z) {
+            progress = 1; // Faded out
+        } else {
+            progress = (camera.position.z - BLOOM_FADE_START_Z) / fadeRange;
         }
-        if (isIntroComplete.value) {
-            // No ScrollTrigger.update()
+
+        if (tunnelStore.isMobile) {
+            bloomPass.strength = THREE.MathUtils.lerp(0.5, 0.0, progress);
+        } else {
+            bloomPass.strength = THREE.MathUtils.lerp(1.6, 0.125, progress); // Was static 6.0
         }
+
         composer.render();
-        stats.update();
+
     }
-    animationFrameId = requestAnimationFrame(animate); // Chain here
+    stats.update();
 };
 
 onMounted(() => {
