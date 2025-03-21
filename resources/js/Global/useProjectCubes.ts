@@ -19,7 +19,8 @@ export function useProjectCubes(
         showKeyarts: boolean;
         showProjectGrids: boolean;
         showProjectTitles: boolean;
-    }
+    },
+    textureCache: Map<string, THREE.Texture>
 ) {
     const { CUBE_SIZE, CUBE_SPACING, FIRST_CUBE_Z } = config;
     const MAX_Z = FIRST_CUBE_Z - (projects.length + 1) * CUBE_SPACING;
@@ -36,6 +37,7 @@ export function useProjectCubes(
     const PULSE_OFFSET = 0.1;
 
     let projectCubes: THREE.Group[] = [];
+    projectCubes.length = 0;
     let fontLoader: FontLoader | null = null;
     let loadedFont: THREE.Font | null = null;
     let isInitialized = false;
@@ -48,9 +50,6 @@ export function useProjectCubes(
     let originalCameraTarget: THREE.Vector3 | null = null;
     let isInPortalFocus = false;
     let onPortalFocusChange: ((isFocused: boolean, originalPosition?: THREE.Vector3, originalTarget?: THREE.Vector3) => void) | null = null;
-    let lastScrollY: number = window.scrollY;
-    let isReverting = false;
-    let lockCameraZ: number | null = null;
 
     const tunnelStore = useTunnelStore();
 
@@ -80,18 +79,6 @@ export function useProjectCubes(
 
         let portalLocation: 'left' | 'top' | 'right' | 'bottom' = 'right';
         const halfSize = size / 2;
-
-        if (keyart && settings.showKeyarts) {
-            const location = (['left', 'top', 'right', 'bottom'] as const).includes(keyartLocation as any)
-                ? keyartLocation as 'left' | 'top' | 'right' | 'bottom'
-                : 'left';
-            switch (location) {
-                case 'left': portalLocation = 'right'; break;
-                case 'top': portalLocation = 'bottom'; break;
-                case 'right': portalLocation = 'left'; break;
-                case 'bottom': portalLocation = 'top'; break;
-            }
-        }
 
         const addPortal = () => {
             const innerRadius = 25;
@@ -215,6 +202,77 @@ export function useProjectCubes(
         };
 
         if (keyart && settings.showKeyarts) {
+            const location = (['left', 'top', 'right', 'bottom'] as const).includes(keyartLocation as any)
+                ? keyartLocation as 'left' | 'top' | 'right' | 'bottom'
+                : 'left';
+            switch (location) {
+                case 'left': portalLocation = 'right'; break;
+                case 'top': portalLocation = 'bottom'; break;
+                case 'right': portalLocation = 'left'; break;
+                case 'bottom': portalLocation = 'top'; break;
+            }
+
+            const texture = textureCache.get(keyart);
+            if (texture) {
+                const planeGeometry = new THREE.PlaneGeometry(size - 1, size - 1);
+                const planeMaterial = new THREE.MeshBasicMaterial({
+                    map: texture,
+                    transparent: true,
+                    opacity: 0,
+                    blending: THREE.AdditiveBlending,
+                    side: THREE.DoubleSide
+                });
+                const plane = new THREE.Mesh(planeGeometry, planeMaterial);
+                plane.userData.isLoaded = true;
+                // Position plane based on keyartLocation
+                switch (keyartLocation) {
+                    case 'left':
+                        plane.position.set(-halfSize, 0, 0);
+                        if (rotation >= THREE.MathUtils.degToRad(120)) {
+                            plane.rotation.y = Math.PI / 2;
+                            plane.rotation.z = -Math.PI;
+                        } else {
+                            plane.rotation.y = Math.PI / 2;
+                        }
+                        break;
+                    case 'top':
+                        plane.position.set(0, halfSize, 0);
+                        plane.rotation.x = Math.PI / 2;
+                        plane.rotation.z = -Math.PI / 2;
+                        break;
+                    case 'right':
+                        plane.position.set(halfSize, 0, 0);
+                        if (rotation >= THREE.MathUtils.degToRad(120)) {
+                            plane.rotation.y = -Math.PI / 2;
+                            plane.rotation.z = -Math.PI;
+                        } else {
+                            plane.rotation.y = -Math.PI / 2;
+                        }
+                        break;
+                    case 'bottom':
+                        plane.position.set(0, -halfSize, 0);
+                        if (rotation >= THREE.MathUtils.degToRad(180)) {
+                            plane.rotation.x = -Math.PI / 2;
+                            plane.rotation.z = Math.PI / 2;
+                        } else {
+                            plane.rotation.x = -Math.PI / 2;
+                            plane.rotation.z = -Math.PI / 2;
+                        }
+                        break;
+                }
+                plane.geometry.computeBoundingSphere();
+                addChildWithBounds(plane);
+                addPortal();
+            } else {
+                console.warn(`Keyart texture not preloaded for ${project.title}: ${keyart}`);
+                addPortal();
+            }
+        } else {
+            addPortal();
+        }
+
+        /*if (keyart && settings.showKeyarts) {
+
             const textureLoader = new THREE.TextureLoader();
             textureLoader.load(
                 keyart,
@@ -225,10 +283,11 @@ export function useProjectCubes(
                         map: texture,
                         transparent: true,
                         opacity: 0,
-                        blending: THREE.AdditiveBlending,
+                        //blending: THREE.AdditiveBlending,
                         side: THREE.DoubleSide
                     });
                     const plane = new THREE.Mesh(planeGeometry, planeMaterial);
+                    plane.userData.isLoaded = true;
                     switch (keyartLocation) {
                         case 'left':
                             plane.position.set(-halfSize, 0, 0);
@@ -255,7 +314,7 @@ export function useProjectCubes(
                             break;
                         case 'bottom':
                             plane.position.set(0, -halfSize, 0);
-                            if (rotation >= THREE.MathUtils.degToRad(120)) {
+                            if (rotation >= THREE.MathUtils.degToRad(180)) {
                                 plane.rotation.x = -Math.PI / 2;
                                 plane.rotation.z = Math.PI / 2;
                             } else {
@@ -276,9 +335,9 @@ export function useProjectCubes(
             );
         } else {
             addPortal();
-        }
+        }*/
 
-        if (settings.showProjectGrids) {
+        /*if (settings.showProjectGrids) {
             const textureLoader = new THREE.TextureLoader();
             textureLoader.load(
                 projectGridFile,
@@ -427,13 +486,90 @@ export function useProjectCubes(
                     console.error('Error loading projectGridFile2:', error);
                 }
             );
+        }*/
+
+        if (settings.showProjectGrids) {
+            const addGridPlane = (texture: THREE.Texture, position: THREE.Vector3, rotation: { x?: number, y?: number }, color?: THREE.Color) => {
+                const gridGeometry = new THREE.PlaneGeometry(size - 1, size - 1);
+                const materialOptions: THREE.MeshBasicMaterialParameters = {
+                    map: texture,
+                    transparent: true,
+                    opacity: 0,
+                    blending: THREE.AdditiveBlending,
+                    side: THREE.DoubleSide,
+                    depthWrite: false
+                };
+                if (color) {
+                    materialOptions.color = color;
+                }
+                const gridMaterial = new THREE.MeshBasicMaterial(materialOptions);
+                const gridPlane = new THREE.Mesh(gridGeometry, gridMaterial);
+                gridPlane.position.copy(position);
+                if (rotation.x) gridPlane.rotation.x = rotation.x;
+                if (rotation.y) gridPlane.rotation.y = rotation.y;
+                gridPlane.userData.isGridPlane = true;
+                gridPlane.geometry.computeBoundingSphere();
+                addChildWithBounds(gridPlane);
+            };
+
+            const gridTexture1 = textureCache.get(projectGridFile);
+            const gridTexture2 = textureCache.get(projectGridFile2);
+
+            const allFaces = ['left', 'top', 'right', 'bottom'];
+            const keyartFace = keyart && settings.showKeyarts ? keyartLocation || 'left' : null;
+            const usedFaces = [keyartFace, portalLocation].filter(Boolean) as string[];
+            const freeFaces = allFaces.filter(face => !usedFaces.includes(face));
+
+            if (gridTexture1) {
+                addGridPlane(gridTexture1, new THREE.Vector3(0, 0, -size / 2 - 1), { y: 0 });
+                addGridPlane(gridTexture1, new THREE.Vector3(0, 0, size / 2 + 1), { y: 0 }, new THREE.Color(0xff8000));
+
+                const blueFace = freeFaces[0];
+                switch (blueFace) {
+                    case 'left':
+                        addGridPlane(gridTexture1, new THREE.Vector3(-halfSize, 0, 0), { y: -Math.PI / 2 }, new THREE.Color(0x0000ff));
+                        break;
+                    case 'top':
+                        addGridPlane(gridTexture1, new THREE.Vector3(0, halfSize, 0), { x: Math.PI / 2 }, new THREE.Color(0x0000ff));
+                        break;
+                    case 'right':
+                        addGridPlane(gridTexture1, new THREE.Vector3(halfSize, 0, 0), { y: Math.PI / 2 }, new THREE.Color(0x0000ff));
+                        break;
+                    case 'bottom':
+                        addGridPlane(gridTexture1, new THREE.Vector3(0, -halfSize, 0), { x: -Math.PI / 2 }, new THREE.Color(0x0000ff));
+                        break;
+                }
+            } else {
+                console.warn(`Grid texture not preloaded: ${projectGridFile}`);
+            }
+
+            if (gridTexture2) {
+                const greenFace = freeFaces[1];
+                switch (greenFace) {
+                    case 'left':
+                        addGridPlane(gridTexture2, new THREE.Vector3(-halfSize, 0, 0), { y: -Math.PI / 2 });
+                        break;
+                    case 'top':
+                        addGridPlane(gridTexture2, new THREE.Vector3(0, halfSize, 0), { x: Math.PI / 2 });
+                        break;
+                    case 'right':
+                        addGridPlane(gridTexture2, new THREE.Vector3(halfSize, 0, 0), { y: Math.PI / 2 });
+                        break;
+                    case 'bottom':
+                        addGridPlane(gridTexture2, new THREE.Vector3(0, -halfSize, 0), { x: -Math.PI / 2 });
+                        break;
+                }
+            } else {
+                console.warn(`Grid texture not preloaded: ${projectGridFile2}`);
+            }
         }
 
         group.children.forEach((child) => {
-            if (child instanceof THREE.LineSegments || child instanceof THREE.Mesh) {
-                if (child.geometry && !child.geometry.boundingSphere) {
-                    child.geometry.computeBoundingSphere();
-                }
+            child.updateMatrixWorld(true);
+            if (child instanceof THREE.Group) {
+                child.children.forEach((grandchild) => {
+                    grandchild.updateMatrixWorld(true);
+                });
             }
         });
         group.updateMatrixWorld(true);
@@ -444,6 +580,7 @@ export function useProjectCubes(
 
         return group;
     };
+    const frustum = new THREE.Frustum();
 
 
     const createTextObject = (text: string, x: number, y: number, z: number, size: number, font: THREE.Font): THREE.Mesh => {
@@ -509,6 +646,8 @@ export function useProjectCubes(
                             createTextObject(project.title, 0, project.size - 15, FIRST_CUBE_Z + 90 - (index + 1) * CUBE_SPACING, project.size, font);
                         }
                     });
+                    //console.log(`Created ${projectCubes.length} cubes for ${projectArray.length} projects`);
+
                     resolve();
                 },
                 undefined,
@@ -590,10 +729,7 @@ export function useProjectCubes(
         });
     };
 
-    const frustum = new THREE.Frustum();
-
-
-    type CubeRefs = {
+    /*type CubeRefs = {
         edge: THREE.LineSegments;
         portal?: THREE.LineSegments;
         grid?: THREE.Mesh;
@@ -603,34 +739,35 @@ export function useProjectCubes(
         portal: cube.children.find(c => c instanceof THREE.LineSegments && c.userData.isPortal) as THREE.LineSegments,
         grid: cube.children.find(c => c instanceof THREE.Mesh && !c.userData.isPortalHitbox) as THREE.Mesh,
     }));
-
+*/
 
     const updateCubeColors = (camera: THREE.PerspectiveCamera) => {
-        const start = performance.now();
 
         frustum.setFromProjectionMatrix(camera.projectionMatrix.clone().multiply(camera.matrixWorldInverse));
 
         const cameraZ = camera.position.z;
         let textMeshes: THREE.Mesh[] = [];
 
+        scene.traverse(o => o instanceof THREE.Mesh && o.geometry?.type === 'TextGeometry' && textMeshes.push(o));
+
         // Enforce locked camera Z position if set
-        if (lockCameraZ !== null && Math.abs(camera.position.z - lockCameraZ) > 0.001) {
+        /*if (lockCameraZ !== null && Math.abs(camera.position.z - lockCameraZ) > 0.001) {
             console.log(`[updateCubeColors] Camera Z enforced from ${camera.position.z} to ${lockCameraZ}`);
             camera.position.z = lockCameraZ;
-        }
+        }*/
 
-        scene.traverse((object) => {
+        /*scene.traverse((object) => {
             if (object instanceof THREE.Mesh && object.geometry && object.geometry.type === 'TextGeometry') {
                 textMeshes.push(object);
             }
-        });
+        });*/
 
         if (!sceneInitialized) {
             sceneInitialized = true;
         }
 
         projectCubes.forEach((cube, index) => {
-            if (!cube.geometry && !cube.children.length) {
+            /*if (!cube.geometry && !cube.children.length) {
                 console.warn(`Cube ${index} has no geometry or children`, cube);
                 return;
             }
@@ -640,10 +777,28 @@ export function useProjectCubes(
             } catch (e) {
                 console.error(`Error with cube ${index}`, cube, e);
                 return;
+            }*/
+
+            const sphere = cube.boundingSphere;
+            if (sphere) {
+                const bufferedSphere = sphere.clone();
+                bufferedSphere.radius *= 1.5; // Increase radius by 50% to prevent premature culling
+                if (!frustum.intersectsSphere(bufferedSphere)) {
+                    //console.log(`Cube ${index} at z=${cube.position.z} culled by frustum`);
+                    return;
+                }
+            } else {
+                console.warn(`Cube ${index} has no boundingSphere`);
             }
 
+            /*if (!frustum.intersectsObject(cube)) {
+               // console.log('CUBE WAS OUT OF RANGE OF CAMERA FUSTRUM',cube.position.z)
+                return
+            }*/
+
             const cubeZ = cube.position.z;
-            const cubeDistance = Math.abs(cameraZ - cubeZ);
+            //const cubeDistance = Math.abs(cameraZ - cubeZ);
+            const cubeDistance = Math.abs(cameraZ - cubeZ + 90);
             let lineProgress = 0;
 
             if (cubeDistance <= PROXIMITY_THRESHOLD) {
@@ -708,17 +863,20 @@ export function useProjectCubes(
                     }
                 } else if (child instanceof THREE.Mesh && !child.userData.isPortalHitbox) {
                     const material = child.material as THREE.MeshBasicMaterial;
-                    if (cubeDistance <= PROXIMITY_THRESHOLD) {
-                        const progress = 1 - (cubeDistance / PROXIMITY_THRESHOLD);
-                        material.opacity = Math.min(0.8, progress * 2);
-                    } else {
-                        material.opacity = 0;
+                    if (child.userData.isLoaded || child.userData.isGridPlane) {
+                        if (cubeDistance <= PROXIMITY_THRESHOLD) {
+                            const progress = 1 - (cubeDistance / PROXIMITY_THRESHOLD);
+                            material.opacity = Math.min(0.8, progress * 2);
+                        } else {
+                            material.opacity = 0;
+                        }
                     }
                 }
             });
         });
 
         textMeshes.forEach((mesh) => {
+            if (!frustum.intersectsObject(mesh)) return
             const textMaterial = mesh.material as THREE.MeshBasicMaterial;
             const planeMesh = mesh.userData.backgroundPlane as THREE.Mesh;
             const planeMaterial = planeMesh?.material as THREE.MeshBasicMaterial;
@@ -739,8 +897,6 @@ export function useProjectCubes(
             }
         });
 
-        const end = performance.now();
-        if (end - start > 16) console.log(`updateCubeColors: ${end - start}ms`);
     };
 
     const setupInteractivity = (

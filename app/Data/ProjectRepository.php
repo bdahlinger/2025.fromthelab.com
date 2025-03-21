@@ -53,6 +53,7 @@ class ProjectRepository
         [
             'slug' => 'harry-potter-quidditch-champions',
             'title' => 'HARRY POTTER: QUIDDITCH CHAMPIONS',
+            'keyart' => 'projects/qc.jpg',
             'keyartMobile' => 'projects/qc-m.jpg',
             'keyartLocation' => 'bottom',
         ],

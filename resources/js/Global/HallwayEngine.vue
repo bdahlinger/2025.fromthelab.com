@@ -48,6 +48,7 @@ const settings = {
     showProjectTitles: true,
     showIntroCubes: true,
     showScrollTrigger: true,
+    showStats: true,
 };
 
 const tunnelWrapper = ref<HTMLElement | null>(null);
@@ -58,6 +59,7 @@ const isIntroComplete = ref(false);
 const showPreloader = ref(true);
 const textureCache = new Map<string, THREE.Texture>();
 const updateCubeColorsRef = ref<((camera: THREE.PerspectiveCamera) => void) | null>(null);
+const sceneDistance = 4000
 
 let scene: THREE.Scene;
 let camera: THREE.PerspectiveCamera;
@@ -68,7 +70,6 @@ let stats: Stats;
 let updateCityParticles: (delta: number) => void;
 let starfieldDispose: (() => void) | null = null;
 let cleanupInteractivity: (() => void) | null = null;
-let setReverting: ((value: boolean) => void) | null = null;
 let chaserPathDispose: (() => void) | null = null;
 let updateChasers: ((delta: number) => void) | null = null;
 let cityscapeDispose: (() => void) | null = null;
@@ -76,19 +77,22 @@ let allCubes: THREE.Group[] = [];
 let updateCubeColors: ((camera: THREE.PerspectiveCamera) => void) | null = null;
 let animationFrameId: number | null = null;
 let lastTime = 0;
-
+let projectCubesInstance: ReturnType<typeof useProjectCubes> | null = null;
+let projectMaxZ: number;
 
 
 const updateRendererSize = () => {
     const width = tunnelWrapper.value ? tunnelWrapper.value.getBoundingClientRect().width : window.innerWidth;
     const height = window.innerHeight;
     const scaleFactor = tunnelStore.isMobile ? 0.75 : 1.0;
+    const pixelRatio = tunnelStore.isMobile ? Math.min(window.devicePixelRatio, 1.0) : window.devicePixelRatio;
 
     renderer.setSize(width * scaleFactor, height * scaleFactor);
+    renderer.setPixelRatio(pixelRatio);
     composer.setSize(width * scaleFactor, height * scaleFactor);
 
     camera.aspect = width / height;
-    camera.far = 60000;
+    //camera.far = 60000;
     camera.updateProjectionMatrix();
 
     renderer.domElement.style.width = `${width}px`;
@@ -117,9 +121,9 @@ const loadTexture = (url: string): Promise<THREE.Texture> => {
 const init = async () => {
     scene = new THREE.Scene();
     scene.background = new THREE.Color(0x000000);
-    scene.fog = new THREE.Fog(0x000000, 700, 4000);
+    scene.fog = new THREE.Fog(0x000000, 700, sceneDistance);
 
-    camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 1, 60000);
+    camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 1, sceneDistance + 6000);
     camera.position.set(0, 0, 0); // Initial, overridden later
     camera.lookAt(0, 0, 1000);
 
@@ -171,7 +175,8 @@ const init = async () => {
     stats.dom.style.zIndex = '1000';
     document.body.appendChild(stats.dom);
 
-    const totalAssets = props.projects.length + 2 + 1;
+    const keyartCount = props.projects.filter(project => project.keyart).length;
+    const totalAssets = keyartCount + 2; // Keyarts + 2 grids
     let loadedAssets = 0;
 
     const updateProgress = () => {
@@ -193,12 +198,14 @@ const init = async () => {
         }
     }
 
-    const projectCubesInstance = useProjectCubes(scene, { CUBE_SIZE, CUBE_SPACING, FIRST_CUBE_Z }, props.projects, props.projectGridFile, props.projectGridFile2, settings);
-    let projectMaxZ: number = -8500;
+    projectCubesInstance = useProjectCubes(scene, { CUBE_SIZE, CUBE_SPACING, FIRST_CUBE_Z }, props.projects, props.projectGridFile, props.projectGridFile2, settings, textureCache);
+
     try {
         const data = await projectCubesInstance.getInitializedData();
-        projectMaxZ = data.maxZ !== undefined && !isNaN(data.maxZ) ? data.maxZ : -8500;
-        updateProgress();
+        projectMaxZ = data.maxZ;
+        if (projectMaxZ === undefined || isNaN(projectMaxZ)) {
+            throw new Error('Invalid maxZ from projectCubesInstance');
+        }
 
         const { introCubes } = useIntroCubes(scene, scene, { CUBE_SIZE, FIRST_CUBE_Z }, settings);
         allCubes = [...introCubes, ...data.projectCubes];
@@ -225,9 +232,10 @@ const init = async () => {
         updateRendererSize();
     } catch (error) {
         console.error('Error initializing project cubes:', error);
+        projectMaxZ = FIRST_CUBE_Z - (props.projects.length + 1) * CUBE_SPACING;
+
     }
 };
-
 
 const animate = (time: number = 0) => {
     animationFrameId = requestAnimationFrame(animate); // Chain here
@@ -235,10 +243,17 @@ const animate = (time: number = 0) => {
     if (renderer && composer) {
         const delta = (time - lastTime) / 1000;
         lastTime = time;
+
         if (settings.showCars) updateCityParticles(delta);
-        if (settings.showChasers && updateChasers) {
-            updateChasers(delta);
-        }
+        if (settings.showChasers && updateChasers) updateChasers(delta);
+
+        // Dynamic far: cover deepest cube + fog range
+        const fogFar = 4000;
+        const buffer = 1000;
+        const minFar = Math.abs(camera.position.z - projectMaxZ); // Use projectMaxZ
+        camera.far = Math.max(fogFar + buffer, minFar);
+        camera.updateProjectionMatrix();
+
 
         const fadeRange = BLOOM_FADE_END_Z - BLOOM_FADE_START_Z;
         let progress = 0;
@@ -257,9 +272,10 @@ const animate = (time: number = 0) => {
         }
 
         composer.render();
-
     }
-    stats.update();
+
+    if (settings.showStats) stats.update();
+
 };
 
 onMounted(() => {
@@ -267,12 +283,12 @@ onMounted(() => {
         if (isLoaded.value) {
             animationFrameId = requestAnimationFrame(animate);
 
-            const projectCubesInstance = useProjectCubes(scene, { CUBE_SIZE, CUBE_SPACING, FIRST_CUBE_Z }, props.projects, props.projectGridFile, props.projectGridFile2, settings);
             let scrollTimeline = null;
             let scrollTrigger = null;
             let setReverting = null;
 
-            const setupPromise = projectCubesInstance.getInitializedData().then(({ projectCubes }) => {
+            const setupPromise = projectCubesInstance!.getInitializedData().then(({ projectCubes }) => {
+
                 projectCubes.forEach((cube) => {
                     cube.userData.isActive = true;
                 });
@@ -303,7 +319,7 @@ onMounted(() => {
                 }
 
                 if (renderer && cleanupInteractivity === null) {
-                    cleanupInteractivity = projectCubesInstance.setupInteractivity(
+                    cleanupInteractivity = projectCubesInstance!.setupInteractivity(
                         camera,
                         renderer.domElement,
                         (isFocused) => {
@@ -346,7 +362,7 @@ onMounted(() => {
                 });
             };
 
-            gsap.delayedCall(0.1, startIntro);
+            gsap.delayedCall(0.5, startIntro);
         }
     }).catch((error) => {
         console.error('Initialization failed:', error);
