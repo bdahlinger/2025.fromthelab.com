@@ -85,7 +85,7 @@ const updateRendererSize = () => {
     const width = tunnelWrapper.value ? tunnelWrapper.value.getBoundingClientRect().width : window.innerWidth;
     const height = window.innerHeight;
     const scaleFactor = tunnelStore.isMobile ? 0.75 : 1.0;
-    const pixelRatio = tunnelStore.isMobile ? Math.min(window.devicePixelRatio, 1.0) : window.devicePixelRatio;
+    const pixelRatio = tunnelStore.isMobile ? Math.min(window.devicePixelRatio, 1.5) : window.devicePixelRatio;
 
     renderer.setSize(width * scaleFactor, height * scaleFactor);
     renderer.setPixelRatio(pixelRatio);
@@ -428,6 +428,9 @@ const handleResize = () => {
     width: 100% !important;
     max-width: none !important;
     overflow-x: hidden !important;
+
+
+
 }
 
 /* Vue Transition styles */

@@ -16,19 +16,16 @@ export function setupScrollAnimation(
     settings: { showScrollTrigger: boolean },
     stats?: Stats
 ) {
-
-    ScrollTrigger.config({ syncTouch: true });
-
     const { CUBE_SIZE, CUBE_SPACING, FIRST_CUBE_Z } = config;
     const cubeCount = allCubes?.length || 0;
     const MAX_Z = FIRST_CUBE_Z - (cubeCount + 1) * CUBE_SPACING;
     let isReverting = false;
 
     const scrollRange = Math.abs(MAX_Z) + (cubeCount - 1) * CUBE_SPACING;
-    const timeline = gsap.timeline();
+    let timeline = gsap.timeline();
 
     if (settings.showScrollTrigger) {
-        const timeline = gsap.timeline({
+        timeline = gsap.timeline({
             scrollTrigger: {
                 trigger: wrapper.value,
                 start: 'top top',
@@ -44,18 +41,16 @@ export function setupScrollAnimation(
                     }
                     updateCubeColors(camera);
                 }
-
             }
         });
 
         timeline.fromTo(camera.position,
             { z: 0 },
-            { z: MAX_Z, duration: 1, ease: 'none' }
+            { z: MAX_Z, duration: 1, ease: 'none' },
+            0
         );
-
-    } else {
-        console.log('ScrollTrigger disabled - Camera movement paused');
     }
+
     const setReverting = (value: boolean) => {
         isReverting = value;
     };

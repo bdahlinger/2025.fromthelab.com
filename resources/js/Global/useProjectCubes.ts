@@ -15,7 +15,7 @@ export function useProjectCubes(
     projectGridFile: string,
     projectGridFile2: string,
     settings: {
-        showPortalPulses: boolean
+        showPortalPulses: boolean;
         showKeyarts: boolean;
         showProjectGrids: boolean;
         showProjectTitles: boolean;
@@ -52,6 +52,38 @@ export function useProjectCubes(
     let onPortalFocusChange: ((isFocused: boolean, originalPosition?: THREE.Vector3, originalTarget?: THREE.Vector3) => void) | null = null;
 
     const tunnelStore = useTunnelStore();
+
+    const positionCloseButton = (closeGroup: THREE.Group, portal: THREE.LineSegments, camera: THREE.PerspectiveCamera, halfSize: number, portalLocation: 'left' | 'top' | 'right' | 'bottom') => {
+        const portalWorldPos = portal.getWorldPosition(new THREE.Vector3());
+        const offsetX = halfSize * 0.5; // Center-right within bounds
+        const offsetY = halfSize * 0.5; // Center-top within bounds
+
+        let pos = new THREE.Vector3();
+        switch (portalLocation) {
+            case 'left':
+                pos.set(portalWorldPos.x, portalWorldPos.y + offsetY, portalWorldPos.z + 20);
+                closeGroup.rotation.y = Math.PI / 2;
+                break;
+            case 'right':
+                pos.set(portalWorldPos.x, portalWorldPos.y + offsetY, portalWorldPos.z + 20);
+                closeGroup.rotation.y = -Math.PI / 2;
+                break;
+            case 'top':
+                pos.set(portalWorldPos.x + offsetX, portalWorldPos.y, portalWorldPos.z + 20);
+                closeGroup.rotation.x = -Math.PI / 2;
+                break;
+            case 'bottom':
+                pos.set(portalWorldPos.x + offsetX, portalWorldPos.y, portalWorldPos.z + 20);
+                closeGroup.rotation.x = Math.PI / 2;
+                break;
+        }
+
+        closeGroup.position.copy(pos);
+        closeGroup.updateMatrixWorld(true);
+        closeGroup.lookAt(camera.position);
+
+        console.log('Close button pos:', pos, 'Portal world pos:', portalWorldPos, 'Camera pos:', camera.position);
+    };
 
     const createProjectCube = (
         project: App.Data.ProjectData,
@@ -192,6 +224,33 @@ export function useProjectCubes(
             }
         };
 
+        const createCloseButton = (): THREE.Group => {
+            const closeGroup = new THREE.Group();
+            const rectGeometry = new THREE.PlaneGeometry(20, 4); // Larger for visibility
+            const material = new THREE.MeshBasicMaterial({
+                color: 0xff0000, // Red for debugging
+                transparent: true,
+                opacity: 0,
+                side: THREE.DoubleSide
+            });
+
+            const rect1 = new THREE.Mesh(rectGeometry, material);
+            rect1.rotation.z = Math.PI / 4;
+            const rect2 = new THREE.Mesh(rectGeometry, material);
+            rect2.rotation.z = -Math.PI / 4;
+
+            closeGroup.add(rect1, rect2);
+
+            const hitboxGeometry = new THREE.PlaneGeometry(40, 40); // Larger hitbox
+            const hitboxMaterial = new THREE.MeshBasicMaterial({ visible: false });
+            const hitbox = new THREE.Mesh(hitboxGeometry, hitboxMaterial);
+            hitbox.userData.isCloseHitbox = true;
+            closeGroup.add(hitbox);
+
+            closeGroup.visible = false;
+            return closeGroup;
+        };
+
         const addChildWithBounds = (child: THREE.Object3D) => {
             if (child instanceof THREE.LineSegments || child instanceof THREE.Mesh) {
                 if (child.geometry) {
@@ -224,7 +283,6 @@ export function useProjectCubes(
                 });
                 const plane = new THREE.Mesh(planeGeometry, planeMaterial);
                 plane.userData.isLoaded = true;
-                // Position plane based on keyartLocation
                 switch (keyartLocation) {
                     case 'left':
                         plane.position.set(-halfSize, 0, 0);
@@ -271,222 +329,10 @@ export function useProjectCubes(
             addPortal();
         }
 
-        /*if (keyart && settings.showKeyarts) {
-
-            const textureLoader = new THREE.TextureLoader();
-            textureLoader.load(
-                keyart,
-                (texture) => {
-                    texture.encoding = THREE.sRGBEncoding;
-                    const planeGeometry = new THREE.PlaneGeometry(size - 1, size - 1);
-                    const planeMaterial = new THREE.MeshBasicMaterial({
-                        map: texture,
-                        transparent: true,
-                        opacity: 0,
-                        //blending: THREE.AdditiveBlending,
-                        side: THREE.DoubleSide
-                    });
-                    const plane = new THREE.Mesh(planeGeometry, planeMaterial);
-                    plane.userData.isLoaded = true;
-                    switch (keyartLocation) {
-                        case 'left':
-                            plane.position.set(-halfSize, 0, 0);
-                            if (rotation >= THREE.MathUtils.degToRad(120)) {
-                                plane.rotation.y = Math.PI / 2;
-                                plane.rotation.z = -Math.PI;
-                            } else {
-                                plane.rotation.y = Math.PI / 2;
-                            }
-                            break;
-                        case 'top':
-                            plane.position.set(0, halfSize, 0);
-                            plane.rotation.x = Math.PI / 2;
-                            plane.rotation.z = -Math.PI / 2;
-                            break;
-                        case 'right':
-                            plane.position.set(halfSize, 0, 0);
-                            if (rotation >= THREE.MathUtils.degToRad(120)) {
-                                plane.rotation.y = -Math.PI / 2;
-                                plane.rotation.z = -Math.PI;
-                            } else {
-                                plane.rotation.y = -Math.PI / 2;
-                            }
-                            break;
-                        case 'bottom':
-                            plane.position.set(0, -halfSize, 0);
-                            if (rotation >= THREE.MathUtils.degToRad(180)) {
-                                plane.rotation.x = -Math.PI / 2;
-                                plane.rotation.z = Math.PI / 2;
-                            } else {
-                                plane.rotation.x = -Math.PI / 2;
-                                plane.rotation.z = -Math.PI / 2;
-                            }
-                            break;
-                    }
-                    plane.geometry.computeBoundingSphere();
-                    addChildWithBounds(plane);
-                    addPortal();
-                },
-                undefined,
-                (error) => {
-                    console.error('Error loading keyart:', error);
-                    addPortal();
-                }
-            );
-        } else {
-            addPortal();
-        }*/
-
-        /*if (settings.showProjectGrids) {
-            const textureLoader = new THREE.TextureLoader();
-            textureLoader.load(
-                projectGridFile,
-                (texture) => {
-                    texture.encoding = THREE.sRGBEncoding;
-                    const gridGeometry = new THREE.PlaneGeometry(size - 1, size - 1);
-                    const gridMaterial = new THREE.MeshBasicMaterial({
-                        map: texture,
-                        transparent: true,
-                        opacity: 0,
-                        blending: THREE.AdditiveBlending,
-                        side: THREE.DoubleSide,
-                        depthWrite: false
-                    });
-                    const gridPlane = new THREE.Mesh(gridGeometry, gridMaterial);
-                    gridPlane.position.set(0, 0, -size / 2 - 1);
-                    gridPlane.rotation.y = 0;
-                    gridPlane.userData.isGridPlane = true;
-                    gridPlane.geometry.computeBoundingSphere();
-                    addChildWithBounds(gridPlane);
-                },
-                undefined,
-                (error) => {
-                    console.error('Error loading projectGridFile:', error);
-                }
-            );
-
-            const textureLoader2 = new THREE.TextureLoader();
-            textureLoader2.load(
-                projectGridFile,
-                (texture) => {
-                    texture.encoding = THREE.sRGBEncoding;
-                    const gridGeometry = new THREE.PlaneGeometry(size - 1, size - 1);
-                    const gridMaterial = new THREE.MeshBasicMaterial({
-                        map: texture,
-                        transparent: true,
-                        opacity: 0,
-                        blending: THREE.AdditiveBlending,
-                        side: THREE.DoubleSide,
-                        depthWrite: false,
-                        color: new THREE.Color(0xff8000)
-                    });
-                    const gridPlane = new THREE.Mesh(gridGeometry, gridMaterial);
-                    gridPlane.position.set(0, 0, size / 2 + 1);
-                    gridPlane.rotation.y = 0;
-                    gridPlane.userData.isGridPlane = true;
-                    gridPlane.geometry.computeBoundingSphere();
-                    addChildWithBounds(gridPlane);
-                },
-                undefined,
-                (error) => {
-                    console.error('Error loading projectGridFile:', error);
-                }
-            );
-
-            const allFaces = ['left', 'top', 'right', 'bottom'];
-            const keyartFace = keyart && settings.showKeyarts ? keyartLocation || 'left' : null;
-            const usedFaces = [keyartFace, portalLocation].filter(Boolean) as string[];
-            const freeFaces = allFaces.filter(face => !usedFaces.includes(face));
-
-            const textureLoader3 = new THREE.TextureLoader();
-            textureLoader3.load(
-                projectGridFile,
-                (texture) => {
-                    texture.encoding = THREE.sRGBEncoding;
-                    const gridGeometry = new THREE.PlaneGeometry(size - 1, size - 1);
-                    const gridMaterial = new THREE.MeshBasicMaterial({
-                        map: texture,
-                        transparent: true,
-                        opacity: 0,
-                        blending: THREE.AdditiveBlending,
-                        side: THREE.DoubleSide,
-                        depthWrite: false,
-                        color: new THREE.Color(0x0000ff)
-                    });
-                    const gridPlane = new THREE.Mesh(gridGeometry, gridMaterial);
-                    const blueFace = freeFaces[0];
-                    switch (blueFace) {
-                        case 'left':
-                            gridPlane.position.set(-halfSize, 0, 0);
-                            gridPlane.rotation.y = -Math.PI / 2;
-                            break;
-                        case 'top':
-                            gridPlane.position.set(0, halfSize, 0);
-                            gridPlane.rotation.x = Math.PI / 2;
-                            break;
-                        case 'right':
-                            gridPlane.position.set(halfSize, 0, 0);
-                            gridPlane.rotation.y = Math.PI / 2;
-                            break;
-                        case 'bottom':
-                            gridPlane.position.set(0, -halfSize, 0);
-                            gridPlane.rotation.x = -Math.PI / 2;
-                            break;
-                    }
-                    gridPlane.userData.isGridPlane = true;
-                    gridPlane.geometry.computeBoundingSphere();
-                    addChildWithBounds(gridPlane);
-                },
-                undefined,
-                (error) => {
-                    console.error('Error loading projectGridFile:', error);
-                }
-            );
-
-            const textureLoader4 = new THREE.TextureLoader();
-            textureLoader4.load(
-                projectGridFile2,
-                (texture) => {
-                    texture.encoding = THREE.sRGBEncoding;
-                    const gridGeometry = new THREE.PlaneGeometry(size - 1, size - 1);
-                    const gridMaterial = new THREE.MeshBasicMaterial({
-                        map: texture,
-                        transparent: true,
-                        opacity: 0,
-                        blending: THREE.AdditiveBlending,
-                        side: THREE.DoubleSide,
-                        depthWrite: false
-                    });
-                    const gridPlane = new THREE.Mesh(gridGeometry, gridMaterial);
-                    const greenFace = freeFaces[1];
-                    switch (greenFace) {
-                        case 'left':
-                            gridPlane.position.set(-halfSize, 0, 0);
-                            gridPlane.rotation.y = -Math.PI / 2;
-                            break;
-                        case 'top':
-                            gridPlane.position.set(0, halfSize, 0);
-                            gridPlane.rotation.x = Math.PI / 2;
-                            break;
-                        case 'right':
-                            gridPlane.position.set(halfSize, 0, 0);
-                            gridPlane.rotation.y = Math.PI / 2;
-                            break;
-                        case 'bottom':
-                            gridPlane.position.set(0, -halfSize, 0);
-                            gridPlane.rotation.x = -Math.PI / 2;
-                            break;
-                    }
-                    gridPlane.userData.isGridPlane = true;
-                    gridPlane.geometry.computeBoundingSphere();
-                    addChildWithBounds(gridPlane);
-                },
-                undefined,
-                (error) => {
-                    console.error('Error loading projectGridFile2:', error);
-                }
-            );
-        }*/
+        const closeButton = createCloseButton();
+        group.add(closeButton);
+        group.userData.closeButton = closeButton;
+        group.userData.portalLocation = portalLocation;
 
         if (settings.showProjectGrids) {
             const addGridPlane = (texture: THREE.Texture, position: THREE.Vector3, rotation: { x?: number, y?: number }, color?: THREE.Color) => {
@@ -582,7 +428,6 @@ export function useProjectCubes(
     };
     const frustum = new THREE.Frustum();
 
-
     const createTextObject = (text: string, x: number, y: number, z: number, size: number, font: THREE.Font): THREE.Mesh => {
         const textGeometry = new TextGeometry(text, {
             font: font,
@@ -642,12 +487,10 @@ export function useProjectCubes(
                         const cube = createProjectCube(project, CUBE_SIZE, zPosition, rotation, project.keyart, project.keyartLocation);
                         scene.add(cube);
                         projectCubes.push(cube);
-                        if (settings.showProjectTitles) { // Only create titles if enabled
+                        if (settings.showProjectTitles) {
                             createTextObject(project.title, 0, project.size - 15, FIRST_CUBE_Z + 90 - (index + 1) * CUBE_SPACING, project.size, font);
                         }
                     });
-                    //console.log(`Created ${projectCubes.length} cubes for ${projectArray.length} projects`);
-
                     resolve();
                 },
                 undefined,
@@ -675,7 +518,7 @@ export function useProjectCubes(
     };
 
     const animatePulses = (portal: THREE.LineSegments) => {
-        if (!settings.showPortalPulses || portal.userData.isAnimating) return; // Skip if pulses are disabled or already animating
+        if (!settings.showPortalPulses || portal.userData.isAnimating) return;
 
         portal.userData.isAnimating = true;
         const pulsesGroup = portal.children.find(child => child instanceof THREE.Group);
@@ -729,20 +572,7 @@ export function useProjectCubes(
         });
     };
 
-    /*type CubeRefs = {
-        edge: THREE.LineSegments;
-        portal?: THREE.LineSegments;
-        grid?: THREE.Mesh;
-    };
-    const cubeRefs: CubeRefs[] = projectCubes.map(cube => ({
-        edge: cube.children.find(c => c instanceof THREE.LineSegments && !c.userData.isPortal && !c.userData.isPortalHitbox) as THREE.LineSegments,
-        portal: cube.children.find(c => c instanceof THREE.LineSegments && c.userData.isPortal) as THREE.LineSegments,
-        grid: cube.children.find(c => c instanceof THREE.Mesh && !c.userData.isPortalHitbox) as THREE.Mesh,
-    }));
-*/
-
     const updateCubeColors = (camera: THREE.PerspectiveCamera) => {
-
         frustum.setFromProjectionMatrix(camera.projectionMatrix.clone().multiply(camera.matrixWorldInverse));
 
         const cameraZ = camera.position.z;
@@ -750,54 +580,23 @@ export function useProjectCubes(
 
         scene.traverse(o => o instanceof THREE.Mesh && o.geometry?.type === 'TextGeometry' && textMeshes.push(o));
 
-        // Enforce locked camera Z position if set
-        /*if (lockCameraZ !== null && Math.abs(camera.position.z - lockCameraZ) > 0.001) {
-            console.log(`[updateCubeColors] Camera Z enforced from ${camera.position.z} to ${lockCameraZ}`);
-            camera.position.z = lockCameraZ;
-        }*/
-
-        /*scene.traverse((object) => {
-            if (object instanceof THREE.Mesh && object.geometry && object.geometry.type === 'TextGeometry') {
-                textMeshes.push(object);
-            }
-        });*/
-
         if (!sceneInitialized) {
             sceneInitialized = true;
         }
 
         projectCubes.forEach((cube, index) => {
-            /*if (!cube.geometry && !cube.children.length) {
-                console.warn(`Cube ${index} has no geometry or children`, cube);
-                return;
-            }
-
-            try {
-                if (!frustum.intersectsObject(cube)) return;
-            } catch (e) {
-                console.error(`Error with cube ${index}`, cube, e);
-                return;
-            }*/
-
             const sphere = cube.boundingSphere;
             if (sphere) {
                 const bufferedSphere = sphere.clone();
-                bufferedSphere.radius *= 1.5; // Increase radius by 50% to prevent premature culling
+                bufferedSphere.radius *= 1.5;
                 if (!frustum.intersectsSphere(bufferedSphere)) {
-                    //console.log(`Cube ${index} at z=${cube.position.z} culled by frustum`);
                     return;
                 }
             } else {
                 console.warn(`Cube ${index} has no boundingSphere`);
             }
 
-            /*if (!frustum.intersectsObject(cube)) {
-               // console.log('CUBE WAS OUT OF RANGE OF CAMERA FUSTRUM',cube.position.z)
-                return
-            }*/
-
             const cubeZ = cube.position.z;
-            //const cubeDistance = Math.abs(cameraZ - cubeZ);
             const cubeDistance = Math.abs(cameraZ - cubeZ + 90);
             let lineProgress = 0;
 
@@ -861,7 +660,7 @@ export function useProjectCubes(
                             delete child.userData.animationStarted;
                         }
                     }
-                } else if (child instanceof THREE.Mesh && !child.userData.isPortalHitbox) {
+                } else if (child instanceof THREE.Mesh && !child.userData.isPortalHitbox && !child.userData.isCloseHitbox) {
                     const material = child.material as THREE.MeshBasicMaterial;
                     if (child.userData.isLoaded || child.userData.isGridPlane) {
                         if (cubeDistance <= PROXIMITY_THRESHOLD) {
@@ -871,12 +670,25 @@ export function useProjectCubes(
                             material.opacity = 0;
                         }
                     }
+                } else if (child instanceof THREE.Group && child.userData.closeButton) {
+                    const distance = Math.abs(cameraZ - child.position.z);
+                    child.children.forEach((grandchild) => {
+                        if (grandchild instanceof THREE.Mesh && !grandchild.userData.isCloseHitbox) {
+                            const material = grandchild.material as THREE.MeshBasicMaterial;
+                            if (distance <= PROXIMITY_THRESHOLD) {
+                                const progress = 1 - (distance / PROXIMITY_THRESHOLD);
+                                material.opacity = Math.min(1, progress * 2);
+                            } else {
+                                material.opacity = 0;
+                            }
+                        }
+                    });
                 }
             });
         });
 
         textMeshes.forEach((mesh) => {
-            if (!frustum.intersectsObject(mesh)) return
+            if (!frustum.intersectsObject(mesh)) return;
             const textMaterial = mesh.material as THREE.MeshBasicMaterial;
             const planeMesh = mesh.userData.backgroundPlane as THREE.Mesh;
             const planeMaterial = planeMesh?.material as THREE.MeshBasicMaterial;
@@ -896,7 +708,6 @@ export function useProjectCubes(
                 }
             }
         });
-
     };
 
     const setupInteractivity = (
@@ -906,8 +717,125 @@ export function useProjectCubes(
     ) => {
         onPortalFocusChange = onFocusChangeCallback;
 
+        let touchStartY: number | null = null;
         let lockedScrollY: number | null = null;
         let activePortal: THREE.LineSegments | null = null;
+        let isTouching = false;
+        let isEnteringPortal = false;
+        let swipeCooldown = false;
+        let isCameraAnimating = false;
+
+        const onTouchStart = (event: TouchEvent) => {
+            if (isInPortalFocus) {
+                touchStartY = event.touches[0].clientY;
+                lockedScrollY = lockedScrollY ?? window.scrollY;
+                isTouching = true;
+            }
+        };
+
+        const onTouchMove = (event: TouchEvent) => {
+            if (!isInPortalFocus || !activePortal || !touchStartY) return;
+            const touchY = event.touches[0].clientY;
+            const deltaY = touchY - touchStartY;
+
+            if (deltaY < -20 && !isEnteringPortal) {
+                console.log("Swipe Up - Exiting");
+                handleExitPortal();
+                touchStartY = null;
+            } else if (deltaY > 20) {
+                console.log("Swipe Down - Blocking");
+                event.preventDefault();
+                window.scrollTo(0, lockedScrollY!);
+                gsap.to(window, { scrollTo: { y: lockedScrollY! }, duration: 0 });
+            }
+        };
+
+        const onTouchEnd = () => {
+            touchStartY = null;
+            isTouching = false;
+            swipeCooldown = true;
+            gsap.delayedCall(0.5, () => { swipeCooldown = false; });
+        };
+
+        const handleScroll = (event: WheelEvent | Event) => {
+            if (isTouching || isEnteringPortal || swipeCooldown) {
+                event.preventDefault();
+                event.stopPropagation();
+                if (lockedScrollY !== null) {
+                    window.scrollTo(0, lockedScrollY);
+                    gsap.to(window, { scrollTo: { y: lockedScrollY }, duration: 0 });
+                }
+                return;
+            }
+            if (!isInPortalFocus || !activePortal || !originalCameraPosition || !originalCameraTarget) {
+                return;
+            }
+
+            let deltaY = 0;
+            if (event instanceof WheelEvent) {
+                deltaY = event.deltaY;
+            } else {
+                const currentScrollY = window.scrollY;
+                deltaY = currentScrollY - (lockedScrollY || 0);
+            }
+
+            event.preventDefault();
+            event.stopPropagation();
+
+            if (deltaY > 0) {
+                window.scrollTo(0, lockedScrollY!);
+                return;
+            }
+
+            if (deltaY < 0) {
+                handleExitPortal();
+            }
+        };
+
+        const handleExitPortal = () => {
+            const exitingPortal = activePortal;
+            const targetLookAt = originalCameraTarget ? originalCameraTarget.clone() : new THREE.Vector3(0, 0, MAX_Z);
+            const originalZ = originalCameraPosition?.z ?? camera.position.z;
+            const cube = exitingPortal?.parent as THREE.Group;
+
+            isCameraAnimating = true;
+            gsap.to(camera.position, {
+                x: originalCameraPosition?.x ?? camera.position.x,
+                y: originalCameraPosition?.y ?? camera.position.y,
+                z: originalZ,
+                duration: 1,
+                ease: 'power3.out',
+                overwrite: 'auto',
+                onUpdate: () => {
+                    camera.lookAt(targetLookAt);
+                },
+                onComplete: () => {
+                    camera.lookAt(targetLookAt);
+                    isInPortalFocus = false;
+                    activePortal = null;
+                    document.body.classList.remove('no-scrollbar');
+                    if (onPortalFocusChange) onFocusChangeCallback(false);
+                    if (exitingPortal) animateRings(exitingPortal, false);
+                    if (cube?.userData.closeButton) {
+                        const materials = cube.userData.closeButton.children
+                            .filter(child => child instanceof THREE.Mesh)
+                            .map(child => (child as THREE.Mesh).material);
+                        gsap.to(materials, {
+                            opacity: 0,
+                            duration: 0.5,
+                            onComplete: () => {
+                                cube.userData.closeButton.visible = false;
+                            }
+                        });
+                    }
+                    lockedScrollY = null;
+                    originalCameraPosition = null;
+                    originalCameraTarget = null;
+                    isCameraAnimating = false;
+                    console.log('Exit complete, resuming ScrollTrigger, z:', camera.position.z);
+                }
+            });
+        };
 
         const animateRings = (portal: THREE.LineSegments, expand: boolean = true) => {
             const rings = [portal, ...portal.children.filter(child => child instanceof THREE.LineSegments && child.userData.isPortal)] as THREE.LineSegments[];
@@ -940,31 +868,38 @@ export function useProjectCubes(
             mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
             raycaster.setFromCamera(mouse, camera);
             const hitboxes = projectCubes.flatMap(cube =>
-                cube.userData.isActive ? cube.children.filter(child => child instanceof THREE.Mesh && child.userData.isPortalHitbox) : []
+                cube.userData.isActive ? cube.children.filter(child =>
+                    (child instanceof THREE.Mesh && child.userData.isPortalHitbox) ||
+                    (child instanceof THREE.Mesh && child.userData.isCloseHitbox)
+                ) : []
             ) as THREE.Mesh[];
             const intersects = raycaster.intersectObjects(hitboxes);
 
             if (intersects.length > 0) {
-                const newHoveredHitbox = intersects[0].object as THREE.Mesh;
-                const newHoveredPortal = newHoveredHitbox.userData.portal as THREE.LineSegments;
-                if (hoveredPortal !== newHoveredPortal) {
-                    if (hoveredPortal) {
+                const hitbox = intersects[0].object as THREE.Mesh;
+                if (hitbox.userData.isPortalHitbox) {
+                    const newHoveredPortal = hitbox.userData.portal as THREE.LineSegments;
+                    if (hoveredPortal !== newHoveredPortal) {
+                        if (hoveredPortal) {
+                            const material = hoveredPortal.material as THREE.LineBasicMaterial;
+                            gsap.to(material.color, {
+                                r: (CUBE_COLOR >> 16 & 255) / 255,
+                                g: (CUBE_COLOR >> 8 & 255) / 255,
+                                b: (CUBE_COLOR & 255) / 255,
+                                duration: 0.5
+                            });
+                        }
+                        hoveredPortal = newHoveredPortal;
                         const material = hoveredPortal.material as THREE.LineBasicMaterial;
                         gsap.to(material.color, {
-                            r: (CUBE_COLOR >> 16 & 255) / 255,
-                            g: (CUBE_COLOR >> 8 & 255) / 255,
-                            b: (CUBE_COLOR & 255) / 255,
+                            r: (HOVER_COLOR >> 16 & 255) / 255,
+                            g: (HOVER_COLOR >> 8 & 255) / 255,
+                            b: (HOVER_COLOR & 255) / 255,
                             duration: 0.5
                         });
                     }
-                    hoveredPortal = newHoveredPortal;
-                    const material = hoveredPortal.material as THREE.LineBasicMaterial;
-                    gsap.to(material.color, {
-                        r: (HOVER_COLOR >> 16 & 255) / 255,
-                        g: (HOVER_COLOR >> 8 & 255) / 255,
-                        b: (HOVER_COLOR & 255) / 255,
-                        duration: 0.5
-                    });
+                } else if (hitbox.userData.isCloseHitbox) {
+                    domElement.style.cursor = 'pointer';
                 }
                 domElement.style.cursor = 'pointer';
             } else {
@@ -983,17 +918,30 @@ export function useProjectCubes(
         };
 
         const onClick = (event: MouseEvent) => {
+            if (isCameraAnimating) {
+                console.log('Click ignored - Camera animating');
+                return;
+            }
+
             mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
             mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
             raycaster.setFromCamera(mouse, camera);
             const hitboxes = projectCubes.flatMap(cube =>
-                cube.userData.isActive ? cube.children.filter(child => child instanceof THREE.Mesh && child.userData.isPortalHitbox) : []
+                cube.userData.isActive ? cube.children.filter(child =>
+                    (child instanceof THREE.Mesh && child.userData.isPortalHitbox) ||
+                    (child instanceof THREE.Mesh && child.userData.isCloseHitbox)
+                ) : []
             ) as THREE.Mesh[];
             const intersects = raycaster.intersectObjects(hitboxes);
 
             if (intersects.length === 0) return;
 
             const clickedHitbox = intersects[0].object as THREE.Mesh;
+            if (clickedHitbox.userData.isCloseHitbox) {
+                handleExitPortal();
+                return;
+            }
+
             const clickedPortal = clickedHitbox.userData.portal as THREE.LineSegments;
             const cube = clickedHitbox.parent as THREE.Group;
             const cubeIndex = projectCubes.indexOf(cube);
@@ -1019,6 +967,7 @@ export function useProjectCubes(
                 const lookAtOffset = portalDirection.clone().multiplyScalar(-1000);
                 const lookAtTarget = endPosition.clone().add(lookAtOffset);
 
+                isCameraAnimating = true;
                 gsap.to(camera.position, {
                     x: endPosition.x,
                     y: endPosition.y,
@@ -1031,6 +980,7 @@ export function useProjectCubes(
                             tunnelStore.setScrollPosition(window.scrollY);
                             router.visit(route('project.show', { project: project.slug }), { preserveScroll: false });
                         }
+                        isCameraAnimating = false;
                     }
                 });
             } else if (!isInPortalFocus) {
@@ -1042,16 +992,43 @@ export function useProjectCubes(
 
                 const portalWorldPosition = clickedPortal.getWorldPosition(new THREE.Vector3());
 
+                isEnteringPortal = true;
+                isCameraAnimating = true;
+                lockedScrollY = window.scrollY;
                 gsap.to(camera.position, {
                     x: 0,
                     y: 0,
                     z: cube.getWorldPosition(new THREE.Vector3()).z,
                     duration: 2,
-                    ease: 'power3.out'
+                    ease: 'power3.out',
+                    overwrite: 'all',
+                    onStart: () => {
+                        isInPortalFocus = true;
+                        activePortal = clickedPortal;
+                        document.body.classList.add('no-scrollbar');
+                        animateRings(clickedPortal, true);
+                    },
+                    onComplete: () => {
+                        if (cube.userData.closeButton) {
+                            cube.userData.closeButton.visible = true;
+                            positionCloseButton(cube.userData.closeButton, clickedPortal, camera, CUBE_SIZE / 2, cube.userData.portalLocation);
+                            const materials = cube.userData.closeButton.children
+                                .filter(child => child instanceof THREE.Mesh)
+                                .map(child => (child as THREE.Mesh).material);
+                            gsap.to(materials, {
+                                opacity: 1,
+                                duration: 0.5,
+                                onComplete: () => {
+                                    console.log('Close button visible:', cube.userData.closeButton.visible, 'Opacity:', materials[0].opacity);
+                                }
+                            });
+                        }
+                    }
                 });
                 gsap.to({}, {
                     duration: 2,
                     ease: 'power3.out',
+                    overwrite: 'all',
                     onUpdate: function() {
                         const progress = this.progress();
                         const startLookAt = camera.getWorldDirection(new THREE.Vector3()).multiplyScalar(1000).add(camera.position);
@@ -1059,72 +1036,15 @@ export function useProjectCubes(
                         const lookAtY = THREE.MathUtils.lerp(startLookAt.y, portalWorldPosition.y, progress);
                         const lookAtZ = THREE.MathUtils.lerp(startLookAt.z, portalWorldPosition.z, progress);
                         camera.lookAt(lookAtX, lookAtY, lookAtZ);
-                    },
-                    onStart: () => {
-                        isInPortalFocus = true;
-                        lockedScrollY = window.scrollY;
-                        document.body.classList.add('no-scrollbar');
-                        activePortal = clickedPortal;
-                        animateRings(clickedPortal, true);
-                    }
-                });
-            }
-        };
-
-        const handleScroll = (event: WheelEvent | Event) => {
-            if (!isInPortalFocus || !activePortal || !originalCameraPosition || !originalCameraTarget) {
-                return;
-            }
-
-            let deltaY = 0;
-            if (event instanceof WheelEvent) {
-                deltaY = event.deltaY;
-            } else {
-                const currentScrollY = window.scrollY;
-                deltaY = currentScrollY - (lockedScrollY || 0);
-            }
-
-            event.preventDefault();
-            event.stopPropagation();
-
-            if (deltaY > 0) {
-                window.scrollTo(0, lockedScrollY!);
-                return;
-            }
-
-            if (deltaY < 0) {
-                const exitingPortal = activePortal;
-                const targetLookAt = originalCameraTarget.clone();
-                const originalZ = originalCameraPosition!.z;
-
-                gsap.to(camera.position, {
-                    x: originalCameraPosition.x,
-                    y: originalCameraPosition.y,
-                    z: originalZ,
-                    duration: 1,
-                    ease: 'power3.out',
-                });
-                gsap.to({}, {
-                    duration: 1,
-                    ease: 'power3.out',
-                    onUpdate: function() {
-                        const progress = this.progress();
-                        const startLookAt = camera.getWorldDirection(new THREE.Vector3()).multiplyScalar(1000).add(camera.position);
-                        const lookAtX = THREE.MathUtils.lerp(startLookAt.x, targetLookAt.x, progress);
-                        const lookAtY = THREE.MathUtils.lerp(startLookAt.y, targetLookAt.y, progress);
-                        const lookAtZ = THREE.MathUtils.lerp(startLookAt.z, targetLookAt.z, progress);
-                        camera.lookAt(lookAtX, lookAtY, lookAtZ);
+                        if (cube.userData.closeButton && activePortal) {
+                            positionCloseButton(cube.userData.closeButton, activePortal, camera, CUBE_SIZE / 2, cube.userData.portalLocation);
+                        }
                     },
                     onComplete: () => {
-                        camera.lookAt(targetLookAt);
-                        isInPortalFocus = false;
-                        activePortal = null;
-                        document.body.classList.remove('no-scrollbar');
-                        if (onPortalFocusChange) onFocusChangeCallback(false);
-                        animateRings(exitingPortal!, false);
-                        lockedScrollY = null;
-                        originalCameraPosition = null;
-                        originalCameraTarget = null;
+                        camera.lookAt(portalWorldPosition);
+                        isEnteringPortal = false;
+                        isCameraAnimating = false;
+                        console.log('Portal enter complete, close button pos:', cube.userData.closeButton?.position);
                     }
                 });
             }
@@ -1132,14 +1052,31 @@ export function useProjectCubes(
 
         domElement.addEventListener('mousemove', onMouseMove);
         domElement.addEventListener('click', onClick);
+        domElement.addEventListener('touchstart', onTouchStart, { passive: true });
+        domElement.addEventListener('touchmove', onTouchMove, { passive: false });
+        domElement.addEventListener('touchend', onTouchEnd, { passive: true });
         window.addEventListener('wheel', handleScroll, { passive: false });
         window.addEventListener('scroll', handleScroll, { passive: false });
+
+        const onResize = () => {
+            if (isInPortalFocus && activePortal) {
+                const cube = activePortal.parent as THREE.Group;
+                if (cube.userData.closeButton) {
+                    positionCloseButton(cube.userData.closeButton, activePortal, camera, CUBE_SIZE / 2, cube.userData.portalLocation);
+                }
+            }
+        };
+        window.addEventListener('resize', onResize);
 
         return () => {
             domElement.removeEventListener('mousemove', onMouseMove);
             domElement.removeEventListener('click', onClick);
+            domElement.removeEventListener('touchstart', onTouchStart);
+            domElement.removeEventListener('touchmove', onTouchMove);
+            domElement.removeEventListener('touchend', onTouchEnd);
             window.removeEventListener('wheel', handleScroll);
             window.removeEventListener('scroll', handleScroll);
+            window.removeEventListener('resize', onResize);
         };
     };
 
