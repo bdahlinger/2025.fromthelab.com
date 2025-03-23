@@ -109,7 +109,7 @@ export function useProjectCubes(
             portal.userData.isAnimating = false
             portal.geometry.computeBoundingSphere()
 
-            const hitboxGeometry = new THREE.PlaneGeometry(60, 60)
+            const hitboxGeometry = new THREE.PlaneGeometry(80, 80)
             const hitboxMaterial = new THREE.MeshBasicMaterial({ visible: false, side: THREE.DoubleSide })
             const hitbox = new THREE.Mesh(hitboxGeometry, hitboxMaterial)
             hitbox.userData.isPortalHitbox = true
@@ -928,15 +928,37 @@ export function useProjectCubes(
             const cube = exitingPortal?.parent as THREE.Group
 
             isCameraAnimating = true
+
+            /*const lookAtPosition = camera.userData.lockedLookAt ? camera.userData.lockedLookAt.clone() : camera.getWorldDirection(new THREE.Vector3()).multiplyScalar(1000).add(camera.position)
+            console.log('lookAtPosition',lookAtPosition,targetLookAt)
+            gsap.to(lookAtPosition, {
+                x: targetLookAt.x,
+                y: targetLookAt.y,
+                z: targetLookAt.z,
+                duration: 1,
+                ease: 'power3.out',
+                overwrite: 'auto'
+            })*/
+            const startLookAt = camera.userData.lockedLookAt ? camera.userData.lockedLookAt.clone() : camera.getWorldDirection(new THREE.Vector3()).multiplyScalar(1000).add(camera.position)
+            console.log('startLookAt', startLookAt, 'targetLookAt', targetLookAt)
+            const progressObj = { progress: 0 }
+
             gsap.to(camera.position, {
                 x: originalCameraPosition?.x ?? camera.position.x,
                 y: originalCameraPosition?.y ?? camera.position.y,
                 z: originalZ,
-                duration: 1,
-                ease: 'power3.out',
+                duration: 2,
+                ease: 'power3.inOut',
                 overwrite: 'auto',
                 onUpdate: () => {
-                    camera.lookAt(targetLookAt)
+
+                    const progress = progressObj.progress
+                    // Interpolate between startLookAt and targetLookAt based on animation progress
+                    const lookAtX = THREE.MathUtils.lerp(startLookAt.x, targetLookAt.x, progress)
+                    const lookAtY = THREE.MathUtils.lerp(startLookAt.y, targetLookAt.y, progress)
+                    const lookAtZ = THREE.MathUtils.lerp(startLookAt.z, targetLookAt.z, progress)
+                    camera.lookAt(lookAtX, lookAtY, lookAtZ)
+                    camera.updateMatrixWorld(true)
                 },
                 onComplete: () => {
                     camera.lookAt(targetLookAt)
@@ -982,6 +1004,67 @@ export function useProjectCubes(
                     })
                 }
             })
+            // Animate the progress proxy object from 0 to 1 over the same duration
+            gsap.to(progressObj, {
+                progress: 1,
+                duration: 2,
+                ease: 'power3.inOut',
+                overwrite: 'auto'
+            })
+            /*gsap.to(camera.position, {
+                x: originalCameraPosition?.x ?? camera.position.x,
+                y: originalCameraPosition?.y ?? camera.position.y,
+                z: originalZ,
+                duration: 1,
+                ease: 'power3.out',
+                overwrite: 'auto',
+                onUpdate: () => {
+                    camera.lookAt(lookAtPosition)
+                },
+                onComplete: () => {
+                    camera.lookAt(targetLookAt)
+                    isInPortalFocus = false
+                    activePortal = null
+                    document.body.classList.remove('no-scrollbar')
+                    if (onPortalFocusChange) onPortalFocusChange(false)
+                    if (exitingPortal) animateRings(exitingPortal, false)
+                    if (cube?.userData.closeButton) {
+                        const materials = cube.userData.closeButton.children
+                            .filter(child => child instanceof THREE.Mesh)
+                            .map(child => (child as THREE.Mesh).material)
+                        gsap.to(materials, {
+                            opacity: 0,
+                            duration: 0.5,
+                            onUpdate: () => {
+                                cube.userData.closeButton.visible = false
+                            },
+                            onComplete: () => {
+                                cube.userData.closeButton.updateMatrixWorld(true)
+
+                                if (cube.userData.standaloneDebugPlane) {
+                                    cube.userData.standaloneDebugPlane.visible = false
+                                    cube.userData.standaloneDebugPlane.userData.locked = false
+                                    cube.userData.standaloneDebugPlane.updateMatrixWorld(true)
+                                    console.log('Standalone debug plane hidden on exit, position unchanged:', cube.userData.standaloneDebugPlane.getWorldPosition(new THREE.Vector3()))
+                                }
+                                cube.userData.lockedPosition = null
+                            }
+                        })
+                    }
+                    lockedScrollY = null
+                    originalCameraPosition = null
+                    originalCameraTarget = null
+                    camera.userData.lockedLookAt = null
+                    isCameraAnimating = false
+
+                    // Restart clickHere particles for cubes within range
+                    projectCubes.forEach(cube => {
+                        if (Math.abs(camera.position.z - cube.position.z + 90) <= PROXIMITY_THRESHOLD) {
+                            lastEmissionTimes.set(cube, 0)
+                        }
+                    })
+                }
+            })*/
         }
 
         const animateRings = (portal: THREE.LineSegments, expand: boolean = true) => {
