@@ -1,13 +1,13 @@
-import * as THREE from 'three';
-import { FontLoader } from 'three/examples/jsm/loaders/FontLoader';
-import { TextGeometry } from 'three/examples/jsm/geometries/TextGeometry';
-import { gsap } from 'gsap';
-import { router } from '@inertiajs/vue3';
-import { useTunnelStore } from '@/Stores/tunnelStore';
+import * as THREE from 'three'
+import { FontLoader } from 'three/examples/jsm/loaders/FontLoader'
+import { TextGeometry } from 'three/examples/jsm/geometries/TextGeometry'
+import { gsap } from 'gsap'
+import { router } from '@inertiajs/vue3'
+import { useTunnelStore } from '@/Stores/tunnelStore'
 
 export function useProjectCubes(
     scene: THREE.Scene,
-    config: { CUBE_SIZE: number; CUBE_SPACING: number; FIRST_CUBE_Z: number },
+    config: { CUBE_SIZE: number, CUBE_SPACING: number, FIRST_CUBE_Z: number },
     projects: App.Data.ProjectData[],
     projectGridFile: string,
     projectGridFile2: string,
@@ -19,7 +19,6 @@ export function useProjectCubes(
     },
     textureCache: Map<string, THREE.Texture>
 ) {
-
     const tunnelStore = useTunnelStore()
     const { CUBE_SIZE, CUBE_SPACING, FIRST_CUBE_Z } = config
     const MAX_Z = FIRST_CUBE_Z - (projects.length + 1) * CUBE_SPACING
@@ -33,7 +32,7 @@ export function useProjectCubes(
     const PULSE_WIDTH = 1
     const PULSE_HEIGHT = 15
     const PULSE_OFFSET = 0.1
-    const CLICK_HERE_SIZE = tunnelStore.isMobile ? 1:0.5
+    const CLICK_HERE_SIZE = tunnelStore.isMobile ? 1 : 0.5
     const CLICK_HERE_SPEED = 40 // units per second
     const CLICK_HERE_RATE = 0.125 // seconds between emissions
     const CLICK_HERE_DISTANCE = 100 // distance beyond portal
@@ -280,6 +279,7 @@ export function useProjectCubes(
 
             clickHereParticles.set(group, [])
             lastEmissionTimes.set(group, 0)
+            particleCounters.set(group, 0)
         }
 
         const addChildWithBounds = (child: THREE.Object3D) => {
@@ -344,7 +344,7 @@ export function useProjectCubes(
                             if (rotation >= THREE.MathUtils.degToRad(220)) {
                                 plane.rotation.x = Math.PI / 2
                                 plane.rotation.z = Math.PI / 2
-                            }else{
+                            } else {
                                 plane.rotation.x = -Math.PI / 2
                                 plane.rotation.z = Math.PI / 2
                             }
@@ -807,7 +807,7 @@ export function useProjectCubes(
             const cubeZ = cube.position.z
             const cubeDistance = Math.abs(cameraZ - cubeZ + 90)
 
-            if (cubeDistance <= PROXIMITY_THRESHOLD) {
+            if (cubeDistance <= PROXIMITY_THRESHOLD && !isInPortalFocus) {
                 const lastEmission = lastEmissionTimes.get(cube) || 0
                 if (currentTime - lastEmission >= CLICK_HERE_RATE) {
                     const portal = cube.children.find(child =>
@@ -875,7 +875,7 @@ export function useProjectCubes(
             } else if (deltaY > 20) {
                 event.preventDefault()
                 window.scrollTo(0, lockedScrollY!)
-                gsap.to(window, { scrollTo: { y: lockedScrollY! }, duration: 0 })
+                gsap.to(window, { scrollTo: { y: lockedScrollY }, duration: 0 })
             }
         }
 
@@ -973,6 +973,13 @@ export function useProjectCubes(
                     originalCameraTarget = null
                     camera.userData.lockedLookAt = null
                     isCameraAnimating = false
+
+                    // Restart clickHere particles for cubes within range
+                    projectCubes.forEach(cube => {
+                        if (Math.abs(camera.position.z - cube.position.z + 90) <= PROXIMITY_THRESHOLD) {
+                            lastEmissionTimes.set(cube, 0)
+                        }
+                    })
                 }
             })
         }
@@ -1210,6 +1217,8 @@ export function useProjectCubes(
                         document.body.classList.add('no-scrollbar')
                         animateRings(clickedPortal, true)
                         cube.userData.lockedPosition = cube.position.clone()
+                        // Dispose of all clickHere particles when entering portal mode
+                        disposeParticles(cube)
                     },
                     onComplete: () => {
                         if (cube.userData.closeButton) {
@@ -1282,6 +1291,7 @@ export function useProjectCubes(
             })
             clickHereParticles.clear()
             lastEmissionTimes.clear()
+            particleCounters.clear()
         }
 
         const originalCleanup = () => {
@@ -1293,6 +1303,7 @@ export function useProjectCubes(
             window.removeEventListener('wheel', handleScroll)
             window.removeEventListener('scroll', handleScroll)
         }
+
         return () => {
             originalCleanup()
             cleanup()
