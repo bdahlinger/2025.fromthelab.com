@@ -32,7 +32,6 @@ const props = defineProps<{
 const CUBE_SIZE = 250;
 const CUBE_SPACING = 500;
 const FIRST_CUBE_Z = -500;
-const SCROLL_BUFFER = 100;
 const BLOOM_FADE_START_Z = -520;
 const BLOOM_FADE_END_Z = -720;
 
@@ -58,7 +57,6 @@ const loadingProgress = ref(0);
 const isIntroComplete = ref(false);
 const showPreloader = ref(true);
 const textureCache = new Map<string, THREE.Texture>();
-const updateCubeColorsRef = ref<((camera: THREE.PerspectiveCamera) => void) | null>(null);
 const sceneDistance = 4000
 
 let scene: THREE.Scene;
@@ -246,6 +244,10 @@ const animate = (time: number = 0) => {
 
         if (settings.showCars) updateCityParticles(delta);
         if (settings.showChasers && updateChasers) updateChasers(delta);
+
+        if (projectCubesInstance?.updateClickHereParticles) {
+            projectCubesInstance.updateClickHereParticles(camera, delta)
+        }
 
         // Dynamic far: cover deepest cube + fog range
         const fogFar = 4000;
