@@ -26,4 +26,8 @@ export default defineConfig({
             "ziggy-js": path.resolve("vendor/tightenco/ziggy/dist"),
         },
     },
+    esbuild: {
+        include: /\.ts$/,
+        exclude: /node_modules/,
+    },
 });
