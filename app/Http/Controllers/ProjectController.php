@@ -19,11 +19,13 @@ class ProjectController extends Controller
             abort(404, 'Project not found');
         }
 
+
         return Inertia::render('Project/Show', [
             'project' => $project,
             'projects' => $projects,
             'projectGridFile' => Storage::url('project-grid.png'),
             'projectGridFile2' => Storage::url('project-grid2.png'),
+            'fromHome' => request()->header('referer') === url('/') || request()->routeIs('home'),
     ]);
     }
 }

@@ -62,6 +62,7 @@ class HomeController extends Controller
                 'size' => $fontSize
             ],
         ]);*/
+        ray('test');
 
         return Inertia::render('Welcome', [
             'canLogin' => Route::has('login'),

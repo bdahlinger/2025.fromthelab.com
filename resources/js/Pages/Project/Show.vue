@@ -1,14 +1,75 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3';
+import { onMounted, onUnmounted, ref, reactive, inject } from 'vue';
+import { useTunnelStore } from '@/Stores/tunnelStore';
 import LogoMark from "@/Global/LogoMark.vue";
 import { ProjectData } from '@/types/generated';
 import GlobalFooter from "@/Global/GlobalFooter.vue";
+import { gsap } from 'gsap';
+import ProjectNavigator from "@/Global/ProjectNavigator.vue";
 
 
 const props = defineProps<{
     projects: ProjectData[];
     project: ProjectData;
+    storage: Storage;
 }>();
+
+const tunnelStore = useTunnelStore();
+tunnelStore.setProject(props.project);
+tunnelStore.setProjects(props.projects);
+
+const previousUrl = inject<Ref<string>>('previousUrl')
+
+const headerImageStyle = reactive({
+    backgroundImage: `url("${props.storage}projects/${props.project.slug}/header.jpg")`,
+})
+
+const logo = ref(`${props.storage}projects/${props.project.slug}/logo.webp`)
+const overlay = ref<HTMLElement | null>(null);
+
+// Circle wipe animation (hard-edged mask)
+const animateCircleWipe = () => {
+    if (!overlay.value) return;
+
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    const maxRadius = Math.sqrt(viewportWidth ** 2 + viewportHeight ** 2) / 2;
+
+    gsap.fromTo(
+        overlay.value,
+        {
+            WebkitMask: 'radial-gradient(circle 0px at 50% 50%, transparent 95%, black 100%)',
+            mask: 'radial-gradient(circle 0px at 50% 50%, transparent 95%, black 100%)'
+        },
+        {
+            WebkitMask: `radial-gradient(circle ${maxRadius}px at 50% 50%, transparent 95%, black 100%)`,
+            mask: `radial-gradient(circle ${maxRadius}px at 50% 50%, transparent 95%, black 100%)`,
+            duration: 1,
+            ease: 'power2.out',
+            onComplete: () => {
+                if (overlay.value) overlay.value.style.display = 'none';
+            }
+        }
+    );
+};
+
+onMounted(() => {
+    console.log('previousUrl',previousUrl.value)
+    // Check if previous page was home
+    if (previousUrl?.value === '/') {
+        animateCircleWipe();
+    } else if (overlay.value) {
+        overlay.value.style.display = 'none'; // Hide overlay immediately if not from homepage
+    }
+
+
+});
+
+onUnmounted(() => {
+    // Clean up GSAP animations if needed
+    gsap.killTweensOf(overlay.value);
+});
 
 </script>
 
@@ -16,39 +77,36 @@ const props = defineProps<{
 
     <Head :title=project.title />
 
-    <div class="relative bg-gray-50 text-black/50 dark:bg-black dark:text-white/50">
+    <div class="relative bg-black text-white bg-no-repeat bg-contain" :style="project.hasBg ? headerImageStyle:''">
 
-        <nav class="absolute z-10 flex flex-col items-center justify-center top-32 left-1/2 transform -translate-x-1/2">
+        <section ref="overlay" class="fixed inset-0 bg-black z-50 pointer-events-none"></section>
+
+        <project-navigator />
+
+        <nav class="flex flex-col items-center justify-center pt-32 ">
+
             <Link href="/">
                 <logo-mark/>
             </Link>
 
         </nav>
 
-	    <div class="overflow-hidden">
+        <div class="pt-40 px-2 text-center">
 
+            <img class="block mx-auto max-w-32 h-auto mb-4" v-if="project.hasLogo" :src="logo" :alt="project.title + ' logo'">
 
-	    </div>
+            <h1 class="text-2xl text-white">{{project.title}}</h1>
 
-        <div class="flex justify-center items-center">
+            <h2 class="text-white/50">{{ project.client }}</h2>
 
-
-            <h1>{{project.title}}</h1>
-
-        </div>
-
-        <div class="flex justify-center items-center -mt-24 mix-blend-screen">
-
+            <p class="mt-4 text-center text-sm max-w-xl mx-auto" v-html="project.description"></p>
 
         </div>
 
-<!--        <div class="relative min-h-screen flex flex-col items-center justify-center">
-            <div class="relative w-full max-w-2xl px-2 lg:max-w-7xl">
-                <footer class="py-16 text-center text-xs text-black dark:text-white/70">
-                    © Copyright 2025 From the Lab. All rights reserved.
-                </footer>
-            </div>
-        </div>-->
+        <div class="flex justify-center items-center ">
+
+
+        </div>
 
         <global-footer/>
     </div>

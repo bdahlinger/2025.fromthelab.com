@@ -19,15 +19,16 @@ import Preloader from './Preloader.vue';
 
 gsap.registerPlugin(ScrollTrigger);
 
-const tunnelStore = useTunnelStore();
-tunnelStore.isMobile = /iPhone|iPad|Android/i.test(navigator.userAgent);
-
 const props = defineProps<{
     projects: App.Data.ProjectData[];
     projectGridFile: string;
     projectGridFile2: string;
     initialSlug?: string;
 }>();
+
+const tunnelStore = useTunnelStore();
+tunnelStore.isMobile = /iPhone|iPad|Android/i.test(navigator.userAgent);
+tunnelStore.projects = props.projects;
 
 const CUBE_SIZE = 250;
 const CUBE_SPACING = 500;
@@ -324,6 +325,7 @@ onMounted(() => {
                     cleanupInteractivity = projectCubesInstance!.setupInteractivity(
                         camera,
                         renderer.domElement,
+                        renderer,
                         (isFocused) => {
                             if (setReverting) setReverting(isFocused);
                         }

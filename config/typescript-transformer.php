@@ -7,7 +7,8 @@ return [
      */
 
     'auto_discover_types' => [
-        app_path(),
+        app_path('Data'), // Narrow it down to specific directories
+        app_path('Enums'),
     ],
 
     /*
@@ -28,10 +29,11 @@ return [
      */
 
     'transformers' => [
-        Spatie\LaravelTypeScriptTransformer\Transformers\SpatieStateTransformer::class,
+        //Spatie\LaravelTypeScriptTransformer\Transformers\SpatieStateTransformer::class,
         Spatie\TypeScriptTransformer\Transformers\EnumTransformer::class,
         //Spatie\TypeScriptTransformer\Transformers\SpatieEnumTransformer::class,
-        Spatie\LaravelTypeScriptTransformer\Transformers\DtoTransformer::class,
+        //Spatie\LaravelTypeScriptTransformer\Transformers\DtoTransformer::class,
+        Spatie\LaravelData\Support\TypeScriptTransformer\DataTypeScriptTransformer::class
     ],
 
     /*
@@ -75,7 +77,7 @@ return [
      * the package will transform them to types.
      */
 
-    'transform_to_native_enums' => false,
+    'transform_to_native_enums' => true,
 
     /*
      * By default, this package will convert PHP nullable properties to TypeScript

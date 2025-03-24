@@ -16,6 +16,7 @@
         "laravel/sanctum": "^4.0",
         "laravel/tinker": "^2.9",
         "spatie/laravel-data": "^4.13",
+        "spatie/laravel-ray": "^1.40",
         "spatie/laravel-typescript-transformer": "^2.5",
         "tightenco/ziggy": "^2.0"
     },
