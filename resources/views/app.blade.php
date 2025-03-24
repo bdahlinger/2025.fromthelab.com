@@ -30,7 +30,7 @@
         <meta name="theme-color" content="#ffffff">
         <!-- Scripts -->
         @routes
-        @vite(['resources/js/app.js', "resources/js/Pages/{$page['component']}.vue"])
+        @vite(['resources/js/app.ts', "resources/js/Pages/{$page['component']}.vue"])
         @inertiaHead
     </head>
     <body class="font-sans antialiased bg-gray-50 text-black/50 dark:bg-black dark:text-white/50">
