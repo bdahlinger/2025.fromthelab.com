@@ -17,6 +17,10 @@ export default {
             fontFamily: {
                 sans: ['Montserrat', ...defaultTheme.fontFamily.sans],
             },
+
+            aspectRatio: {
+                'phero': '24 / 11',
+            },
         },
     },
 

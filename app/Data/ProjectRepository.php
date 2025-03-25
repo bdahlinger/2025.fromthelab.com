@@ -3,6 +3,7 @@
 namespace App\Data;
 
 use App\Enums\Classification;
+use App\Enums\Contributions;
 use Illuminate\Support\Facades\Storage;
 use Spatie\LaravelData\DataCollection;
 
@@ -39,6 +40,11 @@ class ProjectRepository
             'keyart' => 'projects/ss.jpg',
             'keyartMobile' => 'projects/ss-m.jpg',
             'keyartLocation' => 'left',
+            'contributions' => [
+                Contributions::DEVOPS,
+                Contributions::FRONTEND,
+                Contributions::BACKEND,
+            ],
             'hasLogo' => true,
             'hasBg' => true,
         ],
@@ -51,6 +57,9 @@ class ProjectRepository
             'keyart' => 'projects/mk1.jpg',
             'keyartMobile' => 'projects/mk1-m.jpg',
             'keyartLocation' => 'right',
+            'contributions' => [
+
+            ],
             'hasLogo' => true,
             'hasBg' => true,
         ],
@@ -63,6 +72,9 @@ class ProjectRepository
             'keyart' => 'projects/hl.jpg',
             'keyartMobile' => 'projects/hl-m.jpg',
             'keyartLocation' => 'left',
+            'contributions' => [
+
+            ],
             'hasLogo' => true,
             'hasBg' => true,
         ],
@@ -75,13 +87,21 @@ class ProjectRepository
             'keyart' => 'projects/qc.jpg',
             'keyartMobile' => 'projects/qc-m.jpg',
             'keyartLocation' => 'bottom',
+            'contributions' => [
+
+            ],
+            'hasLogo' => true,
+            'hasBg' => true,
         ],
         [
             'classification' => 'entertainment',
             'slug' => 'multiversus',
             'title' => 'MULTIVERSUS',
             'client' => 'WB Games',
-            'description' => '',
+            'description' => '<em>MultiVersus</em>is a platform fighting game featuring characters from Warner Bros. franchises. With 2v2-focused combat, unique character abilities, and cross-platform play, it offers a fresh take on the genre. Iconic fighters like Batman, Shaggy, and Bugs Bunny battle in dynamic, interactive arenas.',
+            'contributions' => [
+
+            ],
             'keyart' => 'projects/mvs.jpg',
             'keyartMobile' => 'projects/mvs-m.jpg',
             'keyartLocation' => 'top',
@@ -92,6 +112,9 @@ class ProjectRepository
             'title' => 'GOTHAM KNIGHTS',
             'client' => 'WB Games',
             'description' => '',
+            'contributions' => [
+
+            ],
             'keyart' => 'projects/gk.jpg',
             'keyartMobile' => 'projects/gk-m.jpg',
             'keyartLocation' => 'bottom',
@@ -102,6 +125,9 @@ class ProjectRepository
             'title' => 'GAME OF THRONES: CONQUEST',
             'client' => 'WB Games',
             'description' => '',
+            'contributions' => [
+
+            ],
             'keyart' => 'projects/got.jpg',
             'keyartMobile' => 'projects/got-m.jpg',
             'keyartLocation' => 'top',
@@ -112,6 +138,9 @@ class ProjectRepository
             'title' => 'MARVEL: STRIKE FORCE',
             'client' => 'Scopely',
             'description' => '',
+            'contributions' => [
+
+            ],
             'keyart' => 'projects/msf.jpg',
             'keyartMobile' => 'projects/msf-m.jpg',
             'keyartLocation' => 'bottom',
@@ -122,6 +151,9 @@ class ProjectRepository
             'title' => 'LEAGUE OF LEGENDS: RIOT KING',
             'client' => 'Riot Games',
             'description' => '',
+            'contributions' => [
+
+            ],
             'keyart' => 'projects/rk.jpg',
             'keyartMobile' => 'projects/rk-m.jpg',
             'keyartLocation' => 'top',
@@ -132,6 +164,9 @@ class ProjectRepository
             'title' => 'LEAGUE OF LEGENDS: CONVERGENCE',
             'client' => 'Riot Games',
             'description' => '',
+            'contributions' => [
+
+            ],
             'keyart' => 'projects/conv.jpg',
             'keyartMobile' => 'projects/conv-m.jpg',
             'keyartLocation' => 'right',
@@ -142,6 +177,9 @@ class ProjectRepository
             'title' => 'PUBG BATTLEGROUNDS',
             'client' => 'PUBG',
             'description' => '',
+            'contributions' => [
+
+            ],
             'keyart' => 'projects/pubg.jpg',
             'keyartMobile' => 'projects/pubg-m.jpg',
             'keyartLocation' => 'left',
@@ -152,6 +190,9 @@ class ProjectRepository
             'title' => 'INJUSTICE 2',
             'client' => 'WB Games',
             'description' => '',
+            'contributions' => [
+
+            ],
             'keyart' => 'projects/inj.jpg',
             'keyartMobile' => 'projects/inj-m.jpg',
             'keyartLocation' => 'right',
@@ -162,6 +203,9 @@ class ProjectRepository
             'title' => 'LEGO STAR WARS',
             'client' => 'WB Games',
             'description' => '',
+            'contributions' => [
+
+            ],
             'keyart' => 'projects/lego-star-wars.jpg',
             'keyartMobile' => 'projects/lego-star-wars-m.jpg',
             'keyartLocation' => 'left',
@@ -172,6 +216,9 @@ class ProjectRepository
             'title' => 'BACK 4 BLOOD',
             'client' => 'WB Games',
             'description' => '',
+            'contributions' => [
+
+            ],
             'keyart' => 'projects/back-4-blood.jpg',
             'keyartMobile' => 'projects/back-4-blood-m.jpg',
             'keyartLocation' => 'right',
@@ -182,6 +229,9 @@ class ProjectRepository
             'title' => 'HITMAN 2',
             'client' => 'WB Games',
             'description' => '',
+            'contributions' => [
+
+            ],
             'keyart' => 'projects/hitman-2.jpg',
             'keyartMobile' => 'projects/hitman-2-m.jpg',
             'keyartLocation' => 'left',
@@ -192,6 +242,9 @@ class ProjectRepository
             'title' => 'MIDDLE EARTH: SHADOW OF WAR',
             'client' => 'WB Games',
             'description' => '',
+            'contributions' => [
+
+            ],
             'keyart' => 'projects/shadow-of-war.jpg',
             'keyartMobile' => 'projects/shadow-of-war-m.jpg',
             'keyartLocation' => 'bottom',
@@ -204,9 +257,19 @@ class ProjectRepository
     public static function all()
     {
         $projects = collect(self::$projects)->map(function (array $project) {
+            //ray('doing ' . $project['slug']);
+
+            // Normalize contributions to an array
+            $contributions = isset($project['contributions']) && is_array($project['contributions'])
+                ? $project['contributions']
+                : [];
+
+            //ray($contributions); // Log the normalized array
+
             return ProjectData::from([
                 'slug' => $project['slug'],
                 'classification' => Classification::from($project['classification']),
+                'contributions' => $contributions, // Pass array directly
                 'title' => $project['title'],
                 'client' => $project['client'],
                 'description' => $project['description'],

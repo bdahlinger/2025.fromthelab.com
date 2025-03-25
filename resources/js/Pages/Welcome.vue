@@ -8,6 +8,7 @@ import CubeStrip from "@/Global/CubeStrip.vue";
 import HallwayEngine from "@/Global/HallwayEngine.vue";
 import { ProjectData } from '@/types/generated';
 import GlobalFooter from "@/Global/GlobalFooter.vue";
+import App from '@/Pages/App.vue';
 
 const props = defineProps<{
     //canLogin: boolean
@@ -21,6 +22,7 @@ const props = defineProps<{
 
 <template>
 
+    <app>
     <Head title="Welcome" />
 
     <div class="relative bg-gray-50 text-black/50 dark:bg-black dark:text-white/50">
@@ -41,7 +43,7 @@ const props = defineProps<{
 
         </div>
 
-        <div class="flex justify-center items-center -mt-24 mix-blend-screen">
+        <div class="flex justify-center items-center ">
 
 <!--            <cube-strip :particle-width="15" :particle-height="160" />-->
 
@@ -50,4 +52,5 @@ const props = defineProps<{
         <global-footer/>
 
     </div>
+    </app>
 </template>

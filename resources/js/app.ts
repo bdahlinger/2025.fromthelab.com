@@ -5,15 +5,16 @@ import { createApp, h, DefineComponent } from 'vue';
 import { createInertiaApp, router } from '@inertiajs/vue3';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import { ZiggyVue } from "ziggy-js"
-import piniaPluginPersistedstate from 'pinia-plugin-persistedstate';
+//import piniaPluginPersistedstate from 'pinia-plugin-persistedstate';
 import { ref, Ref } from 'vue'; // For reactive previousUrl
 import FloatingVue from 'floating-vue';
 import 'floating-vue/dist/style.css';
-
+import { useTunnelStore } from '@/Stores/tunnelStore';
 const appName: string = import.meta.env.VITE_APP_NAME || 'Laravel'
 
+
 const pinia = createPinia()
-pinia.use(piniaPluginPersistedstate)
+//pinia.use(piniaPluginPersistedstate)
 
 const previousUrl = ref('')
 
@@ -33,9 +34,9 @@ createInertiaApp({
             .use(FloatingVue)
             .provide('previousUrl', previousUrl)
             .mount(el);
-
     },
     progress: {
         color: '#4B5563',
     },
 })
+

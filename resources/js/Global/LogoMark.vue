@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { onMounted, onUnmounted, ref } from 'vue'
 import * as THREE from 'three'
 import { gsap } from 'gsap'
 
@@ -279,7 +279,21 @@ onMounted(() => {
 
     animate()
 })
+onUnmounted(() => {
+    // Clean up Three.js resources
+    renderer.dispose();
+    scene.clear();
+    boxes = [];
+    boxGroup = null as any;
 
+    // Kill GSAP animations
+    redRotationAnim?.kill();
+    greenRotationAnim?.kill();
+    blueRotationAnim?.kill();
+
+    // Remove resize listener
+    window.removeEventListener('resize', () => {});
+});
 </script>
 
 <template>
@@ -316,6 +330,6 @@ onMounted(() => {
 .logo-3d-canvas {
     width: 100%;
     height: 100%;
-    image-rendering: pixelated;
+    //image-rendering: pixelated;
 }
 </style>

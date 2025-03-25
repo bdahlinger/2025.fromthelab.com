@@ -26,6 +26,6 @@ class ProjectController extends Controller
             'projectGridFile' => Storage::url('project-grid.png'),
             'projectGridFile2' => Storage::url('project-grid2.png'),
             'fromHome' => request()->header('referer') === url('/') || request()->routeIs('home'),
-    ]);
+        ]);
     }
 }

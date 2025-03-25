@@ -2,7 +2,6 @@
 import { defineStore } from 'pinia';
 
 interface RootState {
-    isMobile: boolean
     activeProjectSlug: string | null
     scrollPosition: number
     projects: App.Data.ProjectData[] | null
@@ -11,7 +10,6 @@ interface RootState {
 
 export const useTunnelStore = defineStore('tunnel', {
     state: (): RootState => ({
-        isMobile: false,
         activeProjectSlug: null as string | null,
         scrollPosition: 0,
         projects: null,

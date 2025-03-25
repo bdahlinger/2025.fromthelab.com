@@ -2,6 +2,7 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref } from 'vue';
 import { useTunnelStore } from '@/Stores/tunnelStore';
+import { useScreenStore } from "@/Stores/screenStore";
 import * as THREE from 'three';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
@@ -27,8 +28,8 @@ const props = defineProps<{
 }>();
 
 const tunnelStore = useTunnelStore();
-tunnelStore.isMobile = /iPhone|iPad|Android/i.test(navigator.userAgent);
 tunnelStore.projects = props.projects;
+const screenStore = useScreenStore();
 
 const CUBE_SIZE = 250;
 const CUBE_SPACING = 500;
@@ -83,8 +84,8 @@ let projectMaxZ: number;
 const updateRendererSize = () => {
     const width = tunnelWrapper.value ? tunnelWrapper.value.getBoundingClientRect().width : window.innerWidth;
     const height = window.innerHeight;
-    const scaleFactor = tunnelStore.isMobile ? 0.75 : 1.0;
-    const pixelRatio = tunnelStore.isMobile ? Math.min(window.devicePixelRatio, 1.5) : window.devicePixelRatio;
+    const scaleFactor = screenStore.isMobile ? 0.75 : 1.0;
+    const pixelRatio = screenStore.isMobile ? Math.min(window.devicePixelRatio, 1.5) : window.devicePixelRatio;
 
     renderer.setSize(width * scaleFactor, height * scaleFactor);
     renderer.setPixelRatio(pixelRatio);
@@ -128,7 +129,7 @@ const init = async () => {
 
     renderer = new THREE.WebGLRenderer({ antialias: true });
 
-    if(tunnelStore.isMobile){
+    if(screenStore.isMobile){
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5))
     }else{
         renderer.setPixelRatio(window.devicePixelRatio);
@@ -141,7 +142,7 @@ const init = async () => {
     composer = new EffectComposer(renderer);
     const renderPass = new RenderPass(scene, camera);
     composer.addPass(renderPass);
-    if(tunnelStore.isMobile){
+    if(screenStore.isMobile){
         bloomPass = new UnrealBloomPass(
             new THREE.Vector2(window.innerWidth, window.innerHeight),
             1.3,
@@ -268,7 +269,7 @@ const animate = (time: number = 0) => {
             progress = (camera.position.z - BLOOM_FADE_START_Z) / fadeRange;
         }
 
-        if (tunnelStore.isMobile) {
+        if (screenStore.isMobile) {
             bloomPass.strength = THREE.MathUtils.lerp(1.3, 0.0, progress);
         } else {
             bloomPass.strength = THREE.MathUtils.lerp(1.6, 0.125, progress); // Was static 6.0
@@ -312,7 +313,7 @@ onMounted(() => {
                         allCubes,
                         updateCubeColors,
                         { CUBE_SIZE, CUBE_SPACING, FIRST_CUBE_Z },
-                        { scrub: tunnelStore.isMobile ? 3 : 1 },
+                        { scrub: screenStore.isMobile ? 3 : 1 },
                         settings,
                         stats
                     );
