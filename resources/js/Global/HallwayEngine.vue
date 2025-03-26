@@ -1,7 +1,7 @@
 <!-- resources/js/Global/HallwayEngine.vue -->
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref } from 'vue';
-import { useTunnelStore } from '@/Stores/tunnelStore';
+import { useProjectStore } from '@/Stores/projectStore';
 import { useScreenStore } from "@/Stores/screenStore";
 import * as THREE from 'three';
 import { gsap } from 'gsap';
@@ -27,8 +27,8 @@ const props = defineProps<{
     initialSlug?: string;
 }>();
 
-const tunnelStore = useTunnelStore();
-tunnelStore.projects = props.projects;
+const projectStore = useProjectStore();
+projectStore.projects = props.projects;
 const screenStore = useScreenStore();
 
 const CUBE_SIZE = 250;

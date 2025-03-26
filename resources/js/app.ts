@@ -9,7 +9,7 @@ import { ZiggyVue } from "ziggy-js"
 import { ref, Ref } from 'vue'; // For reactive previousUrl
 import FloatingVue from 'floating-vue';
 import 'floating-vue/dist/style.css';
-import { useTunnelStore } from '@/Stores/tunnelStore';
+import { useProjectStore } from '@/Stores/projectStore';
 const appName: string = import.meta.env.VITE_APP_NAME || 'Laravel'
 
 

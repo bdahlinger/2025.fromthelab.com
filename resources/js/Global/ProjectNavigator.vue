@@ -2,14 +2,12 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { Link } from '@inertiajs/vue3';
-import { useTunnelStore } from '@/Stores/tunnelStore';
 import { useScreenStore } from '@/Stores/screenStore';
-import { storeToRefs } from 'pinia';
 import AngleRightSharp from "@/Global/Icons/AngleRightSharp.vue";
 import ProjectNavigatorCubes from '@/Global/ProjectNavigatorCubes.vue';
-const tunnelStore = useTunnelStore();
 
-//const { projects, project } = storeToRefs(tunnelStore);
+
+const screenStore = useScreenStore();
 
 const props = defineProps<{
     projects: ProjectData[];
@@ -45,10 +43,10 @@ const nextProject = computed(() => {
             class="text-white text-xs hover:text-gray-300 flex gap-1"
         >
             <angle-right-sharp class="w-1 h-auto -scale-x-100" />
-            {{ previousProject.title }}
+            <span v-html="screenStore.screenWidth > 768 ? previousProject.title : 'Previous Project'"></span>
         </Link>
 
-        <project-navigator-cubes class="absolute left-2/4 -translate-x-2/4"
+        <project-navigator-cubes v-if="screenStore.screenWidth >= 900" class="absolute left-2/4 -translate-x-2/4"
              :project="project"
              :projects="projects"
              :active-index="currentIndex" />
@@ -59,7 +57,7 @@ const nextProject = computed(() => {
             as="button"
             class="text-white text-xs hover:text-gray-300 flex gap-1"
         >
-            {{ nextProject.title }}
+            <span v-html="screenStore.screenWidth > 768 ? previousProject.title : 'Next Project'"></span>
             <angle-right-sharp class="w-1 h-auto" />
         </Link>
     </div>

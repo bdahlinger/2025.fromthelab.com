@@ -4,6 +4,7 @@ namespace App\Data;
 
 use App\Enums\Classification;
 use App\Enums\Contributions;
+use App\Enums\Segments;
 use Spatie\LaravelData\Data;
 use Spatie\LaravelData\DataCollection;
 
@@ -14,6 +15,8 @@ class ProjectData extends Data
         public Classification $classification,
         /** @var array<Contributions> */
         public array $contributions,
+        /** @var array<Segments> */
+        public array $segments,
         public string $title,
         public string $client,
         public string $description,

@@ -216,7 +216,7 @@ watch(() => screenStore.currentBreakpoint, () => {
         if (activeWireframeGroup && props.activeIndex >= 0 && props.activeIndex < cubes.length) {
             const activeIndex = props.activeIndex;
             const wireframeX = PADDING_X.value + activeIndex * (CUBE_SIZE + CUBE_SPACING.value) - (canvasWidthUnits.value - CUBE_SIZE) / 2;
-            console.log('Wireframe target x:', wireframeX);
+            //console.log('Wireframe target x:', wireframeX);
             gsap.to(activeWireframeGroup.position, {
                 x: wireframeX,
                 duration: 0.5,

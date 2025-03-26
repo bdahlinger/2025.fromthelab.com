@@ -9,6 +9,8 @@ export const useScreenStore = defineStore('screen', () => {
         lg: 1024,
         xl: 1280,
         '2xl': 1536,
+        '3xl': 1600,
+        '4xl': 1920,
     };
 
     const isMobile = computed(() => {
@@ -36,6 +38,8 @@ export const useScreenStore = defineStore('screen', () => {
 
     // Current breakpoint based on screen width
     const currentBreakpoint = computed(() => {
+        if (screenWidth.value >= breakpoints['4xl']) return '4xl';
+        if (screenWidth.value >= breakpoints['3xl']) return '3xl';
         if (screenWidth.value >= breakpoints['2xl']) return '2xl';
         if (screenWidth.value >= breakpoints.xl) return 'xl';
         if (screenWidth.value >= breakpoints.lg) return 'lg';

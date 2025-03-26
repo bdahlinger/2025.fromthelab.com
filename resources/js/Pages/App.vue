@@ -10,7 +10,6 @@ import { onMounted, onUnmounted } from 'vue';
 const screenStore = useScreenStore();
 
 onMounted(() => {
-    console.log('App.vue mounted')
     screenStore.initResizeListener();
 });
 

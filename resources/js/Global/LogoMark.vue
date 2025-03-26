@@ -2,6 +2,7 @@
 import { onMounted, onUnmounted, ref } from 'vue'
 import * as THREE from 'three'
 import { gsap } from 'gsap'
+import { useScreenStore } from '@/Stores/screenStore' // Adjust the import path to your Pinia store
 
 // Define types for the boxes
 interface Box {
@@ -24,276 +25,165 @@ let boxGroup: THREE.Group
 let redRotationAnim: gsap.core.Tween | null = null
 let greenRotationAnim: gsap.core.Tween | null = null
 let blueRotationAnim: gsap.core.Tween | null = null
+
+// Pinia store for screen size
+const screenStore = useScreenStore()
+
 const hoverEffect = () => {
     redRotationAnim?.kill()
     greenRotationAnim?.kill()
     blueRotationAnim?.kill()
-    redRotationAnim = gsap.to(boxes[0].meshes.red.rotation, { // Red box
-        y: Math.PI * 2, // 360 degrees in radians
-        duration: 4, // Animation duration in seconds
-        repeat: -1, // Infinite loop
-        ease: 'none' // Linear easing for smooth rotation
-    })
-
-    greenRotationAnim = gsap.to(boxes[1].meshes.green.rotation, { // Green box
-        y: Math.PI * 2, // 360 degrees in radians
-        duration: 5, // Slightly slower for variety
-        repeat: -1, // Infinite loop
-        ease: 'none' // Linear easing
-    })
-
-    blueRotationAnim = gsap.to(boxes[2].meshes.blue.rotation, { // Blue box
-        y: Math.PI * 2, // 360 degrees in radians
-        duration: 3, // Slightly faster for variety
-        repeat: -1, // Infinite loop
-        ease: 'none' // Linear easing
-    })
+    redRotationAnim = gsap.to(boxes[0].mesh.rotation, { y: Math.PI * 2, duration: 4, repeat: -1, ease: 'none' })
+    greenRotationAnim = gsap.to(boxes[1].mesh.rotation, { y: Math.PI * 2, duration: 5, repeat: -1, ease: 'none' })
+    blueRotationAnim = gsap.to(boxes[2].mesh.rotation, { y: Math.PI * 2, duration: 3, repeat: -1, ease: 'none' })
 }
+
 const hoverOffEffect = () => {
-    // Kill any existing animations
     redRotationAnim?.kill()
     greenRotationAnim?.kill()
     blueRotationAnim?.kill()
-
-
-    gsap.to(boxes[0].meshes.red.rotation, { // Red box
-        y: 0,
-        duration: 0.5,
-        repeat: 0,
-        ease: 'none',
-        onComplete: () => redRotationAnim = null
-    })
-
-    gsap.to(boxes[1].meshes.green.rotation, { // Green box
-        y: 0,
-        duration: 0.5,
-        repeat: 0,
-        ease: 'none',
-        onComplete: () => greenRotationAnim = null
-    })
-
-    gsap.to(boxes[2].meshes.blue.rotation, { // Blue box
-        y: 0,
-        duration: 0.5,
-        repeat: 0,
-        ease: 'none',
-        onComplete: () => blueRotationAnim = null
-    })
+    gsap.to(boxes[0].mesh.rotation, { y: 0, duration: 0.5, ease: 'none', onComplete: () => (redRotationAnim = null) })
+    gsap.to(boxes[1].mesh.rotation, { y: 0, duration: 0.5, ease: 'none', onComplete: () => (greenRotationAnim = null) })
+    gsap.to(boxes[2].mesh.rotation, { y: 0, duration: 0.5, ease: 'none', onComplete: () => (blueRotationAnim = null) })
 }
+
 onMounted(() => {
     if (!canvasRef.value) return
 
+    // Initialize Pinia store resize listener
+    screenStore.initResizeListener()
+
     // Initialize scene
     scene = new THREE.Scene()
-    camera = new THREE.PerspectiveCamera(10, 1, 0.1, 1000) // Aspect ratio will be set dynamically
-
-    renderer = new THREE.WebGLRenderer({
-        canvas: canvasRef.value,
-        antialias: true,
-        alpha: true
-    })
-    //renderer.setClearColor(0x000000) // Black background to match your logo
-
-    // Use native device pixel ratio for performance (can increase to *2 if needed for sharpness)
+    camera = new THREE.PerspectiveCamera(10, 1, 0.1, 1000)
+    renderer = new THREE.WebGLRenderer({ canvas: canvasRef.value, antialias: true, alpha: true })
     renderer.setPixelRatio(window.devicePixelRatio)
 
-    // Add lighting to the scene
-    const directionalLight = new THREE.DirectionalLight(0xffffff, 1) // White light, intensity 1
-    directionalLight.position.set(10, 20, 30) // Position the light above and to the side for realistic shading
+    // Add lighting
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 1)
+    directionalLight.position.set(10, 20, 30)
     scene.add(directionalLight)
-
-    // Increase ambient light to illuminate shadowed areas
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.35) // White light, higher intensity for visibility
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.35)
     scene.add(ambientLight)
 
-    // Create geometry for the boxes (simple cubes for now, scaled down to fit smaller canvas)
+    // Create geometry for boxes
     const geometryRed = new THREE.BoxGeometry(5, 8, 5)
     const geometryGreen = new THREE.BoxGeometry(5, 5, 5)
     const geometryBlue = new THREE.BoxGeometry(6, 5, 5)
 
-    // Create the group to hold the boxes
     boxGroup = new THREE.Group()
-
-    // Create and position the boxes
-    const colors = [
-        new THREE.Color(0xff0000), // Red
-        new THREE.Color(0x00ff00), // Green
-        new THREE.Color(0x0000ff)  // Blue
-    ]
+    const colors = [new THREE.Color(0xff0000), new THREE.Color(0x00ff00), new THREE.Color(0x0000ff)]
 
     boxes = colors.map((color, index) => {
-        //const material = new THREE.MeshBasicMaterial({ color, transparent: true, blending: THREE.AdditiveBlending })
         const material = new THREE.MeshPhongMaterial({
-            color: color,
-            specular: 0x555555, // Silver-like specular highlight color (adjust for brightness)
-            shininess: 30, // Controls the size/brightness of the specular highlight (higher = smaller, brighter highlight)
+            color,
+            specular: 0x555555,
+            shininess: 30,
             transparent: true,
-            blending: THREE.AdditiveBlending, // Maintain color blending for overlaps
+            blending: THREE.AdditiveBlending,
             side: THREE.DoubleSide,
-            opacity: 0
+            opacity: 0,
         })
 
+        const mesh = new THREE.Mesh(
+            index === 0 ? geometryRed : index === 1 ? geometryGreen : geometryBlue,
+            material
+        )
 
-
-        const meshRed = new THREE.Mesh(geometryRed, material)
-        const meshGreen = new THREE.Mesh(geometryGreen, material)
-        const meshBlue = new THREE.Mesh(geometryBlue, material)
-
-        // Position and rotate to form the "L" shape with overlaps, scaled for smaller size
         switch (index) {
-            case 0: // Red box (bottom/front of "L")
-                meshRed.position.set(0, 17.1, 0)
-                meshRed.rotation.set(THREE.MathUtils.degToRad(0), THREE.MathUtils.degToRad(0), 0)
-                boxGroup.add(meshRed)
+            case 0:
+                mesh.position.set(0, 17.1, 0)
                 break
-            case 1: // Green box (middle, overlapping)
-                meshGreen.position.set(-10, 0, 0) // Halved positions to fit smaller canvas
-                meshGreen.rotation.set(THREE.MathUtils.degToRad(0), THREE.MathUtils.degToRad(0), 0)
-                boxGroup.add(meshGreen)
+            case 1:
+                mesh.position.set(-10, 0, 0)
                 break
-            case 2: // Blue box (top/back)
-                meshBlue.position.set(15.75, 0, 0) // Halved positions to fit smaller canvas
-                meshBlue.rotation.set(THREE.MathUtils.degToRad(0), THREE.MathUtils.degToRad(0), 0)
-                boxGroup.add(meshBlue)
+            case 2:
+                mesh.position.set(15.75, 0, 0)
                 break
         }
-
-        return {
-            meshes: {
-                red: meshRed,
-                green: meshGreen,
-                blue: meshBlue
-            },
-            color
-        }
+        boxGroup.add(mesh)
+        return { mesh, color }
     })
 
-    // Add the group to the scene
     scene.add(boxGroup)
-
-    // Position camera closer to focus tightly on the smaller logo
-    //camera.position.set(6, -14, 22) // Moved closer (z: 15) for tighter framing in 64px square
-    camera.position.set(60, -90, 90) // Moved closer (z: 15) for tighter framing in 64px square
+    camera.position.set(60, -90, 90)
     camera.lookAt(2.5, 2.5, 0)
+    camera.rotation.z = THREE.MathUtils.degToRad(0)
 
-    // Add roll by rotating around the z-axis (e.g., 45 degrees, or π/4 radians)
-    const rollAngle = THREE.MathUtils.degToRad(0) // Adjust this value (e.g., 0, 30, 45, 90) for desired roll
-    //camera.rotation.x = 0 // Pitch (optional, keep if needed)
-    //camera.rotation.y = 0 // Yaw (optional, keep if needed)
-    camera.rotation.z = rollAngle // Roll (rotation around z-axis)
-
-    // Handle resize with fixed 64px square size
+    // Dynamic resize function
     const resize = () => {
-        if (canvasRef.value) {
-            const width = 120 // Fixed square width
-            const height = 78 // Fixed square height
-            const dpr = renderer.getPixelRatio()
+        if (!canvasRef.value) return
 
-            // Set the renderer size with high resolution
-            renderer.setSize(width * dpr, height * dpr, false)
-            camera.aspect = width / height
-            camera.updateProjectionMatrix()
+        let width: number
+        let height: number
+        const aspectRatio = 120 / 78 // ~1.538
 
-            // Scale the canvas CSS size to match the fixed square dimensions
-            canvasRef.value.style.width = `${width}px`
-            canvasRef.value.style.height = `${height}px`
-
-            camera.updateProjectionMatrix()
+        // Calculate dimensions based on breakpoint
+        switch (screenStore.currentBreakpoint) {
+            case 'xs':
+            case 'sm':
+                width = 120 // Fixed pixels for < md
+                height = 78
+                break
+            case 'md':
+            case 'lg':
+            case 'xl':
+            case '2xl':
+                width = window.innerWidth * 0.08 // 8vw for md to <3xl
+                height = width / aspectRatio // Maintain aspect ratio
+                break
+            case '3xl':
+            case '4xl':
+                width = 8 * 16 // 8rem (assuming 1rem = 16px, adjust if your root font size differs)
+                height = width / aspectRatio
+                break
+            default:
+                width = 120
+                height = 78
         }
+
+        const dpr = renderer.getPixelRatio()
+        renderer.setSize(width * dpr, height * dpr, false)
+        camera.aspect = width / height
+        camera.updateProjectionMatrix()
+
+        canvasRef.value.style.width = `${width}px`
+        canvasRef.value.style.height = `${height}px`
     }
 
     window.addEventListener('resize', resize)
     resize()
 
-    gsap.from(logoRef.value, {
-        y: 10,
-        opacity: 0, // Fade up from 0 to 1
-        duration: 5,
-        ease: 'power2.out',
+    // Initial animations (unchanged)
+    gsap.from(logoRef.value, { y: 10, opacity: 0, duration: 5, ease: 'power2.out' })
+    boxes.forEach((box, index) => {
+        gsap.to(box.mesh.position, {
+            [index === 0 ? 'y' : index === 1 ? 'x' : 'x']:
+                index === 0 ? 7.1 : index === 1 ? 0 : 5.75,
+            duration: 1.5,
+            ease: 'power2.out',
+        })
+        gsap.to(box.mesh.rotation, { x: Math.PI, duration: 1.5, ease: 'power2.out' })
+        gsap.to(box.mesh.material, { opacity: 1, duration: 1.5, ease: 'power2.out' })
     })
-    // Initial animations for boxes entering into place
-    gsap.to(boxes[0].meshes.red.position, {
-        y: 7.1, // Move down to resting place
-        duration: 1.5,
-        ease: 'power2.out',
-    })
-    gsap.to(boxes[0].meshes.red.rotation, {
-        x: Math.PI, // Rotate 90 degrees on X-axis
-        duration: 1.5,
-        ease: 'power2.out',
-    })
-    gsap.to(boxes[0].meshes.red.material, {
-        opacity: 1, // Fade up from 0 to 1
-        duration: 1.5,
-        ease: 'power2.out',
-    })
-
-    // Green box animations
-    gsap.to(boxes[1].meshes.green.position, {
-        x: 0, // Move right to resting place
-        duration: 1.5,
-        ease: 'power2.out',
-    })
-    gsap.to(boxes[1].meshes.green.rotation, {
-        x: Math.PI, // Rotate 90 degrees on X-axis
-        duration: 1.5,
-        ease: 'power2.out',
-    })
-    gsap.to(boxes[1].meshes.green.material, {
-        opacity: 1, // Fade up from 0 to 1
-        duration: 1.5,
-        ease: 'power2.out',
-    })
-
-    // Blue box animations
-    gsap.to(boxes[2].meshes.blue.position, {
-        x: 5.75, // Move left to resting place
-        duration: 1.5,
-        ease: 'power2.out',
-    })
-    gsap.to(boxes[2].meshes.blue.rotation, {
-        x: Math.PI, // Rotate 90 degrees on X-axis
-        duration: 1.5,
-        ease: 'power2.out',
-    })
-    gsap.to(boxes[2].meshes.blue.material, {
-        opacity: 1, // Fade up from 0 to 1
-        duration: 1.5,
-        ease: 'power2.out',
-    })
-
-
-    // Animate the box group with GSAP for a 360-degree Y-axis rotation
-    /*gsap.to(boxGroup.rotation, {
-        y: Math.PI * 2, // 360 degrees in radians (2π)
-        duration: 4, // Animation duration in seconds (adjust speed here)
-        repeat: -1, // Infinite loop
-        ease: 'none' // Linear easing for a smooth, constant rotation
-    })*/
-
 
     function animate() {
         requestAnimationFrame(animate)
         renderer.render(scene, camera)
     }
-
     animate()
 })
+
 onUnmounted(() => {
-    // Clean up Three.js resources
-    renderer.dispose();
-    scene.clear();
-    boxes = [];
-    boxGroup = null as any;
-
-    // Kill GSAP animations
-    redRotationAnim?.kill();
-    greenRotationAnim?.kill();
-    blueRotationAnim?.kill();
-
-    // Remove resize listener
-    window.removeEventListener('resize', () => {});
-});
+    renderer.dispose()
+    scene.clear()
+    boxes = []
+    boxGroup = null as any
+    redRotationAnim?.kill()
+    greenRotationAnim?.kill()
+    blueRotationAnim?.kill()
+    window.removeEventListener('resize', () => {})
+})
 </script>
 
 <template>
@@ -301,7 +191,7 @@ onUnmounted(() => {
         <div class="logo-3d-container">
             <canvas ref="canvasRef" class="logo-3d-canvas"></canvas>
         </div>
-        <svg ref="logoRef" class="relative h-3.5 -mt-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 238.54 17.28">
+        <svg ref="logoRef" class="relative h-3.5 md:h-[.875vw] 3xl:h-[.875rem] -mt-2 md:-mt-[.5vw] 3xl:-mt-[.5rem]" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 238.54 17.28">
             <g>
                 <g>
                     <path d="M3.12,2.86v5.11h4.94l-1.44,2.59-3.5.05v6.43H0V.24h12.26l-1.45,2.62H3.12Z" style="fill: #fff;"/>
@@ -322,14 +212,11 @@ onUnmounted(() => {
 
 <style scoped>
 .logo-3d-container {
-    width: 120px;
-    height: 78px;
     position: relative;
 }
 
 .logo-3d-canvas {
     width: 100%;
     height: 100%;
-    //image-rendering: pixelated;
 }
 </style>

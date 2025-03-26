@@ -2,13 +2,13 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, computed } from 'vue';
 import { router, usePage } from '@inertiajs/vue3';
-import { useTunnelStore } from '@/Stores/tunnelStore';
+import { useProjectStore } from '@/Stores/projectStore';
 import { storeToRefs } from 'pinia';
 import { gsap } from 'gsap';
 import Show from '@/Pages/Project/Show.vue'; // Adjust path as needed
 
-const tunnelStore = useTunnelStore();
-const { projects, project } = storeToRefs(tunnelStore);
+const projectStore = useProjectStore();
+const { projects, project } = storeToRefs(projectStore);
 
 // Use Inertia's usePage to get current page props
 const page = usePage();
@@ -70,8 +70,8 @@ onMounted(() => {
     // Initial page load using Inertia's page props
     const initialProps = page.props;
     if (initialProps.project && initialProps.projects) {
-        tunnelStore.setProject(initialProps.project);
-        tunnelStore.setProjects(initialProps.projects);
+        projectStore.setProject(initialProps.project);
+        projectStore.setProjects(initialProps.projects);
         updatePages(initialProps, null);
     } else {
         console.error('Initial props missing:', initialProps);

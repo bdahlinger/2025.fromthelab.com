@@ -3,7 +3,7 @@ import { FontLoader } from 'three/examples/jsm/loaders/FontLoader'
 import { TextGeometry } from 'three/examples/jsm/geometries/TextGeometry'
 import { gsap } from 'gsap'
 import { router } from '@inertiajs/vue3'
-import { useTunnelStore } from '@/Stores/tunnelStore'
+import { useProjectStore } from '@/Stores/projectStore'
 
 export function useProjectCubes(
     scene: THREE.Scene,
@@ -19,7 +19,7 @@ export function useProjectCubes(
     },
     textureCache: Map<string, THREE.Texture>
 ) {
-    const tunnelStore = useTunnelStore()
+    const tunnelStore = useProjectStore()
     const { CUBE_SIZE, CUBE_SPACING, FIRST_CUBE_Z } = config
     const MAX_Z = FIRST_CUBE_Z - (projects.length + 1) * CUBE_SPACING
     const CUBE_COLOR = 0x00ffff

@@ -4,7 +4,8 @@ namespace App\Enums;
 
 enum Classification: string
 {
-    case ENTERTAINMENT = 'entertainment';
-    case ECOMMERCE = 'ecommerce';
-    case OTHER = 'other';
+    case ENTERTAINMENT = 'Entertainment';
+    case ECOMMERCE = 'Ecommerce';
+
+    case OTHER = 'Other';
 }

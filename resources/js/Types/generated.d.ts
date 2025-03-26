@@ -2,7 +2,8 @@ declare namespace App.Data {
 export type ProjectData = {
 slug: string;
 classification: App.Enums.Classification;
-contributions: App.Enums.Contributions;
+contributions: Array<App.Enums.Contributions>;
+segments: Array<App.Enums.Segments>;
 title: string;
 client: string;
 description: string;
@@ -15,6 +16,7 @@ hasBg: boolean | null;
 };
 }
 declare namespace App.Enums {
-export enum Classification { 'ENTERTAINMENT' = 'entertainment', 'ECOMMERCE' = 'ecommerce', 'OTHER' = 'other' };
+export enum Classification { 'ENTERTAINMENT' = 'Entertainment', 'ECOMMERCE' = 'Ecommerce', 'OTHER' = 'Other' };
 export enum Contributions { 'DEVOPS' = 'DEVOPS', 'DESIGN' = 'DESIGN', 'FRONTEND' = 'FRONTEND', 'BACKEND' = 'BACKEND', 'IDEATION' = 'IDEATION', 'UX' = 'UX' };
+export enum Segments { 'LARAVEL' = 'LARAVEL', 'VUE_JS' = 'VUE.JS', 'WORDPRESS' = 'WORDPRESS', 'HEADLESS_WORDPRESS' = 'HEADLESS WORDPRESS', 'SHOPIFY' = 'SHOPIFY', 'THREEJS' = 'THREE.JS', 'AWS' = 'AWS', 'INERTIAJS' = 'INERTIA.JS', 'GSAP' = 'GSAP', 'WEBGL' = 'WEBGL','CUSTOM_CMS' = 'CUSTOM CMS', 'TWILL' = 'TWILL CMS', 'STATIC' = 'STATIC', 'TAILWIND' = 'TAILWIND', 'SCSS' = 'SCSS', 'SSR' = 'SSR', 'ROOTS_BEDROCK' = 'ROOTS BEDROCK', 'ROOTS_SAGE' = 'ROOTS SAGE' };
 }

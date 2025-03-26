@@ -17,9 +17,16 @@ export default {
             fontFamily: {
                 sans: ['Montserrat', ...defaultTheme.fontFamily.sans],
             },
-
+            fontSize: {
+                xxs: "0.675rem",
+            },
             aspectRatio: {
+                'pheroMobile': '1 / 2',
                 'phero': '24 / 11',
+            },
+            screens: {
+                "3xl": "1600px",
+                "4xl": "1920px",
             },
         },
     },

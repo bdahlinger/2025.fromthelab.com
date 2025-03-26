@@ -3,13 +3,10 @@
 import { ref, onMounted, onUnmounted, computed, watch } from 'vue';
 import LogoMark from '@/Global/LogoMark.vue';
 import ProjectNavigator from '@/Global/ProjectNavigator.vue';
-import { useTunnelStore } from '@/Stores/tunnelStore';
 import { Link, router, usePage } from '@inertiajs/vue3';
 import GlobalFooter from '@/Global/GlobalFooter.vue';
 import App from '@/Pages/App.vue';
 
-const tunnelStore = useTunnelStore();
-//const { projects, project } = storeToRefs(tunnelStore);
 
 const page = usePage<{
     projects: ProjectData[];
@@ -66,7 +63,7 @@ onUnmounted(() => {
             :projects="projects"
         />
 
-        <nav class="flex flex-col items-center justify-center mt-28 absolute top-4 left-1/2 -translate-x-1/2 z-10">
+        <nav class="flex flex-col items-center justify-center mt-14 md:mt-[7vw] 3xl:mt-[7rem] absolute top-4 left-1/2 -translate-x-1/2 z-10">
             <Link :href="'/'">
                 <logo-mark class="" />
             </Link>
