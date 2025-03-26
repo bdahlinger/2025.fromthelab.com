@@ -6,6 +6,9 @@ enum Segments: string
 {
     case LARAVEL = 'LARAVEL';
     case VUE_JS = 'VUE JS';
+
+    case REACT = 'REACT';
+
     case WORDPRESS = 'WORDPRESS';
 
     case HEADLESS_WORDPRESS = 'HEADLESS WORDPRESS';
@@ -20,7 +23,7 @@ enum Segments: string
 
     case WEBGL = 'WEBGL';
 
-    case CUSTOM_CMS = 'CUSTOMCMS';
+    case CUSTOM_CMS = 'CUSTOM CMS';
 
     case TWILL = 'TWILL CMS';
 
@@ -35,4 +38,14 @@ enum Segments: string
     case ROOTS_BEDROCK = 'ROOTS BEDROCK';
 
     case ROOTS_SAGE = 'ROOTS SAGE';
+
+    case SEGMENT = 'SEGMENT';
+
+    case LOCALIZED = 'LOCALIZED';
+
+    case GRIDSOME = 'GRIDSOME';
+
+    case NEXT_JS = 'NEXT.JS';
+
+    case SALESFORCE = 'SALESFORCE API';
 }

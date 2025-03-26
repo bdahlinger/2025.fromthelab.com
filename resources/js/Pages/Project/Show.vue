@@ -203,7 +203,7 @@ const determineColorBySegmentClass = (type:App.Enums.Segments) => {
         case App.Enums.Segments.VUE_JS:
             return 'fill-blue-400/10 text-blue-40 ring-blue-400/200'
         case App.Enums.Segments.WORDPRESS:
-            return 'fill-green-500/10 text-green-400 ring-green-400/20'
+            return 'fill-sky-500/10 text-sky-400 ring-sky-400/20'
         case App.Enums.Segments.HEADLESS_WORDPRESS:
             return 'fill-purple-400/10 text-purple-400 ring-purple-400/20'
         case App.Enums.Segments.ROOTS_BEDROCK:
@@ -215,7 +215,7 @@ const determineColorBySegmentClass = (type:App.Enums.Segments) => {
         case App.Enums.Segments.THREEJS:
             return 'fill-orange-400/10 text-orange-400 ring-orange-400/20'
         case App.Enums.Segments.AWS:
-            return 'fill-cyan-400/10 text-cyan-400 ring-cyan-400/20'
+            return 'fill-orange-400/10 text-orange-400 ring-orange-400/20'
         case App.Enums.Segments.INERTIAJS:
             return 'fill-white-400/10 text-white-400 ring-gray-800 ring-gray-400/20'
         case App.Enums.Segments.GSAP:
@@ -232,6 +232,18 @@ const determineColorBySegmentClass = (type:App.Enums.Segments) => {
             return 'fill-violet-400/10 text-violet-400 ring-violet-400/20'
         case App.Enums.Segments.TAILWIND:
             return 'fill-indigo-400/10 text-indigo-400 ring-indigo-400/20'
+        case App.Enums.Segments.SEGMENT:
+            return 'fill-rose-400/10 text-rose-400 ring-rose-400/20'
+        case App.Enums.Segments.LOCALIZED:
+            return 'fill-pink-400/10 text-pink-400 ring-pink-400/20'
+        case App.Enums.Segments.GRIDSOME:
+            return 'fill-fuchsia-400/10 text-fuchsia-400 ring-fuchsia-400/20'
+        case App.Enums.Segments.REACT:
+            return 'fill-lime-400/10 text-lime-400 ring-lime-400/20'
+        case App.Enums.Segments.NEXT_JS:
+            return 'fill-sky-400/10 text-sky-400 ring-sky-400/20'
+        case App.Enums.Segments.SALESFORCE:
+            return 'fill-sky-400/10 text-sky-400 ring-sky-400/20'
         default:
             return 'fill-green-400/10 text-green-400 ring-green-400/20'
     }
@@ -289,7 +301,7 @@ onUnmounted(() => {
             <div class="contributions flex flex-wrap justify-center gap-1 md:gap-[.5vw] 3xl:gap-[.5rem] mt-2 md:mt-[.5vw] 3xl:mt-[.5rem]" v-if="project.contributions.length > 0">
                 <span
                     v-for="(type,index) in project.contributions" :key="index"
-                    class="inline-flex items-center gap-x-2 md:gap-x-[.5vw] 3xl:gap-x-[.5rem] rounded-full px-2 md:px-[.5vw] 3xl:px-[.5rem] py-1 md:py-[.25vw] 3xl:py-[.25rem] text-xs md:text-[.75vw] 3xl:text-[.75rem] font-medium ring-1 ring-inset ring-gray-800">
+                    class="inline-flex items-center gap-x-2 md:gap-x-[.5vw] 3xl:gap-x-[.5rem] rounded-full px-2 md:px-[.5vw] 3xl:px-[.5rem] py-1 md:py-[.25vw] 3xl:py-[.25rem] text-xs md:text-[.75vw] 3xl:text-[.75rem] font-medium ring-1 ring-inset">
                     <svg class="size-1.5 md:size-[.375vw] 3xl:size-[.375rem]" :class="determineColorByContributionClass(type)" viewBox="0 0 6 6" aria-hidden="true">
                       <circle cx="3" cy="3" r="3"/>
                     </svg>
@@ -299,7 +311,7 @@ onUnmounted(() => {
             <div class="segments flex flex-wrap justify-center gap-1 md:gap-[.5vw] 3xl:gap-[.5rem] mt-2 md:mt-[.5vw] 3xl:mt-[.5rem]" v-if="project.segments.length > 0">
                 <span
                     v-for="(type,index) in project.segments" :key="index"
-                    class="inline-flex items-center rounded-full px-2 md:px-[.5vw] 3xl:px-[.5rem] py-1 md:py-[.25vw] 3xl:py-[.25rem] text-xxs md:text-[.675vw] 3xl:text-[.675rem] font-medium text-gray-400 ring-1 ring-inset ring-gray-400/20" :class="determineColorBySegmentClass(type)">
+                    class="inline-flex items-center rounded-full px-2 md:px-[.5vw] 3xl:px-[.5rem] py-1 md:py-[.25vw] 3xl:py-[.25rem] text-xxs md:text-[.675vw] 3xl:text-[.675rem] font-medium ring-1 ring-inset " :class="determineColorBySegmentClass(type)">
                     {{type}}
                 </span>
             </div>
@@ -309,7 +321,7 @@ onUnmounted(() => {
 
 
     </div>
-    <div class="flex justify-center items-center mt-64"></div>
+<!--    <div class="flex justify-center items-center mt-64"></div>-->
 </template>
 
 <style scoped>

@@ -78,8 +78,7 @@ onUnmounted(() => {
         </div>
 
 
-
-        <global-footer class="mt-96" />
+        <global-footer class="mt-12" />
     </div>
 
     </app>
@@ -98,8 +97,7 @@ onUnmounted(() => {
 .transition-container {
     position: relative;
     width: 100%;
-    flex-grow: 1; /* Take available space */
-    overflow: hidden; /* Contain sliding content */
+    //overflow: hidden; /* Contain sliding content */
 }
 
 .page-wrapper {

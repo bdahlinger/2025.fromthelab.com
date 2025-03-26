@@ -16,6 +16,7 @@ export namespace App {
         export enum Segments {
             'LARAVEL' = 'LARAVEL',
             'VUE_JS' = 'VUE.JS',
+            'REACT' = 'REACT',
             'WORDPRESS' = 'WORDPRESS',
             'HEADLESS_WORDPRESS' = 'HEADLESS WORDPRESS',
             'SHOPIFY' = 'SHOPIFY',
@@ -32,6 +33,11 @@ export namespace App {
             'SSR' = 'SSR',
             'ROOTS_BEDROCK' = 'ROOTS BEDROCK',
             'ROOTS_SAGE' = 'ROOTS SAGE',
+            'SEGMENT' = 'SEGMENT',
+            'LOCALIZED' = 'LOCALIZED',
+            'GRIDSOME' = 'GRIDSOME',
+            'NEXT_JS' = 'NEXT.JS',
+            'SALESFORCE' = 'SALESFORCE API',
         }
     }
 }

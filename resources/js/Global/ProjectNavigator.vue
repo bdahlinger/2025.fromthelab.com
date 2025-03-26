@@ -38,6 +38,7 @@ const nextProject = computed(() => {
     <div class="fixed top-0 w-full z-20 px-8 py-4 bg-black/10 flex justify-between items-center">
         <Link
             v-if="previousProject"
+            prefetch
             :href="route('project.show', { project: previousProject.slug })"
             as="button"
             class="text-white text-xs hover:text-gray-300 flex gap-1"
@@ -55,9 +56,10 @@ const nextProject = computed(() => {
             v-if="nextProject"
             :href="route('project.show', { project: nextProject.slug })"
             as="button"
+            prefetch
             class="text-white text-xs hover:text-gray-300 flex gap-1"
         >
-            <span v-html="screenStore.screenWidth > 768 ? previousProject.title : 'Next Project'"></span>
+            <span v-html="screenStore.screenWidth > 768 ? nextProject.title : 'Next Project'"></span>
             <angle-right-sharp class="w-1 h-auto" />
         </Link>
     </div>
