@@ -11,35 +11,38 @@ import App from '@/Pages/App.vue';
 const page = usePage<{
     projects: ProjectData[];
     project: ProjectData;
+    previousProject: ProjectData | null;
+    nextProject: ProjectData | null;
 }>();
 
 const project = ref<ProjectData>(page.props.project);
 const projects = ref<ProjectData[]>(page.props.projects);
+const previousProject = ref<ProjectData>(page.props.previousProject);
+const nextProject = ref<ProjectData>(page.props.nextProject);
 
 const transitionDirection = ref<'next' | 'prev' | null>(null);
-
-const currentIndex = computed(() => {
-    if (!projects.value || !project.value ) return -1;
-    return projects.value.findIndex(p => p.slug === project.value.slug);
-});
 
 watch(
     () => page.props,
     (newProps) => {
         project.value = newProps.project;
         projects.value = newProps.projects;
+        previousProject.value = newProps.previousProject;
+        nextProject.value = newProps.nextProject;
     },
     { deep: true } // Deep watch to catch nested prop changes
 );
 
 onMounted(() => {
     router.on('before', (event) => {
-        const currentIndexVal = currentIndex.value;
         const nextSlug = event.detail.visit.url.pathname.split('/').pop();
-        const nextIndex = projects.value.findIndex(p => p.slug === nextSlug);
-        if (nextIndex === -1 || currentIndexVal === -1) return;
-
-        transitionDirection.value = nextIndex > currentIndexVal ? 'next' : 'prev';
+        if (nextSlug === nextProject.value?.slug) {
+            transitionDirection.value = 'next';
+        } else if (nextSlug === previousProject.value?.slug) {
+            transitionDirection.value = 'prev';
+        } else {
+            transitionDirection.value = null; // No transition for non-adjacent navigation
+        }
     });
 
     router.on('success', () => {
@@ -61,6 +64,8 @@ onUnmounted(() => {
         <project-navigator
             :project="project"
             :projects="projects"
+            :previous-project="previousProject"
+            :next-project="nextProject"
         />
 
         <nav class="flex flex-col items-center justify-center mt-14 md:mt-[5vw] 3xl:mt-[5rem] absolute top-4 left-1/2 -translate-x-1/2 z-10">
@@ -72,7 +77,7 @@ onUnmounted(() => {
         <div class="transition-container">
             <transition :name="transitionDirection === 'next' ? 'slide-next' : 'slide-prev'">
                 <div :key="page.url" class="page-wrapper">
-                    <slot />
+                    <slot/>
                 </div>
             </transition>
         </div>

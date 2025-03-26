@@ -1,27 +1,32 @@
 <script setup lang="ts">
-import {Head, Link} from '@inertiajs/vue3';
+import {Head, Lin, router} from '@inertiajs/vue3';
 import {onMounted, onUnmounted, ref, reactive, inject} from 'vue';
 import {useProjectStore} from '@/Stores/projectStore';
 import { App } from '@/Types/enums';
 import {ProjectData} from '@/types/generated';
 import {gsap} from 'gsap';
 import ProjectLayout from '@/Layouts/ProjectLayout.vue';
+import { useScreenStore } from '@/Stores/screenStore';
 
 defineOptions({
     layout: (h, page) => h(ProjectLayout, () => [page]),
 })
 
+
+
 const props = defineProps<{
-    projects: ProjectData[]
-    project: ProjectData
-    storage: string
-}>()
+    projects: ProjectData[];
+    project: ProjectData;
+    storage: string;
+    previousProject: ProjectData | null;
+    nextProject: ProjectData | null;
+}>();
 
 const projectStore = useProjectStore()
 projectStore.setProject(props.project)
 projectStore.setProjects(props.projects)
 
-
+const screenStore = useScreenStore();
 
 const previousUrl = inject<Ref<string>>('previousUrl')
 
@@ -252,11 +257,60 @@ const determineColorBySegmentClass = (type:App.Enums.Segments) => {
     }*/
 }
 
+// Touch events
+const touchStartX = ref<number | null>(null);
+const touchCurrentX = ref<number | null>(null);
+const isSwiping = ref(false);
+const SWIPE_THRESHOLD = 50;
+
+const onTouchStart = (event: TouchEvent) => {
+    if (!screenStore.hasTouchSupport) return;
+    touchStartX.value = event.touches[0].clientX;
+    touchCurrentX.value = touchStartX.value;
+    isSwiping.value = true;
+};
+
+const onTouchMove = (event: TouchEvent) => {
+    if (!isSwiping.value || !screenStore.hasTouchSupport) return;
+    touchCurrentX.value = event.touches[0].clientX;
+};
+
+const onTouchEnd = () => {
+    if (!isSwiping.value || !screenStore.hasTouchSupport) return;
+    isSwiping.value = false;
+
+    if (touchStartX.value === null || touchCurrentX.value === null) return;
+
+    const deltaX = touchCurrentX.value - touchStartX.value;
+    const absDeltaX = Math.abs(deltaX);
+
+    if (absDeltaX >= SWIPE_THRESHOLD) {
+        if (deltaX > 0 && props.previousProject) {
+            router.visit(route('project.show', { project: props.previousProject.slug }), {
+                preserveScroll: false,
+            });
+        } else if (deltaX < 0 && props.nextProject) {
+            router.visit(route('project.show', { project: props.nextProject.slug }), {
+                preserveScroll: false,
+            });
+        }
+    }
+
+    touchStartX.value = null;
+    touchCurrentX.value = null;
+};
+
+
 onMounted(() => {
     if (previousUrl?.value === '/') animateCircleWipe();
     else if (overlay.value) overlay.value.style.display = 'none';
     animateTwinkling();
     document.body.addEventListener('mousemove', throttledMouseMove);
+    if (container.value) {
+        container.value.addEventListener('touchstart', onTouchStart);
+        container.value.addEventListener('touchmove', onTouchMove);
+        container.value.addEventListener('touchend', onTouchEnd);
+    }
 })
 
 onUnmounted(() => {
@@ -264,6 +318,11 @@ onUnmounted(() => {
     gsap.killTweensOf(twinklingSvg.value?.querySelectorAll('rect'));
     activeTrails.value.forEach(t => t.tween.kill());
     document.body.removeEventListener('mousemove', throttledMouseMove);
+    if (container.value) {
+        container.value.removeEventListener('touchstart', onTouchStart);
+        container.value.removeEventListener('touchmove', onTouchMove);
+        container.value.removeEventListener('touchend', onTouchEnd);
+    }
 })
 
 </script>

@@ -2,16 +2,17 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { Link } from '@inertiajs/vue3';
-import { useScreenStore } from '@/Stores/screenStore';
 import AngleRightSharp from "@/Global/Icons/AngleRightSharp.vue";
 import ProjectNavigatorCubes from '@/Global/ProjectNavigatorCubes.vue';
-
+import { useScreenStore } from '@/Stores/screenStore';
 
 const screenStore = useScreenStore();
 
 const props = defineProps<{
     projects: ProjectData[];
     project: ProjectData;
+    previousProject: ProjectData | null;
+    nextProject: ProjectData | null;
 }>();
 
 const currentIndex = computed(() => {
@@ -19,7 +20,7 @@ const currentIndex = computed(() => {
     return props.projects.findIndex((p) => p.slug === props.project.slug);
 });
 
-const previousProject = computed(() => {
+/*const previousProject = computed(() => {
     if (!props.projects || currentIndex.value === -1) return null;
     const totalProjects = props.projects.length;
     const prevIndex = currentIndex.value === 0 ? totalProjects - 1 : currentIndex.value - 1;
@@ -31,7 +32,7 @@ const nextProject = computed(() => {
     const totalProjects = props.projects.length;
     const nextIndex = currentIndex.value === totalProjects - 1 ? 0 : currentIndex.value + 1;
     return props.projects[nextIndex];
-});
+});*/
 </script>
 
 <template>
