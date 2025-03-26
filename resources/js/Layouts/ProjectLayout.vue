@@ -63,7 +63,7 @@ onUnmounted(() => {
             :projects="projects"
         />
 
-        <nav class="flex flex-col items-center justify-center mt-14 md:mt-[7vw] 3xl:mt-[7rem] absolute top-4 left-1/2 -translate-x-1/2 z-10">
+        <nav class="flex flex-col items-center justify-center mt-14 md:mt-[5vw] 3xl:mt-[5rem] absolute top-4 left-1/2 -translate-x-1/2 z-10">
             <Link :href="'/'">
                 <logo-mark class="" />
             </Link>

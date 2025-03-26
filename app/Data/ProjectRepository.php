@@ -37,7 +37,7 @@ class ProjectRepository
             'slug' => 'suicide-squad-kill-the-justice-league',
             'title' => 'SUICIDE SQUAD: KILL THE JUSTICE LEAGUE',
             'client' => 'Warner Bros. Games',
-            'description' => 'We designed and developed the official <em>Suicide Squad: Kill the Justice League</em> website using Laravel and VueJS. One of the highlights was implementing a custom Twitch Drops feature, allowing players to earn in-game rewards by watching streams. Another feature we are happy with is our headless WordPress setup using the awesome Roots Bedrock and Sage libraries that utilize modern Laravel integrations alongside Corcel, a Laravel 3rd party library that maps WordPress database entries to Laravel models. We set up the Laravel backend and handled deployment using AWS CloudFormation templates.',
+            'description' => 'We designed and developed the official <em>Suicide Squad: Kill the Justice League</em> website. One of the highlights was implementing a custom Twitch Drops feature, allowing players to earn in-game rewards by watching streams. Another feature we are happy with is our headless WordPress setup using the Roots Bedrock and Sage libraries that utilize modern Laravel integrations alongside Corcel, a Laravel 3rd party library that maps WordPress database entries to Laravel models.',
             'keyart' => 'projects/ss.jpg',
             'keyartMobile' => 'projects/ss-m.jpg',
             'keyartLocation' => 'left',

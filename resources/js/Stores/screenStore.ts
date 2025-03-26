@@ -13,12 +13,16 @@ export const useScreenStore = defineStore('screen', () => {
         '4xl': 1920,
     };
 
+    // Check for touch support
+    const hasTouchSupport  = computed(() => {
+
+        return 'ontouchstart' in window || // Works on most browsers
+        (navigator.maxTouchPoints && navigator.maxTouchPoints > 0) || // Modern browsers
+        (navigator as any).msMaxTouchPoints > 0;
+
+    });
     const isMobile = computed(() => {
-        // Check for touch support
-        const hasTouchSupport =
-            'ontouchstart' in window || // Works on most browsers
-            (navigator.maxTouchPoints && navigator.maxTouchPoints > 0) || // Modern browsers
-            (navigator as any).msMaxTouchPoints > 0; // IE11 fallback
+
 
         // Check if screen width is below a reasonable mobile threshold (e.g., md breakpoint)
         const isSmallScreen = screenWidth.value < breakpoints.md;
@@ -65,5 +69,6 @@ export const useScreenStore = defineStore('screen', () => {
         currentBreakpoint,
         isMobile,
         initResizeListener,
+        hasTouchSupport
     };
 });

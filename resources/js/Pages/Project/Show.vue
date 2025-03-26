@@ -9,34 +9,34 @@ import ProjectLayout from '@/Layouts/ProjectLayout.vue';
 
 defineOptions({
     layout: (h, page) => h(ProjectLayout, () => [page]),
-});
+})
 
 const props = defineProps<{
-    projects: ProjectData[];
-    project: ProjectData;
-    storage: string;
-}>();
+    projects: ProjectData[]
+    project: ProjectData
+    storage: string
+}>()
 
-const projectStore = useProjectStore();
-projectStore.setProject(props.project);
-projectStore.setProjects(props.projects);
+const projectStore = useProjectStore()
+projectStore.setProject(props.project)
+projectStore.setProjects(props.projects)
 
 
 
-const previousUrl = inject<Ref<string>>('previousUrl');
+const previousUrl = inject<Ref<string>>('previousUrl')
 
 const headerImageStyle = reactive({
     backgroundImage: `url("${props.storage}projects/${props.project.slug}/header.jpg")`,
-});
+})
 
-const logo = ref(`${props.storage}projects/${props.project.slug}/logo.webp`);
-const overlay = ref<HTMLElement | null>(null);
-const twinklingSvg = ref<SVGSVGElement | null>(null);
-const trailSvg = ref<SVGSVGElement | null>(null);
-const container = ref<HTMLDivElement | null>(null);
+const logo = ref(`${props.storage}projects/${props.project.slug}/logo.webp`)
+const overlay = ref<HTMLElement | null>(null)
+const twinklingSvg = ref<SVGSVGElement | null>(null)
+const trailSvg = ref<SVGSVGElement | null>(null)
+const container = ref<HTMLDivElement | null>(null)
 
 // Define the four colors for twinkling rects
-const colors = ['#ff0000', '#00ff00', '#0000ff', '#ffffff'];
+const colors = ['#ff0000', '#00ff00', '#0000ff', '#ffffff']
 
 // Generate random rectangles with colors
 const generateRandomRects = () => {
@@ -59,13 +59,13 @@ const generateRandomRects = () => {
         const color = colors[Math.floor(Math.random() * colors.length)];
         return {x: x + 1, y: y + 1, color};
     });
-};
+}
 
-const rects = ref(generateRandomRects());
+const rects = ref(generateRandomRects())
 
 // Trailing rectangles config
-const maxTrailingRects = 20; // Increased from 15
-const activeTrails = ref<{ id: string; rect: SVGRectElement; tween: gsap.core.Tween }[]>([]);
+const maxTrailingRects = 20 // Increased from 15
+const activeTrails = ref<{ id: string; rect: SVGRectElement; tween: gsap.core.Tween }[]>([])
 
 // Throttle function
 const throttle = (func: (...args: any[]) => void, limit: number) => {
@@ -77,7 +77,7 @@ const throttle = (func: (...args: any[]) => void, limit: number) => {
             setTimeout(() => (inThrottle = false), limit);
         }
     };
-};
+}
 
 // Mouse move handler
 const onMouseMove = (event: MouseEvent) => {
@@ -132,9 +132,9 @@ const onMouseMove = (event: MouseEvent) => {
     );
 
     activeTrails.value.push({id, rect: trailRect, tween});
-};
+}
 
-const throttledMouseMove = throttle(onMouseMove, 100);
+const throttledMouseMove = throttle(onMouseMove, 100)
 
 // Circle wipe animation
 const animateCircleWipe = () => {
@@ -158,7 +158,7 @@ const animateCircleWipe = () => {
             },
         }
     );
-};
+}
 
 // Twinkling animation for random rectangles
 const animateTwinkling = () => {
@@ -176,7 +176,7 @@ const animateTwinkling = () => {
             }
         );
     });
-};
+}
 
 const determineColorByContributionClass = (type:App.Enums.Contributions) => {
     switch(type) {
@@ -197,7 +197,10 @@ const determineColorByContributionClass = (type:App.Enums.Contributions) => {
     }
 }
 const determineColorBySegmentClass = (type:App.Enums.Segments) => {
-    switch(type) {
+
+    return 'fill-white-400/10 text-white-400 ring-gray-800 ring-gray-400/20'
+
+    /*switch(type) {
         case App.Enums.Segments.LARAVEL:
             return 'fill-red-400/10 text-red-400 ring-red-400/20'
         case App.Enums.Segments.VUE_JS:
@@ -246,21 +249,23 @@ const determineColorBySegmentClass = (type:App.Enums.Segments) => {
             return 'fill-sky-400/10 text-sky-400 ring-sky-400/20'
         default:
             return 'fill-green-400/10 text-green-400 ring-green-400/20'
-    }
+    }*/
 }
+
 onMounted(() => {
     if (previousUrl?.value === '/') animateCircleWipe();
     else if (overlay.value) overlay.value.style.display = 'none';
     animateTwinkling();
     document.body.addEventListener('mousemove', throttledMouseMove);
-});
+})
 
 onUnmounted(() => {
     gsap.killTweensOf(overlay.value);
     gsap.killTweensOf(twinklingSvg.value?.querySelectorAll('rect'));
     activeTrails.value.forEach(t => t.tween.kill());
     document.body.removeEventListener('mousemove', throttledMouseMove);
-});
+})
+
 </script>
 
 <template>
@@ -269,7 +274,7 @@ onUnmounted(() => {
     <div ref="container" class="relative text-white bg-no-repeat bg-cover md:bg-contain aspect-pheroMobile md:aspect-phero"
          :style="project.hasBg ? headerImageStyle : ''">
 
-        <svg ref="twinklingSvg" class="absolute inset-0 w-full h-full pointer-events-none z-40" aria-hidden="true">
+        <svg ref="twinklingSvg" class="absolute inset-0 w-full h-full pointer-events-none " aria-hidden="true">
             <defs>
                 <pattern id="grid-pattern" width="16" height="16" patternUnits="userSpaceOnUse">
                     <line x1="0" y1="0" x2="0" y2="16" stroke="white" stroke-width="1" opacity="0.04"/>
@@ -281,52 +286,57 @@ onUnmounted(() => {
                   height="15" :fill="rect.color" opacity="0"/>
         </svg>
 
-        <svg ref="trailSvg" class="absolute inset-0 w-full h-full pointer-events-none z-41" aria-hidden="true"></svg>
+        <svg ref="trailSvg" class="absolute inset-0 w-full h-full pointer-events-none " aria-hidden="true"></svg>
+
+        <div class="absolute left-0 bottom-0 w-full pointer-events-none z-1 gradOut"></div>
 
         <section ref="overlay" class="fixed inset-0 bg-black z-50 pointer-events-none"></section>
 
-        <section class="project-content pt-48 md:pt-[18vw] 3xl:pt-[18rem] px-2 text-center">
+        <section class="relative z-2 project-content pt-48 md:pt-[15vw] 3xl:pt-[15rem] px-2 text-center">
             <img
-                class="block mx-auto max-w-32 md:max-w-[8vw] 3xl:max-w-[8rem] h-auto mb-4 md:mb-[1vw] 3xl:mb-[1rem]"
+                class="block mx-auto max-w-32 md:max-w-[14vw] 3xl:max-w-[14rem] h-auto mb-4 md:mb-[1vw] 3xl:mb-[1rem]"
                 v-if="project.hasLogo"
                 :src="logo"
                 :alt="project.title + ' logo'"
             >
-            <h1 class="text-lg md:text-[1.5vw] 3xl:text-[1.5rem] md:leading-[2vw] 3xl:leading-[2rem] text-white">{{ project.title }}</h1>
-            <h2 class="md:text-[1vw] 3xl:text-[1rem] md:leading-[1.5vw] 3xl:leading-[1.5rem] text-white/50">
+            <h1 class="text-lg md:text-[2vw] 3xl:text-[2rem] leading-tight md:leading-[2vw] 3xl:leading-[2rem] mb-1 md:mb-0 text-white">{{ project.title }}</h1>
+            <h2 class="md:text-[1vw] 3xl:text-[1rem] md:leading-[1.5vw] 3xl:leading-[1.5rem] md:mb-[1.5vw] 3xl:mb-[1.5rem] text-white/50">
                 <span v-html="project.client"></span>
                 &middot;
                 <span v-html="project.classification"></span>
             </h2>
-            <div class="contributions flex flex-wrap justify-center gap-1 md:gap-[.5vw] 3xl:gap-[.5rem] mt-2 md:mt-[.5vw] 3xl:mt-[.5rem]" v-if="project.contributions.length > 0">
+            <div class="contributions flex flex-wrap justify-center gap-1 md:gap-[.5vw] 3xl:gap-[.5rem] mb-2 md:mb-[.5vw] 3xl:mb-[.5rem]" v-if="project.contributions.length > 0">
                 <span
                     v-for="(type,index) in project.contributions" :key="index"
-                    class="inline-flex items-center gap-x-2 md:gap-x-[.5vw] 3xl:gap-x-[.5rem] rounded-full px-2 md:px-[.5vw] 3xl:px-[.5rem] py-1 md:py-[.25vw] 3xl:py-[.25rem] text-xs md:text-[.75vw] 3xl:text-[.75rem] font-medium ring-1 ring-inset">
+                    class="inline-flex items-center gap-x-2 md:gap-x-[.5vw] 3xl:gap-x-[.5rem] rounded-full px-2 md:px-[.5vw] 3xl:px-[.5rem] py-1 md:py-[.25vw] 3xl:py-[.25rem] text-[11px] md:text-[.75vw] 3xl:text-[.75rem] font-medium ring-1 ring-inset">
                     <svg class="size-1.5 md:size-[.375vw] 3xl:size-[.375rem]" :class="determineColorByContributionClass(type)" viewBox="0 0 6 6" aria-hidden="true">
                       <circle cx="3" cy="3" r="3"/>
                     </svg>
                     {{type}}
                 </span>
             </div>
-            <div class="segments flex flex-wrap justify-center gap-1 md:gap-[.5vw] 3xl:gap-[.5rem] mt-2 md:mt-[.5vw] 3xl:mt-[.5rem]" v-if="project.segments.length > 0">
+            <div class="segments flex flex-wrap justify-center gap-1 md:gap-[.5vw] 3xl:gap-[.5rem] mb-2 md:mb-[3vw] 3xl:mb-[3rem]" v-if="project.segments.length > 0">
                 <span
                     v-for="(type,index) in project.segments" :key="index"
-                    class="inline-flex items-center rounded-full px-2 md:px-[.5vw] 3xl:px-[.5rem] py-1 md:py-[.25vw] 3xl:py-[.25rem] text-xxs md:text-[.675vw] 3xl:text-[.675rem] font-medium ring-1 ring-inset " :class="determineColorBySegmentClass(type)">
+                    class="inline-flex items-center rounded-full px-2 md:px-[.5vw] 3xl:px-[.5rem] py-1 md:py-[.25vw] 3xl:py-[.25rem] text-xxs md:text-[.5vw] 3xl:text-[.5rem] font-medium ring-1 ring-inset fill-white-400/10 text-white-400 ring-gray-800 ring-gray-400/20">
                     {{type}}
                 </span>
             </div>
-            <p class="mt-4 md:mt-[2vw] 3xl:mt-[2rem] text-center text-sm md:text-[.875vw] 3xl:text-[.875rem] leading-5 md:leading-[1.25vw] 3xl:leading-[1.25rem] md:max-w-[50vw] 3xl:max-w-[50rem] mx-auto" v-html="project.description"></p>
+            <p class="mt-4 text-center text-xs md:text-[.875vw] 3xl:text-[.875rem] leading-5 md:leading-[1.25vw] 3xl:leading-[1.25rem] md:max-w-[50vw] 3xl:max-w-[50rem] mx-auto" v-html="project.description"></p>
         </section>
 
-
-
     </div>
-<!--    <div class="flex justify-center items-center mt-64"></div>-->
+
 </template>
 
 <style scoped>
 .project-content {
     position: relative;
     will-change: transform, opacity;
+}
+
+.gradOut {
+    height: 20rem;
+    background: linear-gradient(to top, rgba(0, 0, 0, 1) 0%, rgba(0, 0, 0, 0) 100%);
 }
 </style>
