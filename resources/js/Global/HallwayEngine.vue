@@ -81,6 +81,17 @@ let lastTime = 0;
 let projectCubesInstance: ReturnType<typeof useProjectCubes> | null = null;
 let projectMaxZ: number;
 
+
+const debounce = <T extends (...args: any[]) => void>(func: T, wait: number) => {
+    let timeout: ReturnType<typeof setTimeout> | null = null;
+    return (...args: Parameters<T>) => {
+        if (timeout !== null) {
+            clearTimeout(timeout);
+        }
+        timeout = setTimeout(() => func(...args), wait);
+    };
+};
+
 const fontLoader = useFontLoader('/fonts/Poppins_Regular.json');
 
 const updateRendererSize = () => {
@@ -411,6 +422,7 @@ const handleResize = () => {
     updateRendererSize();
     ScrollTrigger.refresh();
 };
+
 </script>
 
 <template>

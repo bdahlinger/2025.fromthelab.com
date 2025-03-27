@@ -1,13 +1,13 @@
 import * as THREE from 'three';
 import { gsap } from 'gsap'
-
+import { useScreenStore } from "@/Stores/screenStore";
 
 export function useStarfield(scene: THREE.Scene, camera: THREE.PerspectiveCamera, projectMaxZ: number) {
 
+    const screenStore = useScreenStore();
 
-
-    const STAR_SIZE = 20;
-    const STAR_COUNT = 2000;
+    const STAR_SIZE = screenStore.isMobile ? 25 : 20;
+    const STAR_COUNT = screenStore.isMobile ? 1000 : 2000;
     const FIELD_XY_SIZE = 4000;
     const FIELD_Z_MIN = -1000;
     const FIELD_Z_MAX = projectMaxZ - 1000; // Match city buffer

@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { useScreenStore } from '@/Stores/screenStore';
 
 export function useCityscape(
     sceneNoGlow: THREE.Scene,
@@ -6,20 +7,23 @@ export function useCityscape(
     projectMaxZ: number,
     settings: { showCars: boolean; showBuildings: boolean }
 ) {
+
+    const screenStore = useScreenStore();
+
     const BUILDING_BASE_SIZE = 100;
     const BUILDING_MIN_HEIGHT = 100;
     const BUILDING_MAX_HEIGHT = 300;
     const BUILDING_COLOR = 0x333333;
-    const BUILDING_COUNT_X = 32;
+    const BUILDING_COUNT_X = screenStore.isMobile ? 24 : 32;
     const CITY_POSITION_Y = -600;
     const CITY_POSITION_Z = -500;
     const CITY_BUFFER = 1000;
-    const FADE_COLUMNS = 10;
+    const FADE_COLUMNS = screenStore.isMobile ? 5 : 10;
     const MIN_OPACITY = 0.05;
     const MAX_OPACITY = 1.0;
 
-    const PARTICLE_SIZE = 4;
-    const EMITTER_COUNT = 6;
+    const PARTICLE_SIZE = screenStore.isMobile ? 6 : 4;
+    const EMITTER_COUNT = screenStore.isMobile ? 4 : 6;
     const PARTICLE_SPEED = 100;
     const EMITTER_Y = -450;
     const PARTICLES_PER_PATH = 60;

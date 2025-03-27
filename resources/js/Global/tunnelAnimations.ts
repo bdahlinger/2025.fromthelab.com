@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import Stats from 'three/examples/jsm/libs/stats.module';
+import { useScreenStore } from '@/Stores/screenStore';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -16,6 +17,7 @@ export function setupScrollAnimation(
     settings: { showScrollTrigger: boolean },
     stats?: Stats
 ) {
+    const screenStore = useScreenStore();
     const { CUBE_SIZE, CUBE_SPACING, FIRST_CUBE_Z } = config;
     const cubeCount = allCubes?.length || 0;
     const MAX_Z = FIRST_CUBE_Z - (cubeCount + 1) * CUBE_SPACING;
@@ -24,13 +26,21 @@ export function setupScrollAnimation(
     const scrollRange = Math.abs(MAX_Z) + (cubeCount - 1) * CUBE_SPACING;
     let timeline = gsap.timeline();
 
+    // Normalize scroll to prevent address bar show/hide on mobile
+    ScrollTrigger.normalizeScroll(true);
+
+    // Optionally ignore mobile resize events to avoid jumps
+    ScrollTrigger.config({
+        ignoreMobileResize: true,
+    });
+
     if (settings.showScrollTrigger) {
         timeline = gsap.timeline({
             scrollTrigger: {
                 trigger: wrapper.value,
                 start: 'top top',
                 end: `+=${scrollRange}`,
-                scrub: options.scrub || 0.5,
+                scrub: options.scrub || (screenStore.isMobile ? 3 : 0.5),
                 pin: true,
                 onUpdate: (self) => {
                     if (!isReverting) {
@@ -40,7 +50,11 @@ export function setupScrollAnimation(
                         camera.lookAt(0, 0, MAX_Z);
                     }
                     updateCubeColors(camera);
-                }
+                    if (stats) stats.update();
+                },
+                onRefresh: () => {
+                    camera.updateProjectionMatrix(); // Ensure camera adjusts to new viewport
+                },
             }
         });
 
