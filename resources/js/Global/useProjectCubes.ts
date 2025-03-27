@@ -32,7 +32,7 @@ export function useProjectCubes(
     const PORTAL_PULSE_WIDTH = 1
     const PORTAL_PULSE_HEIGHT = 15
     const PORTAL_PULSE_OFFSET = 0.1
-    const PORTAL_TEXT = "EXPLORE"
+    const PORTAL_TEXT = "ENTER TO LEARN MORE"
     const CLICK_HERE_SIZE = tunnelStore.isMobile ? 1 : 0.5
     const CLICK_HERE_SPEED = 40 // units per second
     const CLICK_HERE_RATE = 0.125 // seconds between emissions
@@ -75,12 +75,14 @@ export function useProjectCubes(
         zPosition: number,
         rotation: number,
         keyart: string | null,
-        keyartLocation: string | null
+        keyartLocation: string | null,
+        cubeIndex: number | null
     ): THREE.Group => {
         const group = new THREE.Group()
         group.position.z = zPosition
         group.rotation.z = rotation
         group.userData.isActive = false
+        group.userData.cubeIndex = cubeIndex
 
         const geometry = new THREE.BoxGeometry(size, size, size)
         const edges = new THREE.EdgesGeometry(geometry)
@@ -96,7 +98,7 @@ export function useProjectCubes(
         let portalLocation: 'left' | 'top' | 'right' | 'bottom' = 'right'
         const halfSize = size / 2
 
-        const addPortal = () => {
+        const addPortal = (cubeIndex: number) => {
             const innerRadius = 25
             const outerRadius = 40
             const portalGeometry = new THREE.CircleGeometry(outerRadius, 24)
@@ -165,7 +167,7 @@ export function useProjectCubes(
             if (loadedFont) {
                 const textGeometry = new TextGeometry(PORTAL_TEXT, {
                     font: loadedFont,
-                    size: 4,
+                    size: 3,
                     depth: 0,
                     curveSegments: 12,
                     bevelEnabled: false
@@ -179,18 +181,36 @@ export function useProjectCubes(
                     side: THREE.DoubleSide
                 })
                 const textMesh = new THREE.Mesh(textGeometry, textMaterial)
-                textMesh.visible = false;
-
-                // Position below portal and adjust rotation
-                const textOffsetY = -50; // Distance below portal
-                textMesh.position.set(0, textOffsetY, 0);
-
+                textMesh.visible = false
+                textMesh.userData.isVisible = false
+                textMesh.userData.isExploreText = true
+                textMesh.userData.skipTextMeshes = true
+                const textOffsetY = 45 // Distance above portal
+                textMesh.position.set(0, textOffsetY, 0)
                 portal.add(textMesh)
-                portal.userData.exploreText = textMesh;
-            } else {
-                console.warn("Font not loaded yet; 'EXPLORE' text skipped for this portal.");
-            }
+                portal.userData.exploreText = textMesh
 
+                // Add hitbox for "EXPLORE" text (visible for debugging)
+                const textBoundingBox = textGeometry.boundingBox
+                const textWidth = textBoundingBox.max.x - textBoundingBox.min.x + 10 // Add padding
+                const textHeight = textBoundingBox.max.y - textBoundingBox.min.y + 10 // Add padding
+                const textHitboxGeometry = new THREE.PlaneGeometry(textWidth, textHeight)
+                const textHitboxMaterial = new THREE.MeshBasicMaterial({
+                    transparent: true,
+                    opacity: 0.0, // Semi-transparent
+                    side: THREE.DoubleSide,
+                    visible: false // Visible for debugging
+                })
+                const textHitbox = new THREE.Mesh(textHitboxGeometry, textHitboxMaterial)
+                textHitbox.position.set(0, textOffsetY, 0) // Match text position
+                textHitbox.userData.isExploreTextHitbox = true
+                textHitbox.userData.portal = portal // Link to the same portal
+                textHitbox.geometry.computeBoundingSphere()
+                portal.add(textHitbox)
+                portal.userData.exploreTextHitbox = textHitbox
+            } else {
+                console.warn("Font not loaded yet; 'EXPLORE' text skipped for this portal.")
+            }
 
             // Add close button as a sibling to the portal
             const closeGroup = new THREE.Group()
@@ -214,7 +234,7 @@ export function useProjectCubes(
                 opacity: 0.0,
                 transparent: true,
                 side: THREE.DoubleSide,
-                visible: true
+                visible: true,
             })
             const closeHitbox = new THREE.Mesh(closeHitboxGeometry, closeHitboxMaterial)
             closeHitbox.userData.isCloseHitbox = true
@@ -320,6 +340,7 @@ export function useProjectCubes(
             clickHereParticles.set(group, [])
             lastEmissionTimes.set(group, 0)
             particleCounters.set(group, 0)
+
         }
 
         const addChildWithBounds = (child: THREE.Object3D) => {
@@ -556,12 +577,14 @@ export function useProjectCubes(
                     if (!Array.isArray(projects)) {
                         console.warn('useProjectCubes: projects is not an array, defaulting to empty array', projects)
                     }
+                    let cubeIndex = 0
                     projectArray.forEach((project, index) => {
                         const zPosition = FIRST_CUBE_Z - (index + 1) * CUBE_SPACING
                         const rotation = (index + 1) * CUBE_ROTATION_INCREMENT
-                        const cube = createProjectCube(project, CUBE_SIZE, zPosition, rotation, project.keyart, project.keyartLocation)
+                        const cube = createProjectCube(project, CUBE_SIZE, zPosition, rotation, project.keyart, project.keyartLocation, cubeIndex)
                         scene.add(cube)
                         projectCubes.push(cube)
+                        cubeIndex++
                         if (settings.showProjectTitles) {
                             createTextObject(project.title, 0, project.size - 15, FIRST_CUBE_Z + 90 - (index + 1) * CUBE_SPACING, project.size, font)
                         }
@@ -717,7 +740,7 @@ export function useProjectCubes(
         const cameraZ = camera.position.z
         let textMeshes: THREE.Mesh[] = []
 
-        scene.traverse(o => o instanceof THREE.Mesh && o.geometry?.type === 'TextGeometry' && textMeshes.push(o))
+        scene.traverse(o => o instanceof THREE.Mesh && o.geometry?.type === 'TextGeometry' && !o.userData.skipTextMeshes && textMeshes.push(o))
 
         if (!sceneInitialized) {
             sceneInitialized = true
@@ -736,7 +759,7 @@ export function useProjectCubes(
             }
 
             const cubeZ = cube.position.z
-            const cubeDistance = Math.abs(cameraZ - cubeZ + 90)
+            const cubeDistance = Math.abs(cameraZ - cubeZ)
             let lineProgress = 0
 
             if (cubeDistance <= CUBE_PROXIMITY_THRESHOLD) {
@@ -770,6 +793,20 @@ export function useProjectCubes(
                         material.opacity = 0
                     }
                 } else if (child instanceof THREE.LineSegments && child.userData.isPortal) {
+                    child.children.forEach((grandchild) => {
+                        if (grandchild instanceof THREE.Mesh && grandchild.userData.isExploreText) {
+                            const material = grandchild.material as THREE.MeshBasicMaterial
+                            if (cubeDistance <= CUBE_PROXIMITY_THRESHOLD) {
+                                const progress = 1 - (cubeDistance / CUBE_PROXIMITY_THRESHOLD)
+                                material.opacity = Math.min(1.0, progress * 2)
+                                grandchild.visible = true
+                            } else {
+                                material.opacity = 0
+                                grandchild.visible = false
+                            }
+                        }
+                    })
+
                     if (sceneInitialized) {
                         if (lineProgress > 0.1) {
                             child.children.forEach((grandchild) => {
@@ -805,8 +842,10 @@ export function useProjectCubes(
                         if (cubeDistance <= CUBE_PROXIMITY_THRESHOLD) {
                             const progress = 1 - (cubeDistance / CUBE_PROXIMITY_THRESHOLD)
                             material.opacity = Math.min(0.8, progress * 2)
+                            child.visible = true
                         } else {
                             material.opacity = 0
+                            child.visible = false
                         }
                     }
                 } else if (child instanceof THREE.Group && child.userData.closeButton) {
@@ -833,6 +872,13 @@ export function useProjectCubes(
             const planeMaterial = planeMesh?.material as THREE.MeshBasicMaterial
             const meshZ = mesh.position.z
             const zDistance = Math.abs(cameraZ - meshZ + 120)
+
+            if (isInPortalFocus) {
+                textMaterial.opacity = 0.0
+                if (planeMaterial) planeMaterial.opacity = 0.0
+                return
+            }
+
             if (zDistance <= CUBE_PROXIMITY_THRESHOLD) {
                 const progress = 1 - (zDistance / CUBE_PROXIMITY_THRESHOLD)
                 const opacity = Math.min(1.0, progress * 2)
@@ -909,6 +955,50 @@ export function useProjectCubes(
         })
     }
 
+    const startMarqueeOpacity = (portal: THREE.LineSegments) => {
+        const rings = [portal, ...portal.children.filter(child => child instanceof THREE.LineSegments && child.userData.isPortal)] as THREE.LineSegments[]
+        const ringCount = rings.length
+        const cycleDuration = 2 // Duration for one full fade cycle (down and back up) per ring
+        const stagger = 0.1 // Delay between each ring's animation start
+
+        rings.forEach((ring, index) => {
+            const material = ring.material as THREE.LineBasicMaterial
+            // Ensure initial opacity is set correctly
+            material.opacity = ring.userData.maxOpacity
+
+            // Create an infinite timeline for each ring
+            const tl = gsap.timeline({
+                repeat: -1,
+                delay: index * stagger // Stagger the start of each ring's animation
+            })
+
+            tl.to(material, {
+                opacity: 0, // Fade to 0 instead of 0.2
+                duration: cycleDuration / 2,
+                ease: 'power2.inOut'
+            }).to(material, {
+                opacity: ring.userData.maxOpacity, // Fade back to original max opacity (usually 1.0)
+                duration: cycleDuration / 2,
+                ease: 'power2.inOut'
+            })
+
+            // Store the timeline on the ring for later cleanup
+            ring.userData.marqueeTimeline = tl
+        })
+    }
+
+    const stopMarqueeOpacity = (portal: THREE.LineSegments) => {
+        const rings = [portal, ...portal.children.filter(child => child instanceof THREE.LineSegments && child.userData.isPortal)] as THREE.LineSegments[]
+        rings.forEach((ring) => {
+            if (ring.userData.marqueeTimeline) {
+                ring.userData.marqueeTimeline.kill()
+                delete ring.userData.marqueeTimeline
+                const material = ring.material as THREE.LineBasicMaterial
+                material.opacity = ring.userData.maxOpacity // Reset to full opacity
+            }
+        })
+    }
+
     const setupInteractivity = (
         camera: THREE.PerspectiveCamera,
         domElement: HTMLCanvasElement,
@@ -924,7 +1014,14 @@ export function useProjectCubes(
         let isEnteringPortal = false
         let swipeCooldown = false
         let isCameraAnimating = false
+        let textMeshes: THREE.Mesh[] = []
+        let closeGroupAnimating = false
 
+        scene.traverse(o => {
+            if (o instanceof THREE.Mesh && o.geometry?.type === 'TextGeometry' && !o.userData.skipTextMeshes) {
+                textMeshes.push(o)
+            }
+        })
         const onTouchStart = (event: TouchEvent) => {
             if (isInPortalFocus) {
                 touchStartY = event.touches[0].clientY
@@ -995,19 +1092,14 @@ export function useProjectCubes(
             const targetLookAt = originalCameraTarget ? originalCameraTarget.clone() : new THREE.Vector3(0, 0, MAX_Z)
             const originalZ = originalCameraPosition?.z ?? camera.position.z
             const cube = exitingPortal?.parent as THREE.Group
+            const cubeIndex = exitingPortal ? projectCubes.indexOf(cube) : -1
 
             isCameraAnimating = true
 
-            /*const lookAtPosition = camera.userData.lockedLookAt ? camera.userData.lockedLookAt.clone() : camera.getWorldDirection(new THREE.Vector3()).multiplyScalar(1000).add(camera.position)
-            console.log('lookAtPosition',lookAtPosition,targetLookAt)
-            gsap.to(lookAtPosition, {
-                x: targetLookAt.x,
-                y: targetLookAt.y,
-                z: targetLookAt.z,
-                duration: 1,
-                ease: 'power3.out',
-                overwrite: 'auto'
-            })*/
+            if (exitingPortal) {
+                stopMarqueeOpacity(exitingPortal)
+            }
+
             const startLookAt = camera.userData.lockedLookAt ? camera.userData.lockedLookAt.clone() : camera.getWorldDirection(new THREE.Vector3()).multiplyScalar(1000).add(camera.position)
             const progressObj = { progress: 0 }
 
@@ -1019,23 +1111,68 @@ export function useProjectCubes(
                 ease: 'power3.inOut',
                 overwrite: 'auto',
                 onStart: () => {
-                    // Fade out "EXPLORE" text
-                    if (exitingPortal && exitingPortal.userData.exploreText) {
-                        const exploreText = exitingPortal.userData.exploreText as THREE.Mesh;
-                        gsap.to(exploreText.material, {
-                            opacity: 0.0,
-                            duration: 1,
-                            ease: 'power2.out',
-                            onComplete: () => {
-                                exploreText.visible = false; // Hide after fading out
+                    const titleText = textMeshes[cubeIndex]
+                    // Fade in the specific title text
+                    if (cubeIndex !== -1 && titleText) {
+                        const titleText = textMeshes[cubeIndex]
+                        if (titleText) {
+                            const material = titleText.material as THREE.MeshBasicMaterial
+                            const plane = titleText.userData.backgroundPlane as THREE.Mesh
+                            const zDistance = Math.abs(camera.position.z - titleText.position.z + 120)
+                            const targetOpacity = zDistance <= CUBE_PROXIMITY_THRESHOLD ? Math.min(1.0, (1 - zDistance / CUBE_PROXIMITY_THRESHOLD) * 2) : 0
+                            gsap.to(material, {
+                                opacity: targetOpacity,
+                                duration: 0.5,
+                                ease: 'power2.in'
+                            })
+                            if (plane) {
+                                gsap.to(plane.material, {
+                                    opacity: targetOpacity * 0.8,
+                                    duration: 0.5,
+                                    ease: 'power2.in'
+                                })
                             }
+                        }
+                    }
+                    if (cube?.userData.closeButton) {
+
+                        const currentCloseGroupPos = cube.userData.closeButton.position
+
+                        gsap.to(cube.userData.closeButton.rotation, {
+                            z: 0,
+                            duration: 0.3,
+                            ease: 'power2.inOut',
                         });
+                        gsap.to(cube.userData.closeButton.position, {
+                            x: currentCloseGroupPos.x+2,
+                            duration: 0.3,
+                            ease: 'power2.inOut',
+                        });
+
+                        const materials = cube.userData.closeButton.children
+                            .filter(child => child instanceof THREE.Mesh)
+                            .map(child => (child as THREE.Mesh).material)
+                        gsap.to(materials, {
+                            opacity: 0,
+                            duration: 0.5,
+                            onUpdate: () => {
+
+                            },
+                            onComplete: () => {
+                                cube.userData.closeButton.updateMatrixWorld(true)
+                                cube.userData.closeButton.visible = false
+                                cube.userData.lockedPosition = null
+                                closeGroupAnimating = false
+                            }
+                        })
+
+                        if (exitingPortal) {
+                            animateRings(exitingPortal, false)
+                        }
                     }
                 },
                 onUpdate: () => {
-
                     const progress = progressObj.progress
-                    // Interpolate between startLookAt and targetLookAt based on animation progress
                     const lookAtX = THREE.MathUtils.lerp(startLookAt.x, targetLookAt.x, progress)
                     const lookAtY = THREE.MathUtils.lerp(startLookAt.y, targetLookAt.y, progress)
                     const lookAtZ = THREE.MathUtils.lerp(startLookAt.z, targetLookAt.z, progress)
@@ -1048,37 +1185,17 @@ export function useProjectCubes(
                     activePortal = null
                     document.body.classList.remove('no-scrollbar')
                     if (onPortalFocusChange) onPortalFocusChange(false)
-                    if (exitingPortal) animateRings(exitingPortal, false)
-                    if (cube?.userData.closeButton) {
-                        const materials = cube.userData.closeButton.children
-                            .filter(child => child instanceof THREE.Mesh)
-                            .map(child => (child as THREE.Mesh).material)
-                        gsap.to(materials, {
-                            opacity: 0,
-                            duration: 0.5,
-                            onUpdate: () => {
-                                cube.userData.closeButton.visible = false
-                            },
-                            onComplete: () => {
-                                cube.userData.closeButton.updateMatrixWorld(true)
-
-                                if (cube.userData.standaloneDebugPlane) {
-                                    cube.userData.standaloneDebugPlane.visible = false
-                                    cube.userData.standaloneDebugPlane.userData.locked = false
-                                    cube.userData.standaloneDebugPlane.updateMatrixWorld(true)
-                                    console.log('Standalone debug plane hidden on exit, position unchanged:', cube.userData.standaloneDebugPlane.getWorldPosition(new THREE.Vector3()))
-                                }
-                                cube.userData.lockedPosition = null
-                            }
-                        })
+                    if (exitingPortal) {
+                        stopMarqueeOpacity(exitingPortal)
                     }
+
                     lockedScrollY = null
                     originalCameraPosition = null
                     originalCameraTarget = null
                     camera.userData.lockedLookAt = null
                     isCameraAnimating = false
 
-                    // Restart clickHere particles for cubes within range
+                    // Restart clickHere particles
                     projectCubes.forEach(cube => {
                         if (Math.abs(camera.position.z - cube.position.z + 90) <= CUBE_PROXIMITY_THRESHOLD) {
                             lastEmissionTimes.set(cube, 0)
@@ -1086,131 +1203,214 @@ export function useProjectCubes(
                     })
                 }
             })
-            // Animate the progress proxy object from 0 to 1 over the same duration
             gsap.to(progressObj, {
                 progress: 1,
                 duration: 2,
                 ease: 'power3.inOut',
                 overwrite: 'auto'
             })
-
         }
 
         const animateRings = (portal: THREE.LineSegments, expand: boolean = true) => {
-            const rings = [portal, ...portal.children.filter(child => child instanceof THREE.LineSegments && child.userData.isPortal)] as THREE.LineSegments[]
-            const targetSpacing = expand ? 25 : 2
+            const rings = [portal, ...portal.children.filter(child => child instanceof THREE.LineSegments && child.userData.isPortal)] as THREE.LineSegments[];
+            const targetSpacing = expand ? 25 : 2;
+
             rings.forEach((ring, index) => {
-                let targetZ = -index * targetSpacing
+                let targetZ = -index * targetSpacing;
                 if (portal.position.y > 0 && portal.rotation.x === -Math.PI / 2) {
-                    targetZ = index * targetSpacing
+                    targetZ = index * targetSpacing;
                 } else if (portal.position.y < 0 && portal.rotation.x === Math.PI / 2) {
-                    targetZ = index * targetSpacing
+                    targetZ = index * targetSpacing;
                 }
-                const targetOpacity = expand ? ring.userData.maxOpacity : 0
+                const targetOpacity = expand ? ring.userData.maxOpacity : 0;
+
                 gsap.to(ring.position, {
                     z: targetZ,
                     duration: 1,
                     ease: 'power3.out',
-                    delay: 0.5
-                })
+                    delay: 0.5,
+                    onComplete: () => {
+                        if (expand && index === 0) { // Only trigger once, after the main ring's animation
+                            startMarqueeOpacity(portal);
+                        }
+                    }
+                });
                 gsap.to(ring.material, {
                     opacity: targetOpacity,
                     duration: 1,
                     ease: 'power3.out',
-                    delay: 0.5
-                })
-            })
-        }
+                    delay: 0.5,
+                });
+            });
+        };
 
         const onMouseMove = (event: MouseEvent) => {
-            mouse.x = (event.clientX / window.innerWidth) * 2 - 1
-            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1
-            raycaster.setFromCamera(mouse, camera)
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+            raycaster.setFromCamera(mouse, camera);
 
             if (camera.userData.lockedLookAt) {
-                camera.lookAt(camera.userData.lockedLookAt)
-                camera.updateMatrixWorld(true)
+                camera.lookAt(camera.userData.lockedLookAt);
+                camera.updateMatrixWorld(true);
             }
 
             projectCubes.forEach(cube => {
                 if (cube.userData.lockedPosition) {
-                    const currentPos = cube.position
+                    const currentPos = cube.position;
                     if (!currentPos.equals(cube.userData.lockedPosition)) {
-                        cube.position.copy(cube.userData.lockedPosition)
+                        cube.position.copy(cube.userData.lockedPosition);
                     }
                 }
-                cube.updateMatrixWorld(true)
-                cube.children.forEach(child => child.updateMatrixWorld(true))
-            })
+                cube.updateMatrixWorld(true);
+                cube.children.forEach(child => child.updateMatrixWorld(true));
+            });
 
             const hitboxes = projectCubes.flatMap(cube => {
-                const children = []
-                if (cube.userData.isActive) {
+                const children = [];
+                if (!isInPortalFocus && cube.userData.isActive) {
                     cube.children.forEach(child => {
-                        if (child instanceof THREE.Mesh && child.userData.isPortalHitbox) {
-                            children.push(child)
+                        if (child instanceof THREE.Mesh && (child.userData.isPortalHitbox || child.userData.isExploreTextHitbox)) {
+                            children.push(child);
                         }
-                    })
+                    });
                 }
                 if (isInPortalFocus && activePortal && cube === activePortal.parent) {
                     cube.children.forEach(child => {
+                        if (child instanceof THREE.Mesh && child.userData.isPortalHitbox) {
+                            children.push(child);
+                        }
+                        if (child instanceof THREE.LineSegments && child.userData.isPortal) {
+                            child.children.forEach(grandchild => {
+                                if (grandchild instanceof THREE.Mesh && grandchild.userData.isExploreTextHitbox) {
+                                    children.push(grandchild);
+                                }
+                            });
+                        }
                         if (child instanceof THREE.Group && child === cube.userData.closeButton) {
                             child.children.forEach(grandchild => {
                                 if (grandchild instanceof THREE.Mesh && grandchild.userData.isCloseHitbox) {
-                                    children.push(grandchild)
+                                    children.push(grandchild);
                                 }
-                            })
+                            });
                         }
-                    })
+                    });
                 }
-                return children
-            }) as THREE.Mesh[]
+                return children;
+            }) as THREE.Mesh[];
 
-            const intersects = raycaster.intersectObjects(hitboxes)
+            const intersects = raycaster.intersectObjects(hitboxes);
 
             if (intersects.length > 0) {
-                const hitbox = intersects[0].object as THREE.Mesh
-                if (hitbox.userData.isPortalHitbox) {
-                    const newHoveredPortal = hitbox.userData.portal as THREE.LineSegments
+                const hitbox = intersects[0].object as THREE.Mesh;
+                if (hitbox.userData.isPortalHitbox || hitbox.userData.isExploreTextHitbox) {
+                    const newHoveredPortal = hitbox.userData.portal as THREE.LineSegments;
                     if (hoveredPortal !== newHoveredPortal) {
                         if (hoveredPortal) {
-                            const material = hoveredPortal.material as THREE.LineBasicMaterial
-                            gsap.to(material.color, {
-                                r: (CUBE_COLOR >> 16 & 255) / 255,
-                                g: (CUBE_COLOR >> 8 & 255) / 255,
-                                b: (CUBE_COLOR & 255) / 255,
-                                duration: 0.5
-                            })
+                            // Reset all rings to original color
+                            const oldRings = [hoveredPortal, ...hoveredPortal.children.filter(child =>
+                                child instanceof THREE.LineSegments && child.userData.isPortal)] as THREE.LineSegments[];
+                            oldRings.forEach(ring => {
+                                const material = ring.material as THREE.LineBasicMaterial;
+                                gsap.to(material.color, {
+                                    r: (CUBE_COLOR >> 16 & 255) / 255,
+                                    g: (CUBE_COLOR >> 8 & 255) / 255,
+                                    b: (CUBE_COLOR & 255) / 255,
+                                    duration: 0.5,
+                                });
+                            });
                         }
-                        hoveredPortal = newHoveredPortal
-                        const material = hoveredPortal.material as THREE.LineBasicMaterial
-                        gsap.to(material.color, {
-                            r: (PORTAL_HOVER_COLOR >> 16 & 255) / 255,
-                            g: (PORTAL_HOVER_COLOR >> 8 & 255) / 255,
-                            b: (PORTAL_HOVER_COLOR & 255) / 255,
-                            duration: 0.5
-                        })
+                        hoveredPortal = newHoveredPortal;
+                        // Turn all rings green
+                        const newRings = [hoveredPortal, ...hoveredPortal.children.filter(child =>
+                            child instanceof THREE.LineSegments && child.userData.isPortal)] as THREE.LineSegments[];
+                        newRings.forEach(ring => {
+                            const material = ring.material as THREE.LineBasicMaterial;
+                            gsap.to(material.color, {
+                                r: (PORTAL_HOVER_COLOR >> 16 & 255) / 255,
+                                g: (PORTAL_HOVER_COLOR >> 8 & 255) / 255,
+                                b: (PORTAL_HOVER_COLOR & 255) / 255,
+                                duration: 0.5,
+                            });
+                        });
                     }
-                    domElement.style.cursor = 'pointer'
-                } else if (hitbox.userData.isCloseHitbox) {
-                    domElement.style.cursor = 'pointer'
+                    domElement.style.cursor = 'pointer';
+                } else if (hitbox.userData.isCloseHitbox && isInPortalFocus) {
+                    if( !closeGroupAnimating ) {
+                        closeGroupAnimating = true
+
+                        const closeGroup = hitbox.parent as THREE.Group;
+                        const rects = closeGroup.children.filter(child =>
+                            child instanceof THREE.Mesh && !child.userData.isCloseHitbox) as THREE.Mesh[];
+
+                        const currentCloseGroupPos = closeGroup.position
+
+                        gsap.to(closeGroup.rotation, {
+                            z: Math.PI / 2,
+                            duration: 0.3,
+                            ease: 'power2.inOut',
+                        });
+                        gsap.to(closeGroup.position, {
+                            x: currentCloseGroupPos.x-2,
+                            duration: 0.3,
+                            ease: 'power2.inOut',
+                        });
+
+                        /*rects.forEach(rect => {
+                            gsap.to(rect.position, {
+                                z: -2,
+                                duration: 2,
+                                ease: 'power2.inOut',
+                                //overwrite: 'auto',
+                            });
+
+                        });*/
+                        }
+
+                    domElement.style.cursor = 'pointer';
                 } else {
-                    domElement.style.cursor = 'auto'
+                    domElement.style.cursor = 'auto';
                 }
             } else {
                 if (hoveredPortal) {
-                    const material = hoveredPortal.material as THREE.LineBasicMaterial
-                    gsap.to(material.color, {
-                        r: (CUBE_COLOR >> 16 & 255) / 255,
-                        g: (CUBE_COLOR >> 8 & 255) / 255,
-                        b: (CUBE_COLOR & 255) / 255,
-                        duration: 0.5
-                    })
-                    hoveredPortal = null
+                    // Reset all rings to original color
+                    const rings = [hoveredPortal, ...hoveredPortal.children.filter(child =>
+                        child instanceof THREE.LineSegments && child.userData.isPortal)] as THREE.LineSegments[];
+                    rings.forEach(ring => {
+                        const material = ring.material as THREE.LineBasicMaterial;
+                        gsap.to(material.color, {
+                            r: (CUBE_COLOR >> 16 & 255) / 255,
+                            g: (CUBE_COLOR >> 8 & 255) / 255,
+                            b: (CUBE_COLOR & 255) / 255,
+                            duration: 0.5,
+                        });
+                    });
+                    hoveredPortal = null;
                 }
-                domElement.style.cursor = 'auto'
+                // Reset close button rectangles if not hovering
+                if (isInPortalFocus && activePortal && closeGroupAnimating) {
+                    const closeGroup = activePortal.parent?.userData.closeButton as THREE.Group;
+                    const currentCloseGroupPos = closeGroup.position
+                    if (closeGroup) {
+                        closeGroupAnimating = false
+
+                        gsap.to(closeGroup.rotation, {
+                            z: 0,
+                            duration: 0.3,
+                            ease: 'power2.inOut',
+                            //overwrite: 'auto',
+                        });
+                        gsap.to(closeGroup.position, {
+                            x: currentCloseGroupPos.x+2,
+                            duration: 0.3,
+                            ease: 'power2.inOut',
+                            //overwrite: 'auto',
+                        });
+
+                    }
+                }
+                domElement.style.cursor = 'auto';
             }
-        }
+        };
 
         const onClick = (event: MouseEvent) => {
             if (isCameraAnimating) {
@@ -1221,7 +1421,6 @@ export function useProjectCubes(
             mouse.y = -(event.clientY / window.innerHeight) * 2 + 1
             raycaster.setFromCamera(mouse, camera)
 
-            // Include close hitboxes only for the active portal's cube
             const closeHitboxes = projectCubes.flatMap(cube => {
                 const children = []
                 if (isInPortalFocus && activePortal && cube === activePortal.parent) {
@@ -1238,11 +1437,31 @@ export function useProjectCubes(
                 return children
             }) as THREE.Mesh[]
 
-            const portalHitboxes = projectCubes.flatMap(cube =>
-                cube.userData.isActive ? cube.children.filter(child =>
-                    child instanceof THREE.Mesh && child.userData.isPortalHitbox
-                ) : []
-            ) as THREE.Mesh[]
+            const portalAndTextHitboxes = projectCubes.flatMap(cube => {
+                const children = []
+                if (!isInPortalFocus && cube.userData.isActive) {
+                    cube.children.forEach(child => {
+                        if (child instanceof THREE.Mesh && (child.userData.isPortalHitbox || child.userData.isExploreTextHitbox)) {
+                            children.push(child)
+                        }
+                    })
+                }
+                if (isInPortalFocus && activePortal && cube === activePortal.parent) {
+                    cube.children.forEach(child => {
+                        if (child instanceof THREE.Mesh && child.userData.isPortalHitbox) {
+                            children.push(child)
+                        }
+                        if (child instanceof THREE.LineSegments && child.userData.isPortal) {
+                            child.children.forEach(grandchild => {
+                                if (grandchild instanceof THREE.Mesh && grandchild.userData.isExploreTextHitbox) {
+                                    children.push(grandchild)
+                                }
+                            })
+                        }
+                    })
+                }
+                return children
+            }) as THREE.Mesh[]
 
             let intersects = raycaster.intersectObjects(closeHitboxes)
             for (const intersect of intersects) {
@@ -1253,14 +1472,16 @@ export function useProjectCubes(
                 }
             }
 
-            intersects = raycaster.intersectObjects(portalHitboxes)
+            intersects = raycaster.intersectObjects(portalAndTextHitboxes)
             if (intersects.length === 0) return
 
             const clickedHitbox = intersects[0].object as THREE.Mesh
             const clickedPortal = clickedHitbox.userData.portal as THREE.LineSegments
-            const cube = clickedHitbox.parent as THREE.Group
+            const cube = clickedPortal.parent as THREE.Group
             const cubeIndex = projectCubes.indexOf(cube)
             const project = projects[cubeIndex]
+
+
 
             if (isInPortalFocus && clickedPortal === activePortal) {
                 const numRings = 25
@@ -1290,13 +1511,12 @@ export function useProjectCubes(
                     ease: 'power2.in',
                     onUpdate: () => camera.lookAt(lookAtTarget),
                     onStart: () => {
-                        // Fade canvas to black
                         gsap.to(renderer.domElement, {
                             opacity: 0,
                             duration: 1,
                             ease: 'power2.in',
                             overwrite: 'auto'
-                        });
+                        })
                     },
                     onComplete: () => {
                         if (project?.slug) {
@@ -1326,22 +1546,30 @@ export function useProjectCubes(
                     ease: 'power3.out',
                     overwrite: 'all',
                     onStart: () => {
-                        isInPortalFocus = true;
-                        activePortal = clickedPortal;
-                        document.body.classList.add('no-scrollbar');
-                        animateRings(clickedPortal, true);
-                        cube.userData.lockedPosition = cube.position.clone();
-                        disposeParticles(cube);
+                        isInPortalFocus = true
+                        activePortal = clickedPortal
+                        document.body.classList.add('no-scrollbar')
+                        animateRings(clickedPortal, true)
+                        cube.userData.lockedPosition = cube.position.clone()
+                        disposeParticles(cube)
 
-                        // Fade in "EXPLORE" text
-                        const exploreText = clickedPortal.userData.exploreText as THREE.Mesh;
-                        if (exploreText) {
-                            exploreText.visible = true; // Make visible before fading in
-                            gsap.to(exploreText.material, {
-                                opacity: 1.0,
-                                duration: 1,
-                                ease: 'power2.in'
-                            });
+                        const titleText = textMeshes[cubeIndex]
+                        console.log(titleText)
+                        if (titleText) {
+                            const material = titleText.material as THREE.MeshBasicMaterial
+                            const plane = titleText.userData.backgroundPlane as THREE.Mesh
+                            gsap.to(material, {
+                                opacity: 0,
+                                duration: 0.5,
+                                ease: 'power2.out'
+                            })
+                            if (plane) {
+                                gsap.to(plane.material, {
+                                    opacity: 0,
+                                    duration: 0.5,
+                                    ease: 'power2.out'
+                                })
+                            }
                         }
                     },
                     onComplete: () => {
@@ -1375,7 +1603,7 @@ export function useProjectCubes(
                 })
                 gsap.to({}, {
                     duration: 2,
-                    ease: 'power3.out',
+                    ease: 'power2.out',
                     overwrite: 'all',
                     onUpdate: function() {
                         const progress = this.progress()
@@ -1426,6 +1654,9 @@ export function useProjectCubes(
             domElement.removeEventListener('touchend', onTouchEnd)
             window.removeEventListener('wheel', handleScroll)
             window.removeEventListener('scroll', handleScroll)
+            if (activePortal) {
+                stopMarqueeOpacity(activePortal);
+            }
         }
 
         return () => {
