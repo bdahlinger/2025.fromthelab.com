@@ -4,8 +4,8 @@ import { TextGeometry } from 'three/examples/jsm/geometries/TextGeometry'
 import { SVGLoader } from 'three/examples/jsm/loaders/SVGLoader'
 
 export function useIntroCubes(
-    sceneNoGlow: THREE.Scene,
-    sceneGlow: THREE.Scene,
+    scene: THREE.Scene,
+    font: Ref<THREE.Font | null>,
     config: { CUBE_SIZE: number; FIRST_CUBE_Z: number },
     settings: {
         showIntroCubes: boolean
@@ -93,7 +93,7 @@ export function useIntroCubes(
         }
 
         introGroup.position.z = FIRST_CUBE_Z
-        sceneGlow.add(introGroup) // Single scene usage
+        scene.add(introGroup)
         introCubes.push(introGroup)
 
         initialOpacities = introMaterials.map(m => m.opacity)
@@ -141,6 +141,14 @@ export function useIntroCubes(
     }
 
     setupIntro()
+
+    if (font.value) {
+        const messageGroup = createMessageGroup(font.value);
+        scene.add(messageGroup);
+    } else {
+        console.warn('Font not available; "SCROLL TO CONTINUE" message skipped.');
+    }
+
 
 
     return { introCubes }

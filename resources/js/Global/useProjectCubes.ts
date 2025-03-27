@@ -17,7 +17,8 @@ export function useProjectCubes(
         showProjectGrids: boolean
         showProjectTitles: boolean
     },
-    textureCache: Map<string, THREE.Texture>
+    textureCache: Map<string, THREE.Texture>,
+    font: Ref<THREE.Font | null>
 ) {
     const tunnelStore = useProjectStore()
     const { CUBE_SIZE, CUBE_SPACING, FIRST_CUBE_Z } = config
@@ -164,9 +165,9 @@ export function useProjectCubes(
             }
             portal.userData.maxOpacity = 1.0
 
-            if (loadedFont) {
+            if (font.value) {
                 const textGeometry = new TextGeometry(PORTAL_TEXT, {
-                    font: loadedFont,
+                    font: font.value,
                     size: 3,
                     depth: 0,
                     curveSegments: 12,
@@ -523,10 +524,17 @@ export function useProjectCubes(
 
     const frustum = new THREE.Frustum()
 
-    const createTextObject = (text: string, x: number, y: number, z: number, size: number, font: THREE.Font): THREE.Mesh => {
+    const createTextObject = (text: string, x: number, y: number, z: number, size: number): THREE.Mesh => {
+
+        if (!font.value) {
+            console.warn('Font not available; skipping text creation for:', text);
+            const dummyGeometry = new THREE.BufferGeometry();
+            const dummyMaterial = new THREE.MeshBasicMaterial({ visible: false });
+            return new THREE.Mesh(dummyGeometry, dummyMaterial);
+        }
 
         const textGeometry = new TextGeometry(text, {
-            font: font,
+            font: font.value,
             size: size,
             depth: 0,
             curveSegments: 12,
@@ -566,7 +574,7 @@ export function useProjectCubes(
         return textMesh
     }
 
-    const loadFontAndText = (): Promise<void> => {
+    /*const loadFontAndText = (): Promise<void> => {
         return new Promise((resolve) => {
             fontLoader = new FontLoader()
             fontLoader.load(
@@ -595,8 +603,25 @@ export function useProjectCubes(
                 (error) => console.error('Error loading font:', error)
             )
         })
-    }
-
+    }*/
+    const initializeScene = () => {
+        const projectArray = Array.isArray(projects) ? projects : [];
+        if (!Array.isArray(projects)) {
+            console.warn('useProjectCubes: projects is not an array, defaulting to empty array', projects);
+        }
+        let cubeIndex = 0;
+        projectArray.forEach((project, index) => {
+            const zPosition = FIRST_CUBE_Z - (index + 1) * CUBE_SPACING;
+            const rotation = (index + 1) * CUBE_ROTATION_INCREMENT;
+            const cube = createProjectCube(project, CUBE_SIZE, zPosition, rotation, project.keyart, project.keyartLocation, cubeIndex);
+            scene.add(cube);
+            projectCubes.push(cube);
+            cubeIndex++;
+            if (settings.showProjectTitles) {
+                createTextObject(project.title, 0, project.size - 15, FIRST_CUBE_Z + 90 - (index + 1) * CUBE_SPACING, project.size);
+            }
+        });
+    };
     const getInitializedData = (): Promise<{
         projectCubes: THREE.Group[]
         updateCubeColors: (camera: THREE.PerspectiveCamera) => void
@@ -604,15 +629,11 @@ export function useProjectCubes(
         maxZ: number
     }> => {
         if (isInitialized) {
-            return Promise.resolve({ projectCubes, updateCubeColors, loadedFont: loadedFont as THREE.Font, maxZ: MAX_Z })
+            return Promise.resolve({ projectCubes, updateCubeColors, maxZ: MAX_Z });
         }
-        return loadFontAndText().then(() => {
-            isInitialized = true
-            return { projectCubes, updateCubeColors, loadedFont: loadedFont as THREE.Font, maxZ: MAX_Z }
-        }).catch(error => {
-            console.error('Error in loadFontAndText:', error)
-            throw error
-        })
+        initializeScene();
+        isInitialized = true;
+        return Promise.resolve({ projectCubes, updateCubeColors, maxZ: MAX_Z });
     }
 
     const animatePulses = (portal: THREE.LineSegments) => {
@@ -1554,7 +1575,7 @@ export function useProjectCubes(
                         disposeParticles(cube)
 
                         const titleText = textMeshes[cubeIndex]
-                        console.log(titleText)
+
                         if (titleText) {
                             const material = titleText.material as THREE.MeshBasicMaterial
                             const plane = titleText.userData.backgroundPlane as THREE.Mesh

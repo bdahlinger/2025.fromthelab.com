@@ -16,6 +16,7 @@ import { useCityscape } from './useCityscape';
 import { setupScrollAnimation } from './tunnelAnimations';
 import { useStarfield } from './useStarfield';
 import { useChaserPath } from './useChaserPath';
+import { useFontLoader } from './useFontLoader';
 import Preloader from './Preloader.vue';
 
 gsap.registerPlugin(ScrollTrigger);
@@ -74,12 +75,13 @@ let chaserPathDispose: (() => void) | null = null;
 let updateChasers: ((delta: number) => void) | null = null;
 let cityscapeDispose: (() => void) | null = null;
 let allCubes: THREE.Group[] = [];
-let updateCubeColors: ((camera: THREE.PerspectiveCamera) => void) | null = null;
+let updateCubeColorsInternal: ((camera: THREE.PerspectiveCamera) => void) | null = null;
 let animationFrameId: number | null = null;
 let lastTime = 0;
 let projectCubesInstance: ReturnType<typeof useProjectCubes> | null = null;
 let projectMaxZ: number;
 
+const fontLoader = useFontLoader('/fonts/Poppins_Regular.json');
 
 const updateRendererSize = () => {
     const width = tunnelWrapper.value ? tunnelWrapper.value.getBoundingClientRect().width : window.innerWidth;
@@ -123,7 +125,7 @@ const init = async () => {
     scene.background = new THREE.Color(0x000000);
     scene.fog = new THREE.Fog(0x000000, 700, sceneDistance);
 
-    camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 1, sceneDistance + 6000);
+    camera = new THREE.PerspectiveCamera(screenStore.isMobile ? 95 : 75, window.innerWidth / window.innerHeight, 1, sceneDistance + 6000);
     camera.position.set(0, 0, 0); // Initial, overridden later
     camera.lookAt(0, 0, 1000);
 
@@ -145,8 +147,8 @@ const init = async () => {
     if(screenStore.isMobile){
         bloomPass = new UnrealBloomPass(
             new THREE.Vector2(window.innerWidth, window.innerHeight),
-            1.3,
-            0.2,
+            1.0,
+            0.1,
             0.0
         );
     }else{
@@ -176,16 +178,25 @@ const init = async () => {
     document.body.appendChild(stats.dom);
 
     const keyartCount = props.projects.filter(project => project.keyart).length;
-    const totalAssets = keyartCount + 2; // Keyarts + 2 grids
+    const totalAssets = keyartCount + 2 + 1; // Keyarts + 2 grids + 1 font
     let loadedAssets = 0;
 
     const updateProgress = () => {
         loadedAssets++;
-        loadingProgress.value = (loadedAssets / totalAssets) * 100;
-        if (loadedAssets === totalAssets) {
+        const assetProgress = (loadedAssets / totalAssets) * 100;
+        const fontProgress = fontLoader.loadingProgress.value;
+        loadingProgress.value = (assetProgress + fontProgress / totalAssets) / (1 + 1 / totalAssets);
+        if (loadedAssets === totalAssets && fontLoader.isLoaded.value) {
             isLoaded.value = true;
         }
     };
+
+    // Load font
+    fontLoader.initialize().catch((error) => {
+        console.error('Font loading failed:', error);
+        updateProgress(); // Proceed even if font fails
+    }).then(() => updateProgress());
+
 
     await loadTexture(props.projectGridFile).then(() => updateProgress()).catch(() => updateProgress());
     await loadTexture(props.projectGridFile2).then(() => updateProgress()).catch(() => updateProgress());
@@ -198,19 +209,24 @@ const init = async () => {
         }
     }
 
-    projectCubesInstance = useProjectCubes(scene, { CUBE_SIZE, CUBE_SPACING, FIRST_CUBE_Z }, props.projects, props.projectGridFile, props.projectGridFile2, settings, textureCache);
+    projectCubesInstance = useProjectCubes(scene, { CUBE_SIZE, CUBE_SPACING, FIRST_CUBE_Z }, props.projects, props.projectGridFile, props.projectGridFile2, settings, textureCache, fontLoader.font);
 
     try {
-        const data = await projectCubesInstance.getInitializedData();
-        projectMaxZ = data.maxZ;
-        if (projectMaxZ === undefined || isNaN(projectMaxZ)) {
-            throw new Error('Invalid maxZ from projectCubesInstance');
-        }
+        await projectCubesInstance.getInitializedData().then(({ maxZ, updateCubeColors, projectCubes }) => {
 
-        const { introCubes } = useIntroCubes(scene, scene, { CUBE_SIZE, FIRST_CUBE_Z }, settings);
-        allCubes = [...introCubes, ...data.projectCubes];
+            projectMaxZ = maxZ;
 
-        updateCubeColors = data.updateCubeColors;
+            if (projectMaxZ === undefined || isNaN(projectMaxZ)) {
+                throw new Error('Invalid maxZ from projectCubesInstance');
+            }
+
+            const { introCubes } = useIntroCubes(scene, fontLoader.font, { CUBE_SIZE, FIRST_CUBE_Z }, settings);
+            allCubes = [...introCubes, ...projectCubes];
+            updateCubeColorsInternal = updateCubeColors;
+        });
+
+
+
 
         if( settings.showCars ){
             const { cityGroup, updateParticles, dispose: cityscapeDisposeFunc } = useCityscape(scene, scene, projectMaxZ, settings);
@@ -302,16 +318,16 @@ onMounted(() => {
                 camera.position.set(0, 0, 5000);
                 camera.lookAt(0, 0, maxZ);
                 camera.updateProjectionMatrix();
-                updateCubeColors(camera);
+                updateCubeColorsInternal(camera);
                 composer.render();
 
-                if (allCubes.length && updateCubeColors) {
+                if (allCubes.length && updateCubeColorsInternal) {
                     const result = setupScrollAnimation(
                         scene,
                         camera,
                         wrapper,
                         allCubes,
-                        updateCubeColors,
+                        updateCubeColorsInternal,
                         { CUBE_SIZE, CUBE_SPACING, FIRST_CUBE_Z },
                         { scrub: screenStore.isMobile ? 3 : 1 },
                         settings,
