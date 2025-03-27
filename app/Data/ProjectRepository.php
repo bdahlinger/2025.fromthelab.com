@@ -33,7 +33,7 @@ class ProjectRepository
 
     protected static array $projects = [
         [
-            'classification' => 'Entertainment',
+            'classification' => Classification::ENTERTAINMENT,
             'slug' => 'suicide-squad-kill-the-justice-league',
             'title' => 'SUICIDE SQUAD: KILL THE JUSTICE LEAGUE',
             'client' => 'Warner Bros. Games',
@@ -63,7 +63,7 @@ class ProjectRepository
             'hasBg' => true,
         ],
         [
-            'classification' => 'Entertainment',
+            'classification' => Classification::ENTERTAINMENT,
             'slug' => 'mortal-kombat-1',
             'title' => 'MORTAL KOMBAT 1',
             'client' => 'Warner Bros. Games',
@@ -91,7 +91,7 @@ class ProjectRepository
             'hasBg' => true,
         ],
         [
-            'classification' => 'Entertainment',
+            'classification' => Classification::ENTERTAINMENT,
             'slug' => 'harry-potter-hogwarts-legacy',
             'title' => 'HARRY POTTER: HOGWARTS LEGACY',
             'client' => 'Warner Bros. Games',
@@ -118,7 +118,29 @@ class ProjectRepository
             'hasBg' => true,
         ],
         [
-            'classification' => 'Entertainment',
+            'classification' => Classification::ECOMMERCE,
+            'slug' => 'jade-complexions',
+            'title' => 'JADÉ COMPLEXIONS',
+            'client' => 'JADÉ Complexions',
+            'description' => 'For a beauty skincare brand, we designed and developed a custom Shopify eCommerce site with a dynamic frontend powered by VueJS, SCSS, and Vite. The site includes a tailored system to differentiate between regular consumers, professional estheticians, and wholesale buyers, ensuring a personalized shopping experience. We also integrated various Shopify apps and leveraged Klaviyo to manage email and SMS marketing, enhancing customer engagement and retention.',
+            'keyart' => 'projects/jade-complexions.jpg',
+            'keyartMobile' => 'projects/qc-m.jpg',
+            'keyartLocation' => 'bottom',
+            'contributions' => [
+                Contributions::FRONTEND,
+                Contributions::DESIGN,
+            ],
+            'segments' => [
+                Segments::SHOPIFY,
+                Segments::SCSS,
+                Segments::VUE_JS,
+                Segments::KLAVIYO,
+            ],
+            'hasLogo' => true,
+            'hasBg' => true,
+        ],
+        [
+            'classification' => Classification::ENTERTAINMENT,
             'slug' => 'harry-potter-quidditch-champions',
             'title' => 'HARRY POTTER: QUIDDITCH CHAMPIONS',
             'client' => 'Warner Bros. Games',
@@ -144,7 +166,7 @@ class ProjectRepository
             'hasBg' => true,
         ],
         [
-            'classification' => 'Entertainment',
+            'classification' => Classification::ENTERTAINMENT,
             'slug' => 'multiversus',
             'title' => 'MULTIVERSUS',
             'client' => 'Warner Bros. Games',
@@ -173,7 +195,7 @@ class ProjectRepository
             'hasBg' => true,
         ],
         [
-            'classification' => 'Entertainment',
+            'classification' => Classification::ENTERTAINMENT,
             'slug' => 'gotham-knights',
             'title' => 'GOTHAM KNIGHTS',
             'client' => 'Warner Bros. Games',
@@ -201,7 +223,7 @@ class ProjectRepository
             'hasBg' => true,
         ],
         [
-            'classification' => 'Entertainment',
+            'classification' => Classification::ENTERTAINMENT,
             'slug' => 'game-of-thrones-conquest',
             'title' => 'GAME OF THRONES: CONQUEST',
             'client' => 'Warner Bros. Games',
@@ -228,7 +250,7 @@ class ProjectRepository
             'hasBg' => true,
         ],
         [
-            'classification' => 'Entertainment',
+            'classification' => Classification::ENTERTAINMENT,
             'slug' => 'marvel-strike-force',
             'title' => 'MARVEL: STRIKE FORCE',
             'client' => 'Scopely',
@@ -254,7 +276,7 @@ class ProjectRepository
             'hasBg' => true,
         ],
         [
-            'classification' => 'Entertainment',
+            'classification' => Classification::ENTERTAINMENT,
             'slug' => 'league-of-legends-ruined-king',
             'title' => 'LEAGUE OF LEGENDS: RUINED KING',
             'client' => 'Riot Games',
@@ -280,7 +302,7 @@ class ProjectRepository
             'hasBg' => true,
         ],
         [
-            'classification' => 'Entertainment',
+            'classification' => Classification::ENTERTAINMENT,
             'slug' => 'league-of-legends-convergence',
             'title' => 'LEAGUE OF LEGENDS: CONVERGENCE',
             'client' => 'Riot Games',
@@ -305,7 +327,7 @@ class ProjectRepository
             'hasBg' => true,
         ],
         [
-            'classification' => 'Entertainment',
+            'classification' => Classification::ENTERTAINMENT,
             'slug' => 'pubg',
             'title' => 'PUBG BATTLEGROUNDS',
             'client' => 'PUBG',
@@ -336,7 +358,7 @@ class ProjectRepository
             'hasBg' => true,
         ],
         [
-            'classification' => 'Entertainment',
+            'classification' => Classification::ENTERTAINMENT,
             'slug' => 'injustice-2',
             'title' => 'INJUSTICE 2',
             'client' => 'Warner Bros. Games',
@@ -364,9 +386,9 @@ class ProjectRepository
             'hasBg' => true,
         ],
         [
-            'classification' => 'Entertainment',
+            'classification' => Classification::ENTERTAINMENT,
             'slug' => 'lego-star-wars',
-            'title' => 'LEGO Star Wars: The Skywalker Saga',
+            'title' => 'LEGO STAR WARS: THE SKYWALKER SAGA',
             'client' => 'Warner Bros. Games',
             'description' => 'For the official <em>LEGO Star Wars: The Skywalker Saga</em> website, we created a clean, engaging landing page that showcased the game’s features. The site also included a purchase module, allowing users to select the edition, gaming platform, and purchase from their preferred retailer. This project was part of a series of LEGO gaming sites we developed, including <em>LEGO The Incredibles</em> and <em>LEGO DC Super-Villains</em>, each with a focus on a seamless and informative user experience.',
             'contributions' => [
@@ -390,7 +412,7 @@ class ProjectRepository
             'hasBg' => true,
         ],
         [
-            'classification' => 'Entertainment',
+            'classification' => Classification::ENTERTAINMENT,
             'slug' => 'back-4-blood',
             'title' => 'BACK 4 BLOOD',
             'client' => 'Warner Bros. Games',
@@ -419,7 +441,7 @@ class ProjectRepository
             'hasBg' => true,
         ],
         [
-            'classification' => 'Entertainment',
+            'classification' => Classification::ENTERTAINMENT,
             'slug' => 'hitman-2',
             'title' => 'HITMAN 2',
             'client' => 'Warner Bros. Games',
@@ -445,7 +467,7 @@ class ProjectRepository
             'hasBg' => true,
         ],
         [
-            'classification' => 'Entertainment',
+            'classification' => Classification::ENTERTAINMENT,
             'slug' => 'shadow-of-war',
             'title' => 'MIDDLE EARTH: SHADOW OF WAR',
             'client' => 'Warner Bros. Games',
@@ -487,7 +509,7 @@ class ProjectRepository
 
             return ProjectData::from([
                 'slug' => $project['slug'],
-                'classification' => Classification::from($project['classification']),
+                'classification' => $project['classification'],
                 'contributions' => $contributions,
                 'segments' => $segments,
                 'title' => $project['title'],

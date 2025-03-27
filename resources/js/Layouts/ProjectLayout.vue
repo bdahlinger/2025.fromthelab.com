@@ -115,7 +115,7 @@ onUnmounted(() => {
 .slide-next-leave-active,
 .slide-prev-enter-active,
 .slide-prev-leave-active {
-    transition: transform 0.8s ease-in-out, opacity 0.8s ease-in-out;
+    transition: transform 0.5s ease-in-out, opacity 0.5s ease-in-out;
 }
 
 /* Entering page: absolute to overlap */

@@ -48,4 +48,6 @@ enum Segments: string
     case NEXT_JS = 'NEXT.JS';
 
     case SALESFORCE = 'SALESFORCE API';
+
+    case KLAVIYO = 'KLAVIYO';
 }

@@ -38,6 +38,7 @@ export namespace App {
             'GRIDSOME' = 'GRIDSOME',
             'NEXT_JS' = 'NEXT.JS',
             'SALESFORCE' = 'SALESFORCE API',
+            'KLAVIYO' = 'KLAVIYO',
         }
     }
 }

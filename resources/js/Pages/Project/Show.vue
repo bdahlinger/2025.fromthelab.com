@@ -12,8 +12,6 @@ defineOptions({
     layout: (h, page) => h(ProjectLayout, () => [page]),
 })
 
-
-
 const props = defineProps<{
     projects: ProjectData[];
     project: ProjectData;
@@ -50,7 +48,7 @@ const generateRandomRects = () => {
     const gridSize = 16;
     const maxX = Math.floor(width / gridSize);
     const maxY = Math.floor(height / gridSize);
-    const rectCount = 36;
+    const rectCount = screenStore.isMobile ? 24 : 120;
     const positions = new Set<string>();
 
     while (positions.size < rectCount) {
@@ -201,11 +199,9 @@ const determineColorByContributionClass = (type:App.Enums.Contributions) => {
             return 'fill-green-500'
     }
 }
-const determineColorBySegmentClass = (type:App.Enums.Segments) => {
 
-    return 'fill-white-400/10 text-white-400 ring-gray-800 ring-gray-400/20'
-
-    /*switch(type) {
+/*const determineColorBySegmentClass = (type:App.Enums.Segments) => {
+    switch(type) {
         case App.Enums.Segments.LARAVEL:
             return 'fill-red-400/10 text-red-400 ring-red-400/20'
         case App.Enums.Segments.VUE_JS:
@@ -254,8 +250,8 @@ const determineColorBySegmentClass = (type:App.Enums.Segments) => {
             return 'fill-sky-400/10 text-sky-400 ring-sky-400/20'
         default:
             return 'fill-green-400/10 text-green-400 ring-green-400/20'
-    }*/
-}
+    }
+}*/
 
 // Touch events
 const touchStartX = ref<number | null>(null);
@@ -300,6 +296,14 @@ const onTouchEnd = () => {
     touchCurrentX.value = null;
 };
 
+const getClassificationColor = (): number => {
+    switch (props.project.classification) {
+        case App.Enums.Classification.ENTERTAINMENT: return 'text-red-600/50';
+        case App.Enums.Classification.ECOMMERCE: return 'text-green-600/50';
+        case App.Enums.Classification.OTHER: return 'text-blue-600/50';
+        default: return 'text-white-600';
+    }
+};
 
 onMounted(() => {
     if (previousUrl?.value === '/') animateCircleWipe();
@@ -358,11 +362,11 @@ onUnmounted(() => {
                 :src="logo"
                 :alt="project.title + ' logo'"
             >
-            <h1 class="text-lg md:text-[2vw] 3xl:text-[2rem] leading-tight md:leading-[2vw] 3xl:leading-[2rem] mb-1 md:mb-0 text-white">{{ project.title }}</h1>
-            <h2 class="md:text-[1vw] 3xl:text-[1rem] md:leading-[1.5vw] 3xl:leading-[1.5rem] md:mb-[1.5vw] 3xl:mb-[1.5rem] text-white/50">
-                <span v-html="project.client"></span>
+            <h1 class="text-lg md:text-[2vw] 3xl:text-[2rem] leading-tight md:leading-[2vw] 3xl:leading-[2rem] mb-1 md:mb-[0.5vw] 3xl:mb-[0.5rem] text-white">{{ project.title }}</h1>
+            <h2 class="md:text-[1vw] 3xl:text-[1rem] md:leading-[1.5vw] 3xl:leading-[1.5rem] md:mb-[1.5vw] 3xl:mb-[1.5rem] ">
+                <span class="text-white/50 font-medium" v-html="project.client"></span>
                 &middot;
-                <span v-html="project.classification"></span>
+                <span :class="getClassificationColor()" v-html="project.classification"></span>
             </h2>
             <div class="contributions flex flex-wrap justify-center gap-1 md:gap-[.5vw] 3xl:gap-[.5rem] mb-2 md:mb-[.5vw] 3xl:mb-[.5rem]" v-if="project.contributions.length > 0">
                 <span
