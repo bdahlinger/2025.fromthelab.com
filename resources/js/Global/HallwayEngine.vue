@@ -346,7 +346,7 @@ onMounted(() => {
                         allCubes,
                         updateCubeColorsInternal,
                         { CUBE_SIZE, CUBE_SPACING, FIRST_CUBE_Z },
-                        { scrub: screenStore.isMobile ? 3 : 1 },
+                        { scrub: screenStore.isMobile ? 1 : 1 },
                         settings,
                         stats
                     );
