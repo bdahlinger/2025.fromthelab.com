@@ -44,22 +44,26 @@ export function setupScrollAnimation(
                 trigger: wrapper.value,
                 start: 'top top',
                 end: `+=${scrollRange}`,
-                scrub: options.scrub || (screenStore.isMobile ? 1.5 : 0.5), // Reduced scrub for mobile
+                scrub: options.scrub || (screenStore.isMobile ? 1.5 : 0.5),
                 pin: true,
                 onUpdate: (self) => {
-                    if (!isReverting) {
-                        const progress = self.progress;
-                        const newZ = THREE.MathUtils.lerp(0, MAX_Z, progress);
-                        camera.position.set(0, 0, newZ);
-                        camera.lookAt(0, 0, MAX_Z);
+                    const now = performance.now();
+                    if (now - lastUpdate >= throttleInterval) {
+                        if (!isReverting) {
+                            const progress = self.progress;
+                            const newZ = THREE.MathUtils.lerp(0, MAX_Z, progress);
+                            camera.position.set(0, 0, newZ);
+                            camera.lookAt(0, 0, MAX_Z);
+                        }
+                        updateCubeColors(camera);
+                        lastUpdate = now;
                     }
-                    updateCubeColors(camera);
                     if (stats) stats.update();
                 },
                 onRefresh: () => {
-                    camera.updateProjectionMatrix(); // Ensure camera adjusts to new viewport
+                    camera.updateProjectionMatrix();
                 },
-            }
+            },
         });
 
         timeline.fromTo(camera.position,
