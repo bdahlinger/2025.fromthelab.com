@@ -67,7 +67,7 @@ class ProjectRepository
             'slug' => 'mortal-kombat-1',
             'title' => 'MORTAL KOMBAT 1',
             'client' => 'Warner Bros. Games',
-            'description' => 'For the official <em>Mortal Kombat 1</em> website, we built an experience using Laravel and VueJS. A key feature was the "Refer a Friend" program, powered in part by the Twillio’s Segment API, which let players generate referral codes to share with friends, rewarding both with in-game items. We also optimized backend performance and ensured smooth deployment using AWS CloudFormation templates.',
+            'description' => 'For the official <em>Mortal Kombat 1</em> website, we built an experience using Laravel and Vue.js. A key feature was the "Refer a Friend" program, powered in part by the Twillio’s Segment API, which let players generate referral codes to share with friends, rewarding both with in-game items. We also optimized backend performance and ensured smooth deployment using AWS CloudFormation templates.',
             'keyart' => 'projects/mk1.jpg',
             'keyartMobile' => 'projects/mk1-m.jpg',
             'keyartLocation' => 'right',
@@ -280,7 +280,7 @@ class ProjectRepository
             'slug' => 'league-of-legends-ruined-king',
             'title' => 'LEAGUE OF LEGENDS: RUINED KING',
             'client' => 'Riot Games',
-            'description' => 'For the official <em>League of Legends: Ruined King</em> website, we built a fast and efficient static site using Gridsome, powered by VueJS. Hosted on AWS S3, the site was designed for performance and scalability. We automated deployment and CDN cache invalidation with Bash scripts using the AWS CLI, ensuring seamless updates and optimal load times.',
+            'description' => 'For the official <em>League of Legends: Ruined King</em> website, we built a fast and efficient static site using Gridsome, powered by Vue.js. Hosted on AWS S3, the site was designed for performance and scalability. We automated deployment and CDN cache invalidation with Bash scripts using the AWS CLI, ensuring seamless updates and optimal load times.',
             'contributions' => [
                 Contributions::FRONTEND,
                 Contributions::BACKEND,
@@ -306,7 +306,7 @@ class ProjectRepository
             'slug' => 'league-of-legends-convergence',
             'title' => 'LEAGUE OF LEGENDS: CONVERGENCE',
             'client' => 'Riot Games',
-            'description' => 'For the official <em>League of Legends: Convergence</em> website, we utilized Gridsome with VueJS to create a high-performance static site. Hosted on AWS S3, the site was optimized for speed and reliability. To streamline deployment, we wrote custom Bash scripts that leveraged the AWS CLI, ensuring smooth updates and efficient CDN cache invalidation.',
+            'description' => 'For the official <em>League of Legends: Convergence</em> website, we utilized Gridsome with Vue.js to create a high-performance static site. Hosted on AWS S3, the site was optimized for speed and reliability. To streamline deployment, we wrote custom Bash scripts that leveraged the AWS CLI, ensuring smooth updates and efficient CDN cache invalidation.',
             'contributions' => [
                 Contributions::FRONTEND,
                 Contributions::BACKEND,

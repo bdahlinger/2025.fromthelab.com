@@ -83,6 +83,7 @@ export function useProjectCubes(
         cubeIndex: number | null
     ): THREE.Group => {
         const group = new THREE.Group()
+        group.name = 'group';
         group.position.z = zPosition
         group.rotation.z = rotation
         group.userData.isActive = false
@@ -102,32 +103,42 @@ export function useProjectCubes(
         let portalLocation: 'left' | 'top' | 'right' | 'bottom' = 'right'
         const halfSize = size / 2
 
-        const addPortal = (cubeIndex: number) => {
-            const innerRadius = 25
-            const outerRadius = 40
-            const portalGeometry = new THREE.CircleGeometry(outerRadius, 24)
-            const portalEdges = new THREE.EdgesGeometry(portalGeometry)
+        const addPortal = () => {
+
+            const mobileScaleFactor = screenStore.isMobile ? 1.5 : 1.0;
+
+            const innerRadius = 25 * mobileScaleFactor;
+            const outerRadius = 40 * mobileScaleFactor;
+            const portalGeometry = new THREE.CircleGeometry(outerRadius, 24);
+            const portalEdges = new THREE.EdgesGeometry(portalGeometry);
             const portalMaterial = new THREE.LineBasicMaterial({
                 color: new THREE.Color(CUBE_COLOR),
                 transparent: true,
                 opacity: 0,
                 visible: true
-            })
+            });
             const portal = new THREE.LineSegments(portalEdges, portalMaterial)
+            portal.name = 'portal';
             portal.userData.isPortal = true
             portal.userData.isAnimating = false
             portal.geometry.computeBoundingSphere()
 
-            const hitboxGeometry = new THREE.PlaneGeometry(80, 80)
-            const hitboxMaterial = new THREE.MeshBasicMaterial({ visible: false, side: THREE.DoubleSide })
-            const hitbox = new THREE.Mesh(hitboxGeometry, hitboxMaterial)
-            hitbox.userData.isPortalHitbox = true
-            hitbox.userData.portal = portal
-            hitbox.geometry.computeBoundingSphere()
+            const hitboxSize = 80 * mobileScaleFactor;
+            const hitboxGeometry = new THREE.PlaneGeometry(hitboxSize, hitboxSize);
+            const hitboxMaterial = new THREE.MeshBasicMaterial({
+                visible: false,
+                side: THREE.DoubleSide ,
+            });
+            const hitbox = new THREE.Mesh(hitboxGeometry, hitboxMaterial);
+            hitbox.userData.isPortalHitbox = true;
+            hitbox.userData.portal = portal;
+            hitbox.geometry.computeBoundingSphere();
 
-            const pulsesGroup = new THREE.Group()
-            const pulseGeometry = new THREE.PlaneGeometry(PORTAL_PULSE_WIDTH, PORTAL_PULSE_HEIGHT)
-            const baseRadius = (innerRadius + outerRadius) / 2
+            const pulsesGroup = new THREE.Group();
+            const pulseWidth = PORTAL_PULSE_WIDTH * mobileScaleFactor;
+            const pulseHeight = PORTAL_PULSE_HEIGHT * mobileScaleFactor;
+            const pulseGeometry = new THREE.PlaneGeometry(pulseWidth, pulseHeight);
+            const baseRadius = (innerRadius + outerRadius) / 2;
             for (let i = 0; i < PORTAL_NUM_PULSES; i++) {
                 const pulseMaterial = new THREE.MeshBasicMaterial({
                     color: new THREE.Color(CUBE_COLOR_ACTIVE),
@@ -135,89 +146,99 @@ export function useProjectCubes(
                     opacity: 0,
                     visible: false,
                     side: THREE.DoubleSide
-                })
-                const pulse = new THREE.Mesh(pulseGeometry, pulseMaterial)
-                const angle = (i / PORTAL_NUM_PULSES) * Math.PI * 2
-                pulse.position.set(Math.cos(angle) * baseRadius, Math.sin(angle) * baseRadius, 0)
-                pulse.rotation.z = angle + Math.PI / 2
-                pulse.userData.baseOpacity = 0.01
-                pulse.userData.index = i
-                pulse.geometry.computeBoundingSphere()
-                pulsesGroup.add(pulse)
+                });
+                const pulse = new THREE.Mesh(pulseGeometry, pulseMaterial);
+                const angle = (i / PORTAL_NUM_PULSES) * Math.PI * 2;
+                pulse.position.set(Math.cos(angle) * baseRadius, Math.sin(angle) * baseRadius, 0);
+                pulse.rotation.z = angle + Math.PI / 2;
+                pulse.userData.baseOpacity = 0.01;
+                pulse.userData.index = i;
+                pulse.geometry.computeBoundingSphere();
+                pulsesGroup.add(pulse);
             }
 
-            const ringPortals: THREE.LineSegments[] = [portal]
-            const initialRingSpacing = 2
-            const numRings = 25
+            portal.userData.pulsesGroup = pulsesGroup;
+
+            const ringPortals: THREE.LineSegments[] = [portal];
+            const initialRingSpacing = 2 * mobileScaleFactor;
+            const numRings = 25;
             for (let i = 1; i < numRings; i++) {
-                const newRingGeometry = new THREE.CircleGeometry(outerRadius, 24)
-                const newRingEdges = new THREE.EdgesGeometry(newRingGeometry)
-                const maxOpacity = THREE.MathUtils.lerp(1.0, 0.1, i / (numRings - 1))
+                const newRingGeometry = new THREE.CircleGeometry(outerRadius, 24);
+                const newRingEdges = new THREE.EdgesGeometry(newRingGeometry);
+                const maxOpacity = THREE.MathUtils.lerp(1.0, 0.1, i / (numRings - 1));
                 const newRingMaterial = new THREE.LineBasicMaterial({
                     color: new THREE.Color(CUBE_COLOR),
                     transparent: true,
                     opacity: 0
-                })
-                const newRing = new THREE.LineSegments(newRingEdges, newRingMaterial)
-                newRing.userData.isPortal = true
-                newRing.userData.maxOpacity = maxOpacity
-                newRing.position.z = -i * initialRingSpacing
-                newRing.geometry.computeBoundingSphere()
-                ringPortals.push(newRing)
-                portal.add(newRing)
+                });
+                const newRing = new THREE.LineSegments(newRingEdges, newRingMaterial);
+                newRing.userData.isPortal = true;
+                newRing.userData.maxOpacity = maxOpacity;
+                newRing.position.z = -i * initialRingSpacing;
+                newRing.geometry.computeBoundingSphere();
+                ringPortals.push(newRing);
+                portal.add(newRing);
             }
-            portal.userData.maxOpacity = 1.0
+            portal.userData.maxOpacity = 1.0;
+
+            let textHitbox: THREE.Mesh | null = null
 
             if (font.value) {
+                const textSize = 3 * mobileScaleFactor;
                 const textGeometry = new TextGeometry(PORTAL_TEXT, {
                     font: font.value,
-                    size: 3,
+                    size: textSize,
                     depth: 0,
                     curveSegments: 12,
                     bevelEnabled: false
-                })
-                textGeometry.computeBoundingBox()
-                textGeometry.center() // Center horizontally
+                });
+                textGeometry.computeBoundingBox();
+                textGeometry.center(); // Center horizontally
                 const textMaterial = new THREE.MeshBasicMaterial({
                     color: 0xffffff,
                     transparent: true,
                     opacity: 0.0,
                     side: THREE.DoubleSide
-                })
-                const textMesh = new THREE.Mesh(textGeometry, textMaterial)
-                textMesh.visible = false
-                textMesh.userData.isVisible = false
-                textMesh.userData.isExploreText = true
-                textMesh.userData.skipTextMeshes = true
-                const textOffsetY = 45 // Distance above portal
-                textMesh.position.set(0, textOffsetY, 0)
-                portal.add(textMesh)
-                portal.userData.exploreText = textMesh
+                });
+                const textMesh = new THREE.Mesh(textGeometry, textMaterial);
+                textMesh.visible = false;
+                textMesh.userData.isVisible = false;
+                textMesh.userData.isExploreText = true;
+                textMesh.userData.skipTextMeshes = true;
+                const textOffsetY = 45 * mobileScaleFactor; // Scale offset
+                textMesh.position.set(0, textOffsetY, 0);
+                textMesh.name = 'textMesh';
+                portal.add(textMesh);
+                portal.userData.exploreText = textMesh;
 
-                // Add hitbox for "EXPLORE" text (visible for debugging)
-                const textBoundingBox = textGeometry.boundingBox
-                const textWidth = textBoundingBox.max.x - textBoundingBox.min.x + 10 // Add padding
-                const textHeight = textBoundingBox.max.y - textBoundingBox.min.y + 10 // Add padding
-                const textHitboxGeometry = new THREE.PlaneGeometry(textWidth, textHeight)
+                // Text hitbox
+                const textBoundingBox = textGeometry.boundingBox;
+                const textWidth = (textBoundingBox.max.x - textBoundingBox.min.x + 10) * mobileScaleFactor;
+                const textHeight = (textBoundingBox.max.y - textBoundingBox.min.y + 10) * mobileScaleFactor;
+                const textHitboxGeometry = new THREE.PlaneGeometry(textWidth, textHeight);
                 const textHitboxMaterial = new THREE.MeshBasicMaterial({
                     transparent: true,
-                    opacity: 0.0, // Semi-transparent
+                    opacity: 0.0,
                     side: THREE.DoubleSide,
-                    visible: false // Visible for debugging
-                })
-                const textHitbox = new THREE.Mesh(textHitboxGeometry, textHitboxMaterial)
-                textHitbox.position.set(0, textOffsetY, 0) // Match text position
-                textHitbox.userData.isExploreTextHitbox = true
-                textHitbox.userData.portal = portal // Link to the same portal
-                textHitbox.geometry.computeBoundingSphere()
-                portal.add(textHitbox)
-                portal.userData.exploreTextHitbox = textHitbox
+                    visible: false
+                });
+                textHitbox = new THREE.Mesh(textHitboxGeometry, textHitboxMaterial);
+                textHitbox.position.set(0, textOffsetY, 0);
+                textHitbox.userData.isExploreTextHitbox = true;
+                textHitbox.userData.portal = portal;
+                textHitbox.geometry.computeBoundingSphere();
+                textHitbox.name = 'textHitbox';
+                portal.add(textHitbox);
+                portal.userData.exploreTextHitbox = textHitbox;
             } else {
-                console.warn("Font not loaded yet; 'EXPLORE' text skipped for this portal.")
+                console.warn("Font not loaded yet; 'EXPLORE' text skipped for this portal.");
             }
 
             // Add close button as a sibling to the portal
             const closeGroup = new THREE.Group()
+            closeGroup.name = 'closeGroup';
+            closeGroup.position.set(screenStore.isMobile ? outerRadius - 10 : outerRadius, outerRadius, 2)
+
             const rectGeometry = new THREE.PlaneGeometry(12, tunnelStore.isMobile ? 1:0.5)
             const closeMaterial = new THREE.MeshBasicMaterial({
                 color: 0xffffff,
@@ -233,12 +254,10 @@ export function useProjectCubes(
 
             closeGroup.add(rect1, rect2)
 
-            const closeHitboxGeometry = new THREE.PlaneGeometry(30, 30)
+            const closeHitboxGeometry = new THREE.PlaneGeometry(15 * mobileScaleFactor, 15 * mobileScaleFactor);
             const closeHitboxMaterial = new THREE.MeshBasicMaterial({
-                opacity: 0.0,
-                transparent: true,
                 side: THREE.DoubleSide,
-                visible: true,
+                visible: false,
             })
             const closeHitbox = new THREE.Mesh(closeHitboxGeometry, closeHitboxMaterial)
             closeHitbox.userData.isCloseHitbox = true
@@ -246,30 +265,17 @@ export function useProjectCubes(
             closeHitbox.renderOrder = 2
             closeGroup.add(closeHitbox)
 
-            const xOffset = 42
-            const yOffset = 42
-            const zOffset = -10
-            closeGroup.visible = false
-
-            let initialCloseGroupPosition: THREE.Vector3
+            //closeGroup.visible = false;
 
             switch (portalLocation) {
                 case 'left':
                     portal.position.set(-halfSize, 0, 0)
                     portal.rotation.y = Math.PI / 2
-
                     hitbox.position.set(-halfSize, 0, 0)
                     hitbox.rotation.y = Math.PI / 2
                     if (rotation >= THREE.MathUtils.degToRad(120)) {
                         portal.rotation.z = Math.PI
-
-                        closeGroup.position.set(-halfSize + zOffset, -yOffset, xOffset)
-                        initialCloseGroupPosition = new THREE.Vector3(-halfSize + zOffset, -yOffset, xOffset)
-                    } else {
-                        closeGroup.position.set(-halfSize + zOffset, yOffset, -xOffset)
-                        initialCloseGroupPosition = new THREE.Vector3(-halfSize + zOffset, yOffset, -xOffset)
                     }
-                    closeGroup.rotation.y = Math.PI / 2
                     pulsesGroup.children.forEach((pulse) => pulse.position.x += PORTAL_PULSE_OFFSET)
                     break
                 case 'top':
@@ -281,17 +287,8 @@ export function useProjectCubes(
                     if (rotation >= THREE.MathUtils.degToRad(100)) {
                         if (rotation >= THREE.MathUtils.degToRad(180)) {
                             portal.rotation.z = Math.PI / 2
-                            closeGroup.position.set(-yOffset, -halfSize + zOffset, -xOffset)
-                            initialCloseGroupPosition = new THREE.Vector3(-yOffset, -halfSize + zOffset, -xOffset)
-                        } else {
-                            closeGroup.position.set(yOffset, -halfSize + zOffset, xOffset)
-                            initialCloseGroupPosition = new THREE.Vector3(yOffset, -halfSize + zOffset, xOffset)
                         }
-                    } else {
-                        closeGroup.position.set(yOffset, -halfSize + zOffset, xOffset)
-                        initialCloseGroupPosition = new THREE.Vector3(yOffset, -halfSize + zOffset, xOffset)
                     }
-                    closeGroup.rotation.x = -Math.PI / 2
                     pulsesGroup.children.forEach((pulse) => pulse.position.y += PORTAL_PULSE_OFFSET)
                     break
                 case 'right':
@@ -301,13 +298,7 @@ export function useProjectCubes(
                     hitbox.rotation.y = -Math.PI / 2
                     if (rotation >= THREE.MathUtils.degToRad(120)) {
                         portal.rotation.z = Math.PI
-                        closeGroup.position.set(halfSize + zOffset, -xOffset, -yOffset)
-                        initialCloseGroupPosition = new THREE.Vector3(halfSize + zOffset, -xOffset, -yOffset)
-                    } else {
-                        closeGroup.position.set(halfSize + zOffset, yOffset, xOffset)
-                        initialCloseGroupPosition = new THREE.Vector3(halfSize + zOffset, yOffset, xOffset)
                     }
-                    closeGroup.rotation.y = -Math.PI / 2
                     pulsesGroup.children.forEach((pulse) => pulse.position.x += PORTAL_PULSE_OFFSET)
                     break
                 case 'bottom':
@@ -316,25 +307,17 @@ export function useProjectCubes(
                     portal.rotation.z = -Math.PI / 2
                     hitbox.position.set(0, halfSize, 0)
                     hitbox.rotation.x = Math.PI / 2
-                    if (rotation >= THREE.MathUtils.degToRad(100)) {
-                        closeGroup.position.set(xOffset, halfSize - zOffset, -yOffset)
-                        initialCloseGroupPosition = new THREE.Vector3(xOffset, halfSize - zOffset, -yOffset)
-                    } else {
-                        closeGroup.position.set(yOffset, halfSize - zOffset, -xOffset)
-                        initialCloseGroupPosition = new THREE.Vector3(yOffset, halfSize - zOffset, -xOffset)
-                    }
-                    closeGroup.rotation.x = Math.PI / 2
                     pulsesGroup.children.forEach((pulse) => pulse.position.y += PORTAL_PULSE_OFFSET)
                     break
             }
 
-            group.userData.initialCloseGroupPosition = initialCloseGroupPosition
+            portal.add(closeGroup);
+            portal.userData.closeButton = closeGroup;
 
             closeGroup.updateMatrixWorld(true)
             portal.add(pulsesGroup)
             group.add(portal)
             group.add(hitbox)
-            group.add(closeGroup)
             group.userData.closeButton = closeGroup
 
             portal.updateMatrixWorld(true)
@@ -614,8 +597,12 @@ export function useProjectCubes(
         if (!settings.showPortalPulses || portal.userData.isAnimating) return
 
         portal.userData.isAnimating = true
-        const pulsesGroup = portal.children.find(child => child instanceof THREE.Group)
-        if (!pulsesGroup) return
+
+        const pulsesGroup = portal.userData.pulsesGroup as THREE.Group;
+        if (!pulsesGroup) {
+            console.warn('Pulses group not found in portal.userData');
+            return;
+        }
 
         const pulses = pulsesGroup.children as THREE.Mesh[]
         const numPulses = pulses.length
@@ -650,8 +637,12 @@ export function useProjectCubes(
         if (!portal.userData.isAnimating) return
 
         portal.userData.isAnimating = false
-        const pulsesGroup = portal.children.find(child => child instanceof THREE.Group)
-        if (!pulsesGroup) return
+
+        const pulsesGroup = portal.userData.pulsesGroup as THREE.Group;
+        if (!pulsesGroup) {
+            console.warn('Pulses group not found in portal.userData');
+            return;
+        }
 
         if (portal.userData.animationTimeline) {
             portal.userData.animationTimeline.kill()
@@ -803,32 +794,29 @@ export function useProjectCubes(
                     })
 
                     if (sceneInitialized) {
+                        const pulsesGroup = child.userData.pulsesGroup as THREE.Group;
                         if (lineProgress > 0.1) {
-                            child.children.forEach((grandchild) => {
-                                if (grandchild instanceof THREE.Group) {
-                                    grandchild.children.forEach((pulse) => {
-                                        if (pulse instanceof THREE.Mesh) {
-                                            pulse.material.visible = true
-                                            if (!child.userData.animationStarted && settings.showPortalPulses) {
-                                                animatePulses(child)
-                                                child.userData.animationStarted = true
-                                            }
+                            if (pulsesGroup) {
+                                pulsesGroup.children.forEach((pulse) => {
+                                    if (pulse instanceof THREE.Mesh) {
+                                        pulse.material.visible = true;
+                                        if (!child.userData.animationStarted && settings.showPortalPulses) {
+                                            animatePulses(child);
+                                            child.userData.animationStarted = true;
                                         }
-                                    })
-                                }
-                            })
+                                    }
+                                });
+                            }
                         } else if (lineProgress <= 0.1 && child.userData.animationStarted) {
-                            child.children.forEach((grandchild) => {
-                                if (grandchild instanceof THREE.Group) {
-                                    grandchild.children.forEach((pulse) => {
-                                        if (pulse instanceof THREE.Mesh) {
-                                            pulse.material.visible = false
-                                        }
-                                    })
-                                }
-                            })
-                            stopPulseAnimation(child)
-                            delete child.userData.animationStarted
+                            if (pulsesGroup) {
+                                pulsesGroup.children.forEach((pulse) => {
+                                    if (pulse instanceof THREE.Mesh) {
+                                        pulse.material.visible = false;
+                                    }
+                                });
+                            }
+                            stopPulseAnimation(child);
+                            delete child.userData.animationStarted;
                         }
                     }
                 } else if (child instanceof THREE.Mesh && !child.userData.isPortalHitbox && !child.userData.isCloseHitbox) {
@@ -1226,17 +1214,17 @@ export function useProjectCubes(
         }
 
         const animateRings = (portal: THREE.LineSegments, expand: boolean = true) => {
-            const rings = [portal, ...portal.children.filter(child => child instanceof THREE.LineSegments && child.userData.isPortal)] as THREE.LineSegments[];
-            const targetSpacing = expand ? 25 : 2;
+            const rings = [portal, ...portal.children.filter(child => child instanceof THREE.LineSegments && child.userData.isPortal)] as THREE.LineSegments[]
+            const targetSpacing = expand ? 25 : 2
 
             rings.forEach((ring, index) => {
-                let targetZ = -index * targetSpacing;
+                let targetZ = -index * targetSpacing
                 if (portal.position.y > 0 && portal.rotation.x === -Math.PI / 2) {
-                    targetZ = index * targetSpacing;
+                    targetZ = index * targetSpacing
                 } else if (portal.position.y < 0 && portal.rotation.x === Math.PI / 2) {
-                    targetZ = index * targetSpacing;
+                    targetZ = index * targetSpacing
                 }
-                const targetOpacity = expand ? ring.userData.maxOpacity : 0;
+                const targetOpacity = expand ? ring.userData.maxOpacity : 0
 
                 gsap.to(ring.position, {
                     z: targetZ,
@@ -1245,189 +1233,151 @@ export function useProjectCubes(
                     delay: 0.5,
                     onComplete: () => {
                         if (expand && index === 0) { // Only trigger once, after the main ring's animation
-                            startMarqueeOpacity(portal);
+                            startMarqueeOpacity(portal)
                         }
                     }
-                });
+                })
                 gsap.to(ring.material, {
                     opacity: targetOpacity,
                     duration: 1,
                     ease: 'power3.out',
                     delay: 0.5,
-                });
-            });
-        };
+                })
+            })
+        }
 
         const onMouseMove = (event: MouseEvent) => {
-            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
-            raycaster.setFromCamera(mouse, camera);
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1
+            raycaster.setFromCamera(mouse, camera)
 
             if (camera.userData.lockedLookAt) {
-                camera.lookAt(camera.userData.lockedLookAt);
-                camera.updateMatrixWorld(true);
+                camera.lookAt(camera.userData.lockedLookAt)
+                camera.updateMatrixWorld(true)
             }
 
             projectCubes.forEach(cube => {
                 if (cube.userData.lockedPosition) {
-                    const currentPos = cube.position;
+                    const currentPos = cube.position
                     if (!currentPos.equals(cube.userData.lockedPosition)) {
-                        cube.position.copy(cube.userData.lockedPosition);
+                        cube.position.copy(cube.userData.lockedPosition)
                     }
                 }
-                cube.updateMatrixWorld(true);
-                cube.children.forEach(child => child.updateMatrixWorld(true));
-            });
+                cube.updateMatrixWorld(true)
+                cube.children.forEach(child => child.updateMatrixWorld(true))
+            })
 
             const hitboxes = projectCubes.flatMap(cube => {
-                const children = [];
+                const children = []
                 if (!isInPortalFocus && cube.userData.isActive) {
                     cube.children.forEach(child => {
                         if (child instanceof THREE.Mesh && (child.userData.isPortalHitbox || child.userData.isExploreTextHitbox)) {
-                            children.push(child);
+                            children.push(child)
                         }
-                    });
+                    })
                 }
                 if (isInPortalFocus && activePortal && cube === activePortal.parent) {
                     cube.children.forEach(child => {
                         if (child instanceof THREE.Mesh && child.userData.isPortalHitbox) {
-                            children.push(child);
+                            children.push(child)
                         }
                         if (child instanceof THREE.LineSegments && child.userData.isPortal) {
-                            child.children.forEach(grandchild => {
+                            const portal = child
+                            portal.children.forEach(grandchild => {
                                 if (grandchild instanceof THREE.Mesh && grandchild.userData.isExploreTextHitbox) {
-                                    children.push(grandchild);
+                                    children.push(grandchild)
                                 }
-                            });
-                        }
-                        if (child instanceof THREE.Group && child === cube.userData.closeButton) {
-                            child.children.forEach(grandchild => {
-                                if (grandchild instanceof THREE.Mesh && grandchild.userData.isCloseHitbox) {
-                                    children.push(grandchild);
+                                if (grandchild instanceof THREE.Group && grandchild === portal.userData.closeButton) {
+                                    grandchild.children.forEach(greatgrandchild => {
+                                        if (greatgrandchild instanceof THREE.Mesh && greatgrandchild.userData.isCloseHitbox) {
+                                            children.push(greatgrandchild)
+                                        }
+                                    })
                                 }
-                            });
+                            })
                         }
-                    });
+                    })
                 }
-                return children;
-            }) as THREE.Mesh[];
+                return children
+            }) as THREE.Mesh[]
 
-            const intersects = raycaster.intersectObjects(hitboxes);
+            const intersects = raycaster.intersectObjects(hitboxes)
 
             if (intersects.length > 0) {
-                const hitbox = intersects[0].object as THREE.Mesh;
+                const hitbox = intersects[0].object as THREE.Mesh
                 if (hitbox.userData.isPortalHitbox || hitbox.userData.isExploreTextHitbox) {
-                    const newHoveredPortal = hitbox.userData.portal as THREE.LineSegments;
+                    const newHoveredPortal = hitbox.userData.portal as THREE.LineSegments
                     if (hoveredPortal !== newHoveredPortal) {
                         if (hoveredPortal) {
-                            // Reset all rings to original color
                             const oldRings = [hoveredPortal, ...hoveredPortal.children.filter(child =>
-                                child instanceof THREE.LineSegments && child.userData.isPortal)] as THREE.LineSegments[];
+                                child instanceof THREE.LineSegments && child.userData.isPortal)] as THREE.LineSegments[]
                             oldRings.forEach(ring => {
-                                const material = ring.material as THREE.LineBasicMaterial;
+                                const material = ring.material as THREE.LineBasicMaterial
                                 gsap.to(material.color, {
                                     r: (CUBE_COLOR >> 16 & 255) / 255,
                                     g: (CUBE_COLOR >> 8 & 255) / 255,
                                     b: (CUBE_COLOR & 255) / 255,
                                     duration: 0.5,
-                                });
-                            });
+                                })
+                            })
                         }
-                        hoveredPortal = newHoveredPortal;
-                        // Turn all rings green
+                        hoveredPortal = newHoveredPortal
                         const newRings = [hoveredPortal, ...hoveredPortal.children.filter(child =>
-                            child instanceof THREE.LineSegments && child.userData.isPortal)] as THREE.LineSegments[];
+                            child instanceof THREE.LineSegments && child.userData.isPortal)] as THREE.LineSegments[]
                         newRings.forEach(ring => {
-                            const material = ring.material as THREE.LineBasicMaterial;
+                            const material = ring.material as THREE.LineBasicMaterial
                             gsap.to(material.color, {
                                 r: (PORTAL_HOVER_COLOR >> 16 & 255) / 255,
                                 g: (PORTAL_HOVER_COLOR >> 8 & 255) / 255,
                                 b: (PORTAL_HOVER_COLOR & 255) / 255,
                                 duration: 0.5,
-                            });
-                        });
+                            })
+                        })
                     }
-                    domElement.style.cursor = 'pointer';
+                    domElement.style.cursor = 'pointer'
                 } else if (hitbox.userData.isCloseHitbox && isInPortalFocus) {
-                    if( !closeGroupAnimating ) {
+                    if (!closeGroupAnimating) {
                         closeGroupAnimating = true
-
-                        const closeGroup = hitbox.parent as THREE.Group;
-                        const rects = closeGroup.children.filter(child =>
-                            child instanceof THREE.Mesh && !child.userData.isCloseHitbox) as THREE.Mesh[];
-
-                        const currentCloseGroupPos = closeGroup.position
-
+                        const closeGroup = hitbox.parent as THREE.Group
                         gsap.to(closeGroup.rotation, {
                             z: Math.PI / 2,
                             duration: 0.3,
                             ease: 'power2.inOut',
-                        });
-                        gsap.to(closeGroup.position, {
-                            x: currentCloseGroupPos.x-2,
-                            duration: 0.3,
-                            ease: 'power2.inOut',
-                        });
-
-                        /*rects.forEach(rect => {
-                            gsap.to(rect.position, {
-                                z: -2,
-                                duration: 2,
-                                ease: 'power2.inOut',
-                                //overwrite: 'auto',
-                            });
-
-                        });*/
-                        }
-
-                    domElement.style.cursor = 'pointer';
-                } else {
-                    domElement.style.cursor = 'auto';
+                        })
+                    }
+                    domElement.style.cursor = 'pointer'
                 }
             } else {
                 if (hoveredPortal) {
-                    // Reset all rings to original color
                     const rings = [hoveredPortal, ...hoveredPortal.children.filter(child =>
-                        child instanceof THREE.LineSegments && child.userData.isPortal)] as THREE.LineSegments[];
+                        child instanceof THREE.LineSegments && child.userData.isPortal)] as THREE.LineSegments[]
                     rings.forEach(ring => {
-                        const material = ring.material as THREE.LineBasicMaterial;
+                        const material = ring.material as THREE.LineBasicMaterial
                         gsap.to(material.color, {
                             r: (CUBE_COLOR >> 16 & 255) / 255,
                             g: (CUBE_COLOR >> 8 & 255) / 255,
                             b: (CUBE_COLOR & 255) / 255,
                             duration: 0.5,
-                        });
-                    });
-                    hoveredPortal = null;
+                        })
+                    })
+                    hoveredPortal = null
                 }
-                // Reset close button rectangles if not hovering
                 if (isInPortalFocus && activePortal && closeGroupAnimating) {
-                    const closeGroup = activePortal.parent?.userData.closeButton as THREE.Group;
-                    const currentCloseGroupPos = closeGroup.position
+                    const closeGroup = activePortal.userData.closeButton as THREE.Group
                     if (closeGroup) {
                         closeGroupAnimating = false
-
                         gsap.to(closeGroup.rotation, {
                             z: 0,
                             duration: 0.3,
                             ease: 'power2.inOut',
-                            //overwrite: 'auto',
-                        });
-                        gsap.to(closeGroup.position, {
-                            x: currentCloseGroupPos.x+2,
-                            duration: 0.3,
-                            ease: 'power2.inOut',
-                            //overwrite: 'auto',
-                        });
-
+                        })
                     }
                 }
-                domElement.style.cursor = 'auto';
+                domElement.style.cursor = 'auto'
             }
-        };
+        }
 
         const onClick = (event: MouseEvent) => {
-            console.log('isScrollTriggerActive()',isScrollTriggerActive())
             if (isCameraAnimating) {
                 return
             }
@@ -1440,10 +1390,15 @@ export function useProjectCubes(
                 const children = []
                 if (isInPortalFocus && activePortal && cube === activePortal.parent) {
                     cube.children.forEach(child => {
-                        if (child instanceof THREE.Group && child === cube.userData.closeButton) {
-                            child.children.forEach(grandchild => {
-                                if (grandchild instanceof THREE.Mesh && grandchild.userData.isCloseHitbox) {
-                                    children.push(grandchild)
+                        if (child instanceof THREE.LineSegments && child.userData.isPortal) {
+                            const portal = child
+                            portal.children.forEach(grandchild => {
+                                if (grandchild instanceof THREE.Group && grandchild === portal.userData.closeButton) {
+                                    grandchild.children.forEach(greatgrandchild => {
+                                        if (greatgrandchild instanceof THREE.Mesh && greatgrandchild.userData.isCloseHitbox) {
+                                            children.push(greatgrandchild)
+                                        }
+                                    })
                                 }
                             })
                         }
@@ -1495,8 +1450,6 @@ export function useProjectCubes(
             const cube = clickedPortal.parent as THREE.Group
             const cubeIndex = projectCubes.indexOf(cube)
             const project = projects[cubeIndex]
-
-
 
             if (isInPortalFocus && clickedPortal === activePortal) {
                 const numRings = 25
@@ -1565,16 +1518,13 @@ export function useProjectCubes(
                         activePortal = clickedPortal
                         document.body.classList.add('no-scrollbar')
                         if (screenStore.isMobile) {
-                            document.body.style.overflow = 'hidden';
-                            //document.body.style.position = 'fixed'; // Extra lock for Safari
-                            //document.body.style.top = `-${lockedScrollY}px`;
+                            document.body.style.overflow = 'hidden'
                         }
                         animateRings(clickedPortal, true)
                         cube.userData.lockedPosition = cube.position.clone()
                         disposeParticles(cube)
 
                         const titleText = textMeshes[cubeIndex]
-
                         if (titleText) {
                             const material = titleText.material as THREE.MeshBasicMaterial
                             const plane = titleText.userData.backgroundPlane as THREE.Mesh
@@ -1593,17 +1543,10 @@ export function useProjectCubes(
                         }
                     },
                     onComplete: () => {
-                        if (cube.userData.closeButton) {
-                            if (cube.userData.initialCloseGroupPosition) {
-                                cube.userData.closeButton.position.copy(cube.userData.initialCloseGroupPosition)
-                            }
-                            cube.userData.closeButton.visible = true
-                            cube.userData.closeButton.updateMatrixWorld(true)
-
+                        if (clickedPortal.userData.closeButton) {
+                            clickedPortal.userData.closeButton.visible = true
                             cube.updateMatrixWorld(true)
-                            cube.userData.closeButton.updateMatrixWorld(true)
-
-                            const materials = cube.userData.closeButton.children
+                            const materials = clickedPortal.userData.closeButton.children
                                 .filter(child => child instanceof THREE.Mesh && !child.userData.isCloseHitbox)
                                 .map(child => (child as THREE.Mesh).material)
 
@@ -1612,12 +1555,12 @@ export function useProjectCubes(
                                     opacity: 1,
                                     duration: 0.5,
                                     onComplete: () => {
-                                        cube.userData.closeButton.updateMatrixWorld(true)
+                                        clickedPortal.userData.closeButton.updateMatrixWorld(true)
                                     }
                                 })
                             }
                         } else {
-                            console.warn('Close button not found in cube.userData')
+                            console.warn('Close button not found in portal.userData')
                         }
                     }
                 })
