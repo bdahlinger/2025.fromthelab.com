@@ -81,6 +81,7 @@ let lastTime = 0;
 let projectCubesInstance: ReturnType<typeof useProjectCubes> | null = null;
 let projectMaxZ: number;
 let scrollTriggerActiveCheck: (() => boolean) | null = null;
+let lastOrientation: string | null = null;
 
 const fontLoader = useFontLoader('/fonts/Poppins_Regular.json');
 
@@ -312,6 +313,27 @@ const animate = (time: number = 0) => {
 
 };
 
+const handleResize = () => {
+    updateRendererSize();
+    ScrollTrigger.refresh();
+};
+
+const onResize = () => {
+    if (screenStore.isMobile) {
+        const currentOrientation = screenStore.orientation; // Use store's orientation
+        if (lastOrientation === null) {
+            lastOrientation = currentOrientation; // Initial set
+            handleResize(); // Call once on load
+        } else if (currentOrientation !== lastOrientation) {
+            lastOrientation = currentOrientation;
+            handleResize(); // Only call on orientation change
+        }
+        // Ignore resize if no orientation change (e.g., address bar show/hide)
+    } else {
+        handleResize(); // Desktop: always handle resize
+    }
+};
+
 onMounted(() => {
     init().then(() => {
         if (isLoaded.value) {
@@ -407,7 +429,7 @@ onMounted(() => {
     }).catch((error) => {
         console.error('Initialization failed:', error);
     });
-    window.addEventListener('resize', handleResize);
+    window.addEventListener('resize', onResize);
 });
 
 onUnmounted(() => {
@@ -415,7 +437,7 @@ onUnmounted(() => {
         cancelAnimationFrame(animationFrameId); // Clean up
     }
     if (cleanupInteractivity) cleanupInteractivity();
-    window.removeEventListener('resize', handleResize);
+    window.removeEventListener('resize', onResize);
     ScrollTrigger.getAll().forEach(trigger => trigger.kill());
     renderer.dispose();
     composer.dispose();
@@ -426,10 +448,6 @@ onUnmounted(() => {
     if (cityscapeDispose) cityscapeDispose();
 });
 
-const handleResize = () => {
-    updateRendererSize();
-    ScrollTrigger.refresh();
-};
 
 </script>
 
