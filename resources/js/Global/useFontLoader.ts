@@ -14,11 +14,11 @@ export function useFontLoader(fontUrl: string = '/fonts/Poppins_Regular.json') {
             fontLoader.load(
                 fontUrl,
                 (loadedFont) => {
-                    console.log('Font loaded successfully:', {
+                    /*console.log('Font loaded successfully:', {
                         timestamp: Date.now(),
                         url: fontUrl,
                         userAgent: navigator.userAgent,
-                    });
+                    });*/
                     font.value = loadedFont;
                     loadingProgress.value = 100;
                     isLoaded.value = true;
@@ -31,11 +31,11 @@ export function useFontLoader(fontUrl: string = '/fonts/Poppins_Regular.json') {
                     }
                 },
                 (error) => {
-                    console.error('Font loading error details:', {
+                    /*console.error('Font loading error details:', {
                         url: fontUrl,
                         message: error.message,
                         userAgent: navigator.userAgent,
-                    });
+                    });*/
                     loadingProgress.value = 100; // Mark as complete even on error to avoid stalling
                     isLoaded.value = true;
                     reject(error);

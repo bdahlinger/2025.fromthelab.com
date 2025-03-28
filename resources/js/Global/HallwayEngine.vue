@@ -193,17 +193,17 @@ const init = async () => {
 
     // Load font
     await fontLoader.initialize().then(() => {
-        console.log('Font initialized:', {
+        /*console.log('Font initialized:', {
             fontValue: !!fontLoader.font.value,
             timestamp: Date.now(),
-        });
+        });*/
         updateProgress();
     }).catch((error) => {
         console.error('Font initialization failed:', error);
         updateProgress();
     });
 
-1
+
     await loadTexture(props.projectGridFile).then(() => updateProgress()).catch(() => updateProgress());
     await loadTexture(props.projectGridFile2).then(() => updateProgress()).catch(() => updateProgress());
 
@@ -217,10 +217,10 @@ const init = async () => {
 
     projectCubesInstance = useProjectCubes(scene, { CUBE_SIZE, CUBE_SPACING, FIRST_CUBE_Z }, props.projects, props.projectGridFile, props.projectGridFile2, settings, textureCache, fontLoader.font);
 
-    console.log('Before projectCubesInstance creation:', {
+    /*console.log('Before projectCubesInstance creation:', {
         fontValue: !!fontLoader.font.value,
         timestamp: Date.now(),
-    });
+    });*/
 
     try {
         await projectCubesInstance.getInitializedData().then(({ maxZ, updateCubeColors, projectCubes }) => {
@@ -231,10 +231,10 @@ const init = async () => {
                 throw new Error('Invalid maxZ from projectCubesInstance');
             }
 
-            console.log('Before introCubes creation:', {
+            /*console.log('Before introCubes creation:', {
                 fontValue: !!fontLoader.font.value,
                 timestamp: Date.now(),
-            });
+            });*/
 
             const { introCubes } = useIntroCubes(scene, fontLoader.font, { CUBE_SIZE, FIRST_CUBE_Z }, settings);
             allCubes = [...introCubes, ...projectCubes];
