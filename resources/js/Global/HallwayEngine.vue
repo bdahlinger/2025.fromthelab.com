@@ -319,6 +319,8 @@ const handleResize = () => {
 };
 
 const onResize = () => {
+    console.log('Resize: orientation', screenStore.orientation, 'lastOrientation', lastOrientation);
+
     if (screenStore.isMobile) {
         const currentOrientation = screenStore.orientation; // Use store's orientation
         if (lastOrientation === null) {
