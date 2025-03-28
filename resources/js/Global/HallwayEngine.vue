@@ -319,16 +319,12 @@ const handleResize = () => {
 };
 
 const onResize = () => {
-    console.log('Resize: orientation', screenStore.orientation, 'lastOrientation', lastOrientation);
-
     if (screenStore.isMobile) {
-        const currentOrientation = screenStore.orientation; // Use store's orientation
-        if (lastOrientation === null) {
-            lastOrientation = currentOrientation; // Initial set
-            handleResize(); // Call once on load
-        } else if (currentOrientation !== lastOrientation) {
+        const currentOrientation = screenStore.orientation;
+        console.log('Resize: orientation', currentOrientation, 'lastOrientation', lastOrientation);
+        if (currentOrientation !== lastOrientation) {
             lastOrientation = currentOrientation;
-            handleResize(); // Only call on orientation change
+            handleResize(); // Call on orientation change
         }
         // Ignore resize if no orientation change (e.g., address bar show/hide)
     } else {
