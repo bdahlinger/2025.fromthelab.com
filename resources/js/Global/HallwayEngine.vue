@@ -314,6 +314,7 @@ const animate = (time: number = 0) => {
 };
 
 const handleResize = () => {
+    console.log('handleResize()')
     updateRendererSize();
     ScrollTrigger.refresh();
 };
