@@ -81,17 +81,6 @@ let lastTime = 0;
 let projectCubesInstance: ReturnType<typeof useProjectCubes> | null = null;
 let projectMaxZ: number;
 
-
-const debounce = <T extends (...args: any[]) => void>(func: T, wait: number) => {
-    let timeout: ReturnType<typeof setTimeout> | null = null;
-    return (...args: Parameters<T>) => {
-        if (timeout !== null) {
-            clearTimeout(timeout);
-        }
-        timeout = setTimeout(() => func(...args), wait);
-    };
-};
-
 const fontLoader = useFontLoader('/fonts/Poppins_Regular.json');
 
 const updateRendererSize = () => {
@@ -203,12 +192,18 @@ const init = async () => {
     };
 
     // Load font
-    fontLoader.initialize().catch((error) => {
-        console.error('Font loading failed:', error);
-        updateProgress(); // Proceed even if font fails
-    }).then(() => updateProgress());
+    await fontLoader.initialize().then(() => {
+        console.log('Font initialized:', {
+            fontValue: !!fontLoader.font.value,
+            timestamp: Date.now(),
+        });
+        updateProgress();
+    }).catch((error) => {
+        console.error('Font initialization failed:', error);
+        updateProgress();
+    });
 
-
+1
     await loadTexture(props.projectGridFile).then(() => updateProgress()).catch(() => updateProgress());
     await loadTexture(props.projectGridFile2).then(() => updateProgress()).catch(() => updateProgress());
 
@@ -222,6 +217,11 @@ const init = async () => {
 
     projectCubesInstance = useProjectCubes(scene, { CUBE_SIZE, CUBE_SPACING, FIRST_CUBE_Z }, props.projects, props.projectGridFile, props.projectGridFile2, settings, textureCache, fontLoader.font);
 
+    console.log('Before projectCubesInstance creation:', {
+        fontValue: !!fontLoader.font.value,
+        timestamp: Date.now(),
+    });
+
     try {
         await projectCubesInstance.getInitializedData().then(({ maxZ, updateCubeColors, projectCubes }) => {
 
@@ -231,13 +231,15 @@ const init = async () => {
                 throw new Error('Invalid maxZ from projectCubesInstance');
             }
 
+            console.log('Before introCubes creation:', {
+                fontValue: !!fontLoader.font.value,
+                timestamp: Date.now(),
+            });
+
             const { introCubes } = useIntroCubes(scene, fontLoader.font, { CUBE_SIZE, FIRST_CUBE_Z }, settings);
             allCubes = [...introCubes, ...projectCubes];
             updateCubeColorsInternal = updateCubeColors;
         });
-
-
-
 
         if( settings.showCars ){
             const { cityGroup, updateParticles, dispose: cityscapeDisposeFunc } = useCityscape(scene, scene, projectMaxZ, settings);
