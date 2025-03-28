@@ -452,7 +452,7 @@ const handleResize = () => {
     overflow-x: hidden;
 }
 
-.tunnel-wrapper {
+/*.tunnel-wrapper {
     width: 100%;
     height: 100vh;
     position: relative;
@@ -460,6 +460,14 @@ const handleResize = () => {
     left: 0;
     overflow-x: hidden;
     max-width: none;
+}*/
+.tunnel-wrapper {
+    width: 100%;
+    height: 100vh;
+    position: fixed;
+    top: 0;
+    left: 0;
+    overflow: hidden;
 }
 .tunnel-wrapper canvas {
     width: 100% !important;

@@ -23,15 +23,19 @@ export function setupScrollAnimation(
     const MAX_Z = FIRST_CUBE_Z - (cubeCount + 1) * CUBE_SPACING;
     let isReverting = false;
 
-    const scrollRange = Math.abs(MAX_Z) + (cubeCount - 1) * CUBE_SPACING;
+    const scrollRange = screenStore.isMobile
+        ? (Math.abs(MAX_Z) + (cubeCount - 1) * CUBE_SPACING) * 0.7 // 70% of full range on mobile
+        : Math.abs(MAX_Z) + (cubeCount - 1) * CUBE_SPACING
+
+
     let timeline = gsap.timeline();
 
     // Normalize scroll to prevent address bar show/hide on mobile
-    ScrollTrigger.normalizeScroll({
+    /*ScrollTrigger.normalizeScroll({
         type: 'touch', // Only normalize touch events (not wheel/pointer)
-        momentum: (self) => Math.min(2, self.velocityY / 1000), // Cap momentum duration for smoother feel
+        momentum: (self) => Math.min(4, self.velocityY / 500),
         lockAxis: true, // Prevent horizontal drift on touch
-    });
+    });*/
 
     // Optionally ignore mobile resize events to avoid jumps
     ScrollTrigger.config({
@@ -48,7 +52,7 @@ export function setupScrollAnimation(
                 trigger: wrapper.value,
                 start: 'top top',
                 end: `+=${scrollRange}`,
-                scrub: options.scrub || (screenStore.isMobile ? 1.5 : 0.5),
+                scrub: options.scrub || (screenStore.isMobile ? 0.8 : 0.5),
                 pin: true,
                 onUpdate: (self) => {
                     const now = performance.now();
