@@ -82,6 +82,7 @@ let projectCubesInstance: ReturnType<typeof useProjectCubes> | null = null;
 let projectMaxZ: number;
 let scrollTriggerActiveCheck: (() => boolean) | null = null;
 let lastOrientation: string | null = null;
+let resizeTimeout: number | null = null;
 
 const fontLoader = useFontLoader('/fonts/Poppins_Regular.json');
 
@@ -323,13 +324,18 @@ const onResize = () => {
     if (screenStore.isMobile) {
         const currentOrientation = screenStore.orientation;
         console.log('Resize: orientation', currentOrientation, 'lastOrientation', lastOrientation);
+
         if (currentOrientation !== lastOrientation) {
             lastOrientation = currentOrientation;
-            handleResize(); // Call on orientation change
+            // Debounce resize to wait for orientation animation
+            if (resizeTimeout) clearTimeout(resizeTimeout);
+            resizeTimeout = setTimeout(() => {
+                handleResize();
+                resizeTimeout = null;
+            }, 500); // 500ms delay to let Safari animation settle
         }
-        // Ignore resize if no orientation change (e.g., address bar show/hide)
     } else {
-        handleResize(); // Desktop: always handle resize
+        handleResize(); // Desktop: immediate resize
     }
 };
 
@@ -480,6 +486,7 @@ onUnmounted(() => {
 .tunnel-wrapper {
     width: 100%;
     height: 100vh;
+    min-height: 100vh;
     position: fixed;
     top: 0;
     left: 0;
