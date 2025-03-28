@@ -334,6 +334,10 @@ onMounted(() => {
                 updateCubeColorsInternal(camera);
                 composer.render();
 
+                // Clean up existing ScrollTriggers
+                ScrollTrigger.getAll().forEach(trigger => trigger.kill());
+                console.log('ScrollTriggers before setup:', ScrollTrigger.getAll().length); // Should be 0
+
                 if (allCubes.length && updateCubeColorsInternal) {
                     const result = setupScrollAnimation(
                         scene,
@@ -349,6 +353,9 @@ onMounted(() => {
                     setReverting = result.setReverting;
                     scrollTimeline = result.timeline;
                     scrollTrigger = result.scrollTrigger;
+
+                    console.log('ScrollTriggers after setup:', ScrollTrigger.getAll().length); // Should be 1
+
                 }
 
                 if (renderer && cleanupInteractivity === null) {
