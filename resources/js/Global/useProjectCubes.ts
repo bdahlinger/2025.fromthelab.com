@@ -1194,9 +1194,9 @@ export function useProjectCubes(
                     document.body.classList.remove('no-scrollbar')
                     if (screenStore.isMobile) {
                         document.body.style.overflow = '';
-                        document.body.style.position = '';
-                        document.body.style.top = '';
-                        window.scrollTo(0, lockedScrollY!);
+                        //document.body.style.position = '';
+                        //document.body.style.top = '';
+                       // window.scrollTo(0, lockedScrollY!);
                     }
                     if (onPortalFocusChange) onPortalFocusChange(false)
                     if (exitingPortal) {
@@ -1566,8 +1566,8 @@ export function useProjectCubes(
                         document.body.classList.add('no-scrollbar')
                         if (screenStore.isMobile) {
                             document.body.style.overflow = 'hidden';
-                            document.body.style.position = 'fixed'; // Extra lock for Safari
-                            document.body.style.top = `-${lockedScrollY}px`;
+                            //document.body.style.position = 'fixed'; // Extra lock for Safari
+                            //document.body.style.top = `-${lockedScrollY}px`;
                         }
                         animateRings(clickedPortal, true)
                         cube.userData.lockedPosition = cube.position.clone()
@@ -1679,8 +1679,8 @@ export function useProjectCubes(
             }
             if (screenStore.isMobile) {
                 document.body.style.overflow = '';
-                document.body.style.position = '';
-                document.body.style.top = '';
+               // document.body.style.position = '';
+               // document.body.style.top = '';
             }
         }
 
