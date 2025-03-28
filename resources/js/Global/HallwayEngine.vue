@@ -336,7 +336,6 @@ onMounted(() => {
 
                 // Clean up existing ScrollTriggers
                 ScrollTrigger.getAll().forEach(trigger => trigger.kill());
-                console.log('ScrollTriggers before setup:', ScrollTrigger.getAll().length); // Should be 0
 
                 if (allCubes.length && updateCubeColorsInternal) {
                     const result = setupScrollAnimation(
@@ -346,15 +345,13 @@ onMounted(() => {
                         allCubes,
                         updateCubeColorsInternal,
                         { CUBE_SIZE, CUBE_SPACING, FIRST_CUBE_Z },
-                        { scrub: screenStore.isMobile ? 1 : 1 },
+                        { scrub: 1 },
                         settings,
                         stats
                     );
                     setReverting = result.setReverting;
                     scrollTimeline = result.timeline;
                     scrollTrigger = result.scrollTrigger;
-
-                    console.log('ScrollTriggers after setup:', ScrollTrigger.getAll().length); // Should be 1
 
                 }
 

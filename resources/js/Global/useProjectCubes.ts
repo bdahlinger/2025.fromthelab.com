@@ -4,6 +4,7 @@ import { TextGeometry } from 'three/examples/jsm/geometries/TextGeometry'
 import { gsap } from 'gsap'
 import { router } from '@inertiajs/vue3'
 import { useProjectStore } from '@/Stores/projectStore'
+import { useScreenStore } from '@/Stores/screenStore';
 
 export function useProjectCubes(
     scene: THREE.Scene,
@@ -20,6 +21,8 @@ export function useProjectCubes(
     textureCache: Map<string, THREE.Texture>,
     font: Ref<THREE.Font | null>
 ) {
+    const screenStore = useScreenStore();
+
     const tunnelStore = useProjectStore()
     const { CUBE_SIZE, CUBE_SPACING, FIRST_CUBE_Z } = config
     const MAX_Z = FIRST_CUBE_Z - (projects.length + 1) * CUBE_SPACING
@@ -1045,36 +1048,37 @@ export function useProjectCubes(
         })
         const onTouchStart = (event: TouchEvent) => {
             if (isInPortalFocus) {
-                touchStartY = event.touches[0].clientY
-                lockedScrollY = lockedScrollY ?? window.scrollY
-                isTouching = true
+                touchStartY = event.touches[0].clientY;
+                lockedScrollY = lockedScrollY ?? window.scrollY;
+                isTouching = true;
             }
         }
 
         const onTouchMove = (event: TouchEvent) => {
-            if (!isInPortalFocus || !activePortal || !touchStartY) return
-            const touchY = event.touches[0].clientY
-            const deltaY = touchY - touchStartY
+            if (!isInPortalFocus || !activePortal || !touchStartY || isCameraAnimating) return;
 
-            if (deltaY < -20 && !isEnteringPortal) {
-                handleExitPortal()
-                touchStartY = null
-            } else if (deltaY > 20) {
-                event.preventDefault()
-                window.scrollTo(0, lockedScrollY!)
-                gsap.to(window, { scrollTo: { y: lockedScrollY }, duration: 0 })
+            const touchY = event.touches[0].clientY;
+            const deltaY = touchY - touchStartY;
+
+            // Detect upward swipe on mobile to exit portal mode
+            if (screenStore.isMobile && deltaY < -50 && !isEnteringPortal) {
+                if (event.cancelable) { // Only preventDefault if the event is cancelable
+                    event.preventDefault();
+                }
+                handleExitPortal();
+                touchStartY = null;
             }
-        }
+        };
 
-        const onTouchEnd = () => {
-            touchStartY = null
-            isTouching = false
-            swipeCooldown = true
-            gsap.delayedCall(0.5, () => { swipeCooldown = false })
-        }
+        const onTouchEnd = (event: TouchEvent) => {
+            touchStartY = null;
+            isTouching = false;
+            swipeCooldown = true;
+            gsap.delayedCall(0.5, () => { swipeCooldown = false });
+        };
 
         const handleScroll = (event: WheelEvent | Event) => {
-            if (isTouching || isEnteringPortal || swipeCooldown) {
+            if (isTouching || isEnteringPortal || swipeCooldown || isCameraAnimating) {
                 event.preventDefault()
                 event.stopPropagation()
                 if (lockedScrollY !== null) {
@@ -1084,7 +1088,14 @@ export function useProjectCubes(
                 return
             }
             if (!isInPortalFocus || !activePortal || !originalCameraPosition || !originalCameraTarget) {
-                return
+                return;
+            }
+
+            // Disable scroll exit on mobile; rely on touch events instead
+            if (screenStore.isMobile) {
+                event.preventDefault();
+                event.stopPropagation();
+                return;
             }
 
             let deltaY = 0
@@ -1205,6 +1216,9 @@ export function useProjectCubes(
                     isInPortalFocus = false
                     activePortal = null
                     document.body.classList.remove('no-scrollbar')
+                    if (screenStore.isMobile) {
+                        document.body.style.overflow = ''; // Re-enable scrolling on mobile
+                    }
                     if (onPortalFocusChange) onPortalFocusChange(false)
                     if (exitingPortal) {
                         stopMarqueeOpacity(exitingPortal)
@@ -1570,6 +1584,9 @@ export function useProjectCubes(
                         isInPortalFocus = true
                         activePortal = clickedPortal
                         document.body.classList.add('no-scrollbar')
+                        if (screenStore.isMobile) {
+                            document.body.style.overflow = 'hidden'; // Disable scrolling on mobile
+                        }
                         animateRings(clickedPortal, true)
                         cube.userData.lockedPosition = cube.position.clone()
                         disposeParticles(cube)
@@ -1647,7 +1664,7 @@ export function useProjectCubes(
 
         domElement.addEventListener('mousemove', onMouseMove)
         domElement.addEventListener('click', onClick)
-        domElement.addEventListener('touchstart', onTouchStart, { passive: true })
+        domElement.addEventListener('touchstart', onTouchStart, { passive: false })
         domElement.addEventListener('touchmove', onTouchMove, { passive: false })
         domElement.addEventListener('touchend', onTouchEnd, { passive: true })
         window.addEventListener('wheel', handleScroll, { passive: false })
@@ -1677,6 +1694,9 @@ export function useProjectCubes(
             window.removeEventListener('scroll', handleScroll)
             if (activePortal) {
                 stopMarqueeOpacity(activePortal);
+            }
+            if (screenStore.isMobile) {
+                document.body.style.overflow = ''; // Ensure scrolling is re-enabled on cleanup
             }
         }
 
