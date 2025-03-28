@@ -39,6 +39,10 @@ export function setupScrollAnimation(
     });
 
     if (settings.showScrollTrigger) {
+
+        let lastUpdate = 0;
+        const throttleInterval = 16; // ~60fps
+
         timeline = gsap.timeline({
             scrollTrigger: {
                 trigger: wrapper.value,
