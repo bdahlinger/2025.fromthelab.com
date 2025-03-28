@@ -80,6 +80,7 @@ let animationFrameId: number | null = null;
 let lastTime = 0;
 let projectCubesInstance: ReturnType<typeof useProjectCubes> | null = null;
 let projectMaxZ: number;
+let scrollTriggerActiveCheck: (() => boolean) | null = null;
 
 const fontLoader = useFontLoader('/fonts/Poppins_Regular.json');
 
@@ -345,14 +346,14 @@ onMounted(() => {
                         allCubes,
                         updateCubeColorsInternal,
                         { CUBE_SIZE, CUBE_SPACING, FIRST_CUBE_Z },
-                        { scrub: 1 },
+                        { scrub: screenStore.isMobile ? false : 1.0 },
                         settings,
                         stats
                     );
                     setReverting = result.setReverting;
                     scrollTimeline = result.timeline;
                     scrollTrigger = result.scrollTrigger;
-
+                    scrollTriggerActiveCheck = result.isScrollTriggerActive;
                 }
 
                 if (renderer && cleanupInteractivity === null) {
@@ -362,7 +363,8 @@ onMounted(() => {
                         renderer,
                         (isFocused) => {
                             if (setReverting) setReverting(isFocused);
-                        }
+                        },
+                        scrollTriggerActiveCheck
                     );
                 }
 

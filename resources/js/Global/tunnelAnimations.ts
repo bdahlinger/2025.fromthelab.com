@@ -22,7 +22,9 @@ export function setupScrollAnimation(
     const cubeCount = allCubes?.length || 0;
     const MAX_Z = FIRST_CUBE_Z - (cubeCount + 1) * CUBE_SPACING;
     let isReverting = false;
-
+    let isScrubbing = false;
+    let lastVelocity = 0;
+    let settleTimeout: number | null = null;
     const scrollRange = screenStore.isMobile
         ? (Math.abs(MAX_Z) + (cubeCount - 1) * CUBE_SPACING) * 0.7 // 70% of full range on mobile
         : Math.abs(MAX_Z) + (cubeCount - 1) * CUBE_SPACING
@@ -45,14 +47,15 @@ export function setupScrollAnimation(
     if (settings.showScrollTrigger) {
 
         let lastUpdate = 0;
-        const throttleInterval = 16; // ~60fps
+        const throttleInterval = 16;
+       // const scrubSettleTime = (options.scrub || (screenStore.isMobile ? 0.8 : 0.5)) * 1000;
 
         timeline = gsap.timeline({
             scrollTrigger: {
                 trigger: wrapper.value,
                 start: 'top top',
                 end: `+=${scrollRange}`,
-                scrub: options.scrub || (screenStore.isMobile ? 0.8 : 0.5),
+                scrub: options.scrub,
                 pin: true,
                 onUpdate: (self) => {
                     const now = performance.now();
@@ -66,6 +69,23 @@ export function setupScrollAnimation(
                         updateCubeColors(camera);
                         lastUpdate = now;
                     }
+                    /*const currentVelocity = Math.abs(self.getVelocity());
+                    if (currentVelocity > 1) {
+                        isScrubbing = true;
+                        if (settleTimeout) clearTimeout(settleTimeout);
+                        settleTimeout = setTimeout(() => {
+                            // Check if velocity has stabilized near 0 after scrub duration
+                            if (Math.abs(self.getVelocity()) <= 1) {
+                                isScrubbing = false;
+                            }
+                        }, scrubSettleTime); // Wait for scrub to settle
+                    } else if (currentVelocity <= 1 && lastVelocity > 1 && !settleTimeout) {
+                        // Start settle timer when velocity drops
+                        settleTimeout = setTimeout(() => {
+                            isScrubbing = false;
+                        }, scrubSettleTime);
+                    }
+                    lastVelocity = currentVelocity;*/
                     if (stats) stats.update();
                 },
                 onRefresh: () => {
@@ -85,5 +105,7 @@ export function setupScrollAnimation(
         isReverting = value;
     };
 
-    return { setReverting, timeline };
+    const isScrollTriggerActive = () => isScrubbing;
+
+    return { setReverting, timeline, isScrollTriggerActive };
 }

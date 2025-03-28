@@ -577,36 +577,6 @@ export function useProjectCubes(
         return textMesh
     }
 
-    /*const loadFontAndText = (): Promise<void> => {
-        return new Promise((resolve) => {
-            fontLoader = new FontLoader()
-            fontLoader.load(
-                '/fonts/Poppins_Regular.json',
-                (font) => {
-                    loadedFont = font
-                    const projectArray = Array.isArray(projects) ? projects : []
-                    if (!Array.isArray(projects)) {
-                        console.warn('useProjectCubes: projects is not an array, defaulting to empty array', projects)
-                    }
-                    let cubeIndex = 0
-                    projectArray.forEach((project, index) => {
-                        const zPosition = FIRST_CUBE_Z - (index + 1) * CUBE_SPACING
-                        const rotation = (index + 1) * CUBE_ROTATION_INCREMENT
-                        const cube = createProjectCube(project, CUBE_SIZE, zPosition, rotation, project.keyart, project.keyartLocation, cubeIndex)
-                        scene.add(cube)
-                        projectCubes.push(cube)
-                        cubeIndex++
-                        if (settings.showProjectTitles) {
-                            createTextObject(project.title, 0, project.size - 15, FIRST_CUBE_Z + 90 - (index + 1) * CUBE_SPACING, project.size, font)
-                        }
-                    })
-                    resolve()
-                },
-                undefined,
-                (error) => console.error('Error loading font:', error)
-            )
-        })
-    }*/
     const initializeScene = () => {
         const projectArray = Array.isArray(projects) ? projects : [];
         if (!Array.isArray(projects)) {
@@ -625,6 +595,7 @@ export function useProjectCubes(
             }
         });
     };
+
     const getInitializedData = (): Promise<{
         projectCubes: THREE.Group[]
         updateCubeColors: (camera: THREE.PerspectiveCamera) => void
@@ -1027,7 +998,8 @@ export function useProjectCubes(
         camera: THREE.PerspectiveCamera,
         domElement: HTMLCanvasElement,
         renderer: THREE.WebGLRenderer,
-        onFocusChangeCallback: (isFocused: boolean, originalPosition?: THREE.Vector3, originalTarget?: THREE.Vector3) => void
+        onFocusChangeCallback: (isFocused: boolean, originalPosition?: THREE.Vector3, originalTarget?: THREE.Vector3) => void,
+        isScrollTriggerActive?: () => boolean
     ) => {
         onPortalFocusChange = onFocusChangeCallback
 
@@ -1120,6 +1092,10 @@ export function useProjectCubes(
         }
 
         const handleExitPortal = () => {
+            /*if (isCameraAnimating || (isScrollTriggerActive && isScrollTriggerActive())) {
+                return; // Prevent exit if scrubbing or animating
+            }*/
+
             const exitingPortal = activePortal
             const targetLookAt = originalCameraTarget ? originalCameraTarget.clone() : new THREE.Vector3(0, 0, MAX_Z)
             const originalZ = originalCameraPosition?.z ?? camera.position.z
@@ -1217,7 +1193,10 @@ export function useProjectCubes(
                     activePortal = null
                     document.body.classList.remove('no-scrollbar')
                     if (screenStore.isMobile) {
-                        document.body.style.overflow = ''; // Re-enable scrolling on mobile
+                        document.body.style.overflow = '';
+                        document.body.style.position = '';
+                        document.body.style.top = '';
+                        window.scrollTo(0, lockedScrollY!);
                     }
                     if (onPortalFocusChange) onPortalFocusChange(false)
                     if (exitingPortal) {
@@ -1448,6 +1427,7 @@ export function useProjectCubes(
         };
 
         const onClick = (event: MouseEvent) => {
+            console.log('isScrollTriggerActive()',isScrollTriggerActive())
             if (isCameraAnimating) {
                 return
             }
@@ -1585,7 +1565,9 @@ export function useProjectCubes(
                         activePortal = clickedPortal
                         document.body.classList.add('no-scrollbar')
                         if (screenStore.isMobile) {
-                            document.body.style.overflow = 'hidden'; // Disable scrolling on mobile
+                            document.body.style.overflow = 'hidden';
+                            document.body.style.position = 'fixed'; // Extra lock for Safari
+                            document.body.style.top = `-${lockedScrollY}px`;
                         }
                         animateRings(clickedPortal, true)
                         cube.userData.lockedPosition = cube.position.clone()
@@ -1696,7 +1678,9 @@ export function useProjectCubes(
                 stopMarqueeOpacity(activePortal);
             }
             if (screenStore.isMobile) {
-                document.body.style.overflow = ''; // Ensure scrolling is re-enabled on cleanup
+                document.body.style.overflow = '';
+                document.body.style.position = '';
+                document.body.style.top = '';
             }
         }
 
