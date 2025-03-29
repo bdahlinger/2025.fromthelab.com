@@ -3,6 +3,7 @@ import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import Stats from 'three/examples/jsm/libs/stats.module';
 import { useScreenStore } from '@/Stores/screenStore';
+import { useProjectStore } from '@/Stores/projectStore';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -18,6 +19,7 @@ export function setupScrollAnimation(
     stats?: Stats
 ) {
     const screenStore = useScreenStore();
+    const projectStore = useProjectStore();
     const { CUBE_SIZE, CUBE_SPACING, FIRST_CUBE_Z } = config;
     const cubeCount = allCubes?.length || 0;
     const MAX_Z = FIRST_CUBE_Z - (cubeCount + 1) * CUBE_SPACING;
@@ -45,7 +47,7 @@ export function setupScrollAnimation(
     });
 
     if (settings.showScrollTrigger) {
-
+        let updateCounter = 0;
         let lastUpdate = 0;
         const throttleInterval = 16;
        // const scrubSettleTime = (options.scrub || (screenStore.isMobile ? 0.8 : 0.5)) * 1000;
@@ -65,6 +67,10 @@ export function setupScrollAnimation(
                             const newZ = THREE.MathUtils.lerp(0, MAX_Z, progress);
                             camera.position.set(0, 0, newZ);
                             camera.lookAt(0, 0, MAX_Z);
+                            updateCounter++;
+                            if (updateCounter % 4 === 0 || newZ < 1) { // Only update on even counts
+                                projectStore.setProgress(Math.round(Math.abs(newZ)));
+                            }
                         }
                         updateCubeColors(camera);
                         lastUpdate = now;

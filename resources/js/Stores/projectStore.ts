@@ -5,7 +5,11 @@ interface RootState {
     activeProjectSlug: string | null
     scrollPosition: number
     projects: App.Data.ProjectData[] | null
-    project: App.Data.ProjectData | null
+    project: App.Data.ProjectData | null,
+    progress: number,
+    cubeSize: number,
+    cubeSpacing: number,
+    firstCubeZ: number
 }
 
 export const useProjectStore = defineStore('project', {
@@ -14,8 +18,15 @@ export const useProjectStore = defineStore('project', {
         scrollPosition: 0,
         projects: null,
         project: null,
+        progress: -1,
+        cubeSize: 250,
+        cubeSpacing: 500,
+        firstCubeZ: -500
     }),
     actions: {
+        setProgress( progress: number) {
+            this.progress = progress;
+        },
         setProject(project: App.Data.ProjectData) {
             this.project = project;
         },

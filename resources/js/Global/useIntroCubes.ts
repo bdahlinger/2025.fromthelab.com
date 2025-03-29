@@ -142,18 +142,18 @@ export function useIntroCubes(
 
     setupIntro()
 
-    if (font.value) {
+    /*if (font.value) {
         const messageGroup = createMessageGroup(font.value);
         scene.add(messageGroup);
     } else {
         console.warn('Font not available; "SCROLL TO CONTINUE" message skipped.');
-    }
+    }*/
 
 
 
     return { introCubes }
 
-    function createMessageGroup(font: THREE.Font): THREE.Group {
+    /*function createMessageGroup(font: THREE.Font): THREE.Group {
         const messageGroup = new THREE.Group()
         const textMesh = createMessageText(font)
         textMesh.position.set(0, screenStore.isMobile ? -110:-36, 0)
@@ -289,5 +289,5 @@ export function useIntroCubes(
                 callback(mouseGroup)
             }
         })
-    }
+    }*/
 }

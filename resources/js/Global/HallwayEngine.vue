@@ -32,9 +32,9 @@ const projectStore = useProjectStore();
 projectStore.projects = props.projects;
 const screenStore = useScreenStore();
 const ready = ref(false)
-const CUBE_SIZE = 250;
-const CUBE_SPACING = 500;
-const FIRST_CUBE_Z = -500;
+const CUBE_SIZE = projectStore.cubeSize;
+const CUBE_SPACING = projectStore.cubeSpacing;
+const FIRST_CUBE_Z = projectStore.firstCubeZ;
 const BLOOM_FADE_START_Z = -520;
 const BLOOM_FADE_END_Z = -720;
 
@@ -89,7 +89,7 @@ const fontLoader = useFontLoader('/fonts/Poppins_Regular.json');
 const updateRendererSize = () => {
     const width = tunnelWrapper.value ? tunnelWrapper.value.getBoundingClientRect().width : window.innerWidth;
     const height = window.innerHeight;
-    const scaleFactor = screenStore.isMobile ? 0.75 : 1.0;
+    const scaleFactor = 1;//screenStore.isMobile ? 0.75 : 1.0;
     const pixelRatio = screenStore.isMobile ? Math.min(window.devicePixelRatio, 1.5) : window.devicePixelRatio;
 
     renderer.setSize(width * scaleFactor, height * scaleFactor);

@@ -11,6 +11,7 @@ import { App } from '@/Types/enums';
 import GlobalFooter from "@/Global/GlobalFooter.vue";
 import AppWrap from '@/Pages/App.vue';
 import { computed, ref } from 'vue';
+import IntroMessage from "@/Global/Tunnel/IntroMessage.vue";
 
 const props = defineProps<{
     //canLogin: boolean
@@ -63,6 +64,8 @@ const getClassificationColor = (classification: App.Enums.Classification): numbe
                 :projects="projects"
                 :project-grid-file="projectGridFile"
                 :project-grid-file2="projectGridFile2" />
+
+            <intro-message/>
 	    </div>
         <div class="mt-16 px-4 md:px-16">
 
