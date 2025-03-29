@@ -43,13 +43,13 @@ export function useProjectCubes(
     const PORTAL_PULSE_HEIGHT = 15
     const PORTAL_PULSE_OFFSET = 0.1
     const PORTAL_TEXT = "ENTER TO LEARN MORE"
-    const CLICK_HERE_SIZE = tunnelStore.isMobile ? 1 : 0.5
+    const CLICK_HERE_SIZE = screenStore.isMobile ? 1 : 0.5
     const CLICK_HERE_SPEED = 40 // units per second
     const CLICK_HERE_RATE = 0.125 // seconds between emissions
     const CLICK_HERE_DISTANCE = 100 // distance beyond portal
     const CLICK_HERE_CONE_RATE = 8
-    const CLICK_HERE_CONE_RADIUS = tunnelStore.isMobile ? 1.5 : 2.0
-    const CLICK_HERE_CONE_HEIGHT = tunnelStore.isMobile ? 2.0 : 3.5
+    const CLICK_HERE_CONE_RADIUS = screenStore.isMobile ? 2.5 : 2.0
+    const CLICK_HERE_CONE_HEIGHT = screenStore.isMobile ? 4.0 : 3.5
     const CLICK_HERE_FADE_LENGTH = 1.0
 
 
@@ -273,7 +273,7 @@ export function useProjectCubes(
             closeGroup.name = 'closeGroup';
             closeGroup.position.set(screenStore.isMobile ? outerRadius - 10 : outerRadius, outerRadius, 2)
 
-            const rectGeometry = new THREE.PlaneGeometry(12, tunnelStore.isMobile ? 1:0.5)
+            const rectGeometry = new THREE.PlaneGeometry(12, screenStore.isMobile ? 1:0.5)
             const closeMaterial = new THREE.MeshBasicMaterial({
                 color: 0xffffff,
                 transparent: true,

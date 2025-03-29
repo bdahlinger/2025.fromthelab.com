@@ -254,6 +254,10 @@ const init = async () => {
     }
 };
 
+let lastFrameTime = 0;
+const TARGET_FPS = 60;
+const FRAME_DURATION = 1000 / TARGET_FPS; // ~16.67 ms
+
 const animate = (time: number = 0) => {
     animationFrameId = requestAnimationFrame(animate)
 
@@ -465,7 +469,7 @@ onUnmounted(() => {
     width: 100%;
     max-width: none;
     overflow-x: hidden;
-    padding-top: 300px;
+    padding-top: 100vh;
 }
 .wrapper.ready{
     padding-top:0;

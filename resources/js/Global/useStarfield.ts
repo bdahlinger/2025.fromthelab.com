@@ -7,7 +7,7 @@ export function useStarfield(scene: THREE.Scene, camera: THREE.PerspectiveCamera
     const screenStore = useScreenStore();
 
     const STAR_SIZE = screenStore.isMobile ? 25 : 20;
-    const STAR_COUNT = screenStore.isMobile ? 800 : 1800;
+    const STAR_COUNT = screenStore.isMobile ? 600 : 1800;
     const FIELD_XY_SIZE = 4000;
     const FIELD_Z_MIN = -1000;
     const FIELD_Z_MAX = projectMaxZ - 1000; // Match city buffer

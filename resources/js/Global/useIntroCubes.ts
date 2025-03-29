@@ -2,7 +2,7 @@ import * as THREE from 'three'
 import { gsap } from 'gsap'
 import { TextGeometry } from 'three/examples/jsm/geometries/TextGeometry'
 import { SVGLoader } from 'three/examples/jsm/loaders/SVGLoader'
-
+import { useScreenStore } from '@/Stores/screenStore';
 export function useIntroCubes(
     scene: THREE.Scene,
     font: Ref<THREE.Font | null>,
@@ -15,7 +15,7 @@ export function useIntroCubes(
     if (!settings.showIntroCubes) {
         return { introCubes: [] };
     }
-
+    const screenStore = useScreenStore();
 
     const { CUBE_SIZE, FIRST_CUBE_Z } = config;
     const CUBE_SIZE_STEP = 8;
@@ -156,42 +156,67 @@ export function useIntroCubes(
     function createMessageGroup(font: THREE.Font): THREE.Group {
         const messageGroup = new THREE.Group()
         const textMesh = createMessageText(font)
-        textMesh.position.set(0, -36, 0)
+        textMesh.position.set(0, screenStore.isMobile ? -110:-36, 0)
         messageGroup.add(textMesh)
 
-        createMouseIcon((mouseGroup) => {
-            messageGroup.add(mouseGroup)
-            gsap.fromTo(textMesh.material, { opacity: 0.3 }, {
-                opacity: 1.0,
-                duration: 3,
-                ease: 'linear',
-                repeat: -1,
-                yoyo: true
-            })
-            const scrollWheel = mouseGroup.children.find(child => child instanceof THREE.Mesh && child !== mouseGroup.children[0]) as THREE.Mesh
-            if (scrollWheel) {
-                const originalY = scrollWheel.position.y
-                gsap.to(scrollWheel.position, {
-                    y: originalY + 3,
-                    duration: 1,
-                    ease: 'easeOut',
-                    onComplete: () => { scrollWheel.position.y = originalY },
-                    repeat: -1
+        if( screenStore.isMobile ){
+            createSwipeIcon((mouseGroup) => {
+                messageGroup.add(mouseGroup)
+                gsap.fromTo(textMesh.material, { opacity: 0.3 }, {
+                    opacity: 1.0,
+                    duration: 3,
+                    ease: 'linear',
+                    repeat: -1,
+                    yoyo: true
                 })
-            }
-        })
+                const scrollWheel = mouseGroup.children.find(child => child instanceof THREE.Mesh && child !== mouseGroup.children[0]) as THREE.Mesh
+                if (scrollWheel) {
+                    const originalY = scrollWheel.position.y
+                    gsap.to(scrollWheel.position, {
+                        y: originalY - 15,
+                        duration: 1,
+                        ease: 'easeOut',
+                        onComplete: () => { scrollWheel.position.y = originalY },
+                        repeat: -1
+                    })
+                }
+            })
+        }else{
+            createMouseIcon((mouseGroup) => {
+                messageGroup.add(mouseGroup)
+                gsap.fromTo(textMesh.material, { opacity: 0.3 }, {
+                    opacity: 1.0,
+                    duration: 3,
+                    ease: 'linear',
+                    repeat: -1,
+                    yoyo: true
+                })
+                const scrollWheel = mouseGroup.children.find(child => child instanceof THREE.Mesh && child !== mouseGroup.children[0]) as THREE.Mesh
+                if (scrollWheel) {
+                    const originalY = scrollWheel.position.y
+                    gsap.to(scrollWheel.position, {
+                        y: originalY + 3,
+                        duration: 1,
+                        ease: 'easeOut',
+                        onComplete: () => { scrollWheel.position.y = originalY },
+                        repeat: -1
+                    })
+                }
+            })
+        }
+
 
         messageGroup.position.x = 0
-        messageGroup.position.y = -240
+        messageGroup.position.y = screenStore.isMobile ? -300 : -240
         const lastIntroCubeZ = FIRST_CUBE_Z - (CUBE_COUNT_INTRO * CUBE_SIZE_STEP)
         messageGroup.position.z = lastIntroCubeZ + MESSAGE_SPACING
         return messageGroup
     }
 
     function createMessageText(font: THREE.Font): THREE.Mesh {
-        const textGeometry = new TextGeometry('SCROLL TO CONTINUE', {
+        const textGeometry = new TextGeometry(`${screenStore.isMobile ? 'SWIPE':'SCROLL'} TO CONTINUE`, {
             font: font,
-            size: 8,
+            size: screenStore.isMobile ? 30 : 8,
             depth: 0,
             curveSegments: 12,
             bevelEnabled: false
@@ -201,7 +226,38 @@ export function useIntroCubes(
         const textMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 1.0 })
         return new THREE.Mesh(textGeometry, textMaterial)
     }
+    function createSwipeIcon(callback: (group: THREE.Group) => void): void {
+        const loader = new SVGLoader()
+        loader.load('/3D/swipe.svg', (data) => {
+            const paths = data.paths
+            let swipeBody: THREE.Mesh | null = null
+            let swipeArrow: THREE.Mesh | null = null
+            let swipeGroup: THREE.Group = new THREE.Group()
 
+            paths.forEach((path, i) => {
+                const shapes = SVGLoader.createShapes(path)
+                shapes.forEach((shape) => {
+                    const geometry = new THREE.ShapeGeometry(shape)
+                    geometry.computeBoundingBox()
+                    const material = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 1.0, side: THREE.DoubleSide })
+                    const mesh = new THREE.Mesh(geometry, material)
+                    mesh.scale.set(screenStore.isMobile ? 0.1:0.05, screenStore.isMobile ? 0.1:0.05, 1)
+                    if (i === 0) swipeBody = mesh
+                    else if (i === 1) swipeArrow = mesh
+                })
+            })
+
+            if (swipeBody && swipeArrow) {
+                swipeGroup.add(swipeBody)
+                swipeGroup.add(swipeArrow)
+                const bodyWidth = swipeBody.geometry.boundingBox!.max.x - swipeBody.geometry.boundingBox!.min.x
+                const centerOffsetX = bodyWidth * swipeBody.scale.x / 2
+                swipeGroup.position.x = -centerOffsetX
+                swipeGroup.rotation.x = Math.PI
+                callback(swipeGroup)
+            }
+        })
+    }
     function createMouseIcon(callback: (group: THREE.Group) => void): void {
         const loader = new SVGLoader()
         loader.load('/3D/mouse.svg', (data) => {
@@ -217,7 +273,7 @@ export function useIntroCubes(
                     geometry.computeBoundingBox()
                     const material = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 1.0, side: THREE.DoubleSide })
                     const mesh = new THREE.Mesh(geometry, material)
-                    mesh.scale.set(0.05, 0.05, 1)
+                    mesh.scale.set(screenStore.isMobile ? 0.1:0.05, screenStore.isMobile ? 0.1:0.05, 1)
                     if (i === 0) mouseBody = mesh
                     else if (i === 1) scrollWheel = mesh
                 })
