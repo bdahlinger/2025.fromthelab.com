@@ -102,7 +102,6 @@ onUnmounted(() => {
 .transition-container {
     position: relative;
     width: 100%;
-    //overflow: hidden; /* Contain sliding content */
 }
 
 .page-wrapper {

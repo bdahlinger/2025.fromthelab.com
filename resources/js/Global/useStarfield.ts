@@ -7,7 +7,7 @@ export function useStarfield(scene: THREE.Scene, camera: THREE.PerspectiveCamera
     const screenStore = useScreenStore();
 
     const STAR_SIZE = screenStore.isMobile ? 25 : 20;
-    const STAR_COUNT = screenStore.isMobile ? 1000 : 2000;
+    const STAR_COUNT = screenStore.isMobile ? 800 : 1800;
     const FIELD_XY_SIZE = 4000;
     const FIELD_Z_MIN = -1000;
     const FIELD_Z_MAX = projectMaxZ - 1000; // Match city buffer
@@ -80,7 +80,7 @@ export function useStarfield(scene: THREE.Scene, camera: THREE.PerspectiveCamera
         depthWrite: false,
     });
 
-    const starfield = new THREE.Points(geometry, material);
+    /*const starfield = new THREE.Points(geometry, material);
     scene.add(starfield);
 
     const opacityAttribute = geometry.attributes.opacity;
@@ -97,8 +97,37 @@ export function useStarfield(scene: THREE.Scene, camera: THREE.PerspectiveCamera
                 opacityAttribute.needsUpdate = true;
             },
         });
-    }
+    }*/
+    const starfield = new THREE.Points(geometry, material);
+    starfield.frustumCulled = true; // Enable frustum culling
+    scene.add(starfield);
 
+    // Single GSAP tween for all stars
+    const opacityObj = { values: dynamicOpacities.slice() };
+    const opacityAttribute = geometry.attributes.opacity;
+    gsap.to(opacityObj, {
+        duration: 2, // Fixed duration for simplicity
+        onUpdate: () => {
+            const time = Date.now() * 0.001; // Convert to seconds
+            for (let i = 0; i < STAR_COUNT; i++) {
+                // Sine wave with per-star phase offset (i-based)
+                opacityObj.values[i] = initialOpacities[i] * (0.05 + 0.95 * Math.abs(Math.sin(time + i * 0.01)));
+            }
+            opacityAttribute.array.set(opacityObj.values);
+            opacityAttribute.needsUpdate = true;
+        },
+        repeat: -1,
+        ease: 'none', // Linear updates, sine wave handles the easing
+    });
+
+    // Frustum culling check (optional fine-grained control)
+    const frustum = new THREE.Frustum();
+    const updateVisibility = () => {
+        frustum.setFromProjectionMatrix(
+            camera.projectionMatrix.clone().multiply(camera.matrixWorldInverse)
+        );
+        starfield.visible = frustum.intersectsSphere(boundingSphere);
+    };
     const dispose = () => {
         gsap.killTweensOf(dynamicOpacities);
         scene.remove(starfield);

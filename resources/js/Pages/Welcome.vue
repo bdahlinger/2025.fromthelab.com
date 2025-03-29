@@ -10,7 +10,7 @@ import { ProjectData } from '@/Types/generated';
 import { App } from '@/Types/enums';
 import GlobalFooter from "@/Global/GlobalFooter.vue";
 import AppWrap from '@/Pages/App.vue';
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 
 const props = defineProps<{
     //canLogin: boolean
@@ -20,6 +20,8 @@ const props = defineProps<{
     projectGridFile2: string
     archived: ProjectData[]
 }>()
+
+
 
 const sortedArchived = computed(() => {
     return [...props.archived].sort((a, b) => a.title.localeCompare(b.title));

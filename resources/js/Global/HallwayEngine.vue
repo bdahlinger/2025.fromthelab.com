@@ -31,7 +31,7 @@ const props = defineProps<{
 const projectStore = useProjectStore();
 projectStore.projects = props.projects;
 const screenStore = useScreenStore();
-
+const ready = ref(false)
 const CUBE_SIZE = 250;
 const CUBE_SPACING = 500;
 const FIRST_CUBE_Z = -500;
@@ -113,7 +113,7 @@ const loadTexture = (url: string): Promise<THREE.Texture> => {
         textureLoader.load(
             url,
             (texture) => {
-                texture.encoding = THREE.sRGBEncoding;
+                texture.encoding = THREE.SRGBColorSpace;
                 textureCache.set(url, texture);
                 resolve(texture);
             },
@@ -142,27 +142,22 @@ const init = async () => {
 
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.0;
-    renderer.outputEncoding = THREE.sRGBEncoding;
+    renderer.outputEncoding = THREE.SRGBColorSpace;
 
     composer = new EffectComposer(renderer);
     const renderPass = new RenderPass(scene, camera);
     composer.addPass(renderPass);
-    if(screenStore.isMobile){
-        bloomPass = new UnrealBloomPass(
-            new THREE.Vector2(window.innerWidth, window.innerHeight),
-            1.0,
-            0.1,
-            0.0
-        );
-    }else{
-        bloomPass = new UnrealBloomPass(
-            new THREE.Vector2(window.innerWidth, window.innerHeight),
-            1.6,
-            0.2,
-            0.0
-        );
-    }
 
+
+    const bloomResolution = new THREE.Vector2(
+        Math.floor(window.innerWidth / 2),
+        Math.floor(window.innerHeight / 2)
+    );
+    if (screenStore.isMobile) {
+        bloomPass = new UnrealBloomPass(bloomResolution, 1.0, 0.1, 0.0);
+    } else {
+        bloomPass = new UnrealBloomPass(bloomResolution, 1.6, 0.2, 0.0);
+    }
     bloomPass.renderToScreen = true;
     composer.addPass(bloomPass);
 
@@ -260,100 +255,104 @@ const init = async () => {
 };
 
 const animate = (time: number = 0) => {
-    animationFrameId = requestAnimationFrame(animate); // Chain here
+    animationFrameId = requestAnimationFrame(animate)
 
     if (renderer && composer) {
-        const delta = (time - lastTime) / 1000;
-        lastTime = time;
+        const delta = (time - lastTime) / 1000
+        lastTime = time
 
-        if (settings.showCars) updateCityParticles(delta);
-        if (settings.showChasers && updateChasers) updateChasers(delta);
+        if (settings.showCars) updateCityParticles(delta)
+        if (settings.showChasers && updateChasers) updateChasers(delta)
 
         if (projectCubesInstance?.updateClickHereParticles) {
             projectCubesInstance.updateClickHereParticles(camera, delta)
         }
 
         // Dynamic far: cover deepest cube + fog range
-        const fogFar = 4000;
-        const buffer = 1000;
-        const minFar = Math.abs(camera.position.z - projectMaxZ); // Use projectMaxZ
-        camera.far = Math.max(fogFar + buffer, minFar);
-        camera.updateProjectionMatrix();
+        const fogFar = 4000
+        const buffer = 1000
+        const minFar = Math.abs(camera.position.z - projectMaxZ)
+        camera.far = Math.max(fogFar + buffer, minFar)
+        camera.updateProjectionMatrix()
 
-
-        const fadeRange = BLOOM_FADE_END_Z - BLOOM_FADE_START_Z;
-        let progress = 0;
+        const fadeRange = BLOOM_FADE_END_Z - BLOOM_FADE_START_Z
+        let progress = 0
         if (camera.position.z >= BLOOM_FADE_START_Z) {
-            progress = 0; // Full bloom
+            progress = 0
         } else if (camera.position.z <= BLOOM_FADE_END_Z) {
-            progress = 1; // Faded out
+            progress = 1
         } else {
-            progress = (camera.position.z - BLOOM_FADE_START_Z) / fadeRange;
+            progress = (camera.position.z - BLOOM_FADE_START_Z) / fadeRange
         }
 
+        const minStrength = 0.01 // Adjust this to taste
+        const easedProgress = 1 - Math.pow(1 - progress, 2) // Smooth ease-out
+        let targetStrength: number
         if (screenStore.isMobile) {
-            bloomPass.strength = THREE.MathUtils.lerp(1.3, 0.0, progress);
+            targetStrength = THREE.MathUtils.lerp(1.3, minStrength, easedProgress)
         } else {
-            bloomPass.strength = THREE.MathUtils.lerp(1.6, 0.125, progress); // Was static 6.0
+            targetStrength = THREE.MathUtils.lerp(1.6, minStrength, easedProgress)
         }
 
-        composer.render();
+        bloomPass.strength = targetStrength
+
+        composer.render()
     }
 
-    if (settings.showStats) stats.update();
+    if (settings.showStats) stats.update()
 
-};
+}
 
 const handleResize = () => {
     console.log('handleResize()')
-    updateRendererSize();
-    ScrollTrigger.refresh();
+    updateRendererSize()
+    ScrollTrigger.refresh()
 };
 
 const onResize = () => {
     if (screenStore.isMobile) {
-        const currentOrientation = screenStore.orientation;
-        console.log('Resize: orientation', currentOrientation, 'lastOrientation', lastOrientation);
+        const currentOrientation = screenStore.orientation
+        console.log('Resize: orientation', currentOrientation, 'lastOrientation', lastOrientation)
 
         if (currentOrientation !== lastOrientation) {
-            lastOrientation = currentOrientation;
+            lastOrientation = currentOrientation
             // Debounce resize to wait for orientation animation
-            if (resizeTimeout) clearTimeout(resizeTimeout);
+            if (resizeTimeout) clearTimeout(resizeTimeout)
             resizeTimeout = setTimeout(() => {
-                handleResize();
-                resizeTimeout = null;
-            }, 500); // 500ms delay to let Safari animation settle
+                handleResize()
+                resizeTimeout = null
+            }, 500) // 500ms delay to let Safari animation settle
         }
     } else {
-        handleResize(); // Desktop: immediate resize
+        handleResize() // Desktop: immediate resize
     }
 };
 
 onMounted(() => {
     init().then(() => {
         if (isLoaded.value) {
-            animationFrameId = requestAnimationFrame(animate);
+            animationFrameId = requestAnimationFrame(animate)
 
-            let scrollTimeline = null;
-            let scrollTrigger = null;
-            let setReverting = null;
+            let scrollTimeline = null
+            let scrollTrigger = null
+            let setReverting = null
 
             const setupPromise = projectCubesInstance!.getInitializedData().then(({ projectCubes }) => {
 
                 projectCubes.forEach((cube) => {
                     cube.userData.isActive = true;
-                });
+                })
 
-                const maxZ = FIRST_CUBE_Z - (props.projects.length - 1) * CUBE_SPACING;
+                const maxZ = FIRST_CUBE_Z - (props.projects.length - 1) * CUBE_SPACING
 
-                camera.position.set(0, 0, 5000);
-                camera.lookAt(0, 0, maxZ);
-                camera.updateProjectionMatrix();
-                updateCubeColorsInternal(camera);
-                composer.render();
+                camera.position.set(0, 0, 5000)
+                camera.lookAt(0, 0, maxZ)
+                camera.updateProjectionMatrix()
+                updateCubeColorsInternal(camera)
+                composer.render()
 
                 // Clean up existing ScrollTriggers
-                ScrollTrigger.getAll().forEach(trigger => trigger.kill());
+                ScrollTrigger.getAll().forEach(trigger => trigger.kill())
 
                 if (allCubes.length && updateCubeColorsInternal) {
                     const result = setupScrollAnimation(
@@ -366,11 +365,11 @@ onMounted(() => {
                         { scrub: screenStore.isMobile ? 0.5 : 1.0 },
                         settings,
                         stats
-                    );
-                    setReverting = result.setReverting;
-                    scrollTimeline = result.timeline;
-                    scrollTrigger = result.scrollTrigger;
-                    scrollTriggerActiveCheck = result.isScrollTriggerActive;
+                    )
+                    setReverting = result.setReverting
+                    scrollTimeline = result.timeline
+                    scrollTrigger = result.scrollTrigger
+                    scrollTriggerActiveCheck = result.isScrollTriggerActive
                 }
 
                 if (renderer && cleanupInteractivity === null) {
@@ -382,10 +381,10 @@ onMounted(() => {
                             if (setReverting) setReverting(isFocused);
                         },
                         scrollTriggerActiveCheck
-                    );
+                    )
                 }
-
-                window.scrollTo({ top: 0, behavior: 'auto' });
+                ready.value = true
+                window.scrollTo({ top: 0, behavior: 'auto' })
             });
 
 
@@ -417,15 +416,19 @@ onMounted(() => {
                         }
                     });
                 });
-            };
+            }
 
-            gsap.delayedCall(0.5, startIntro);
+
+
+            gsap.delayedCall(0.5, startIntro)
+
+
         }
     }).catch((error) => {
-        console.error('Initialization failed:', error);
+        console.error('Initialization failed:', error)
     });
-    window.addEventListener('resize', onResize);
-});
+    window.addEventListener('resize', onResize)
+})
 
 onUnmounted(() => {
     if (animationFrameId !== null) {
@@ -447,7 +450,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-    <section ref="wrapper" class="wrapper">
+    <section ref="wrapper" class="wrapper"  :class="{'ready':ready}">
         <Transition name="fade">
             <Preloader v-if="showPreloader" :progress="loadingProgress" />
         </Transition>
@@ -462,6 +465,10 @@ onUnmounted(() => {
     width: 100%;
     max-width: none;
     overflow-x: hidden;
+    padding-top: 300px;
+}
+.wrapper.ready{
+    padding-top:0;
 }
 
 /*.tunnel-wrapper {

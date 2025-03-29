@@ -36,7 +36,7 @@ export const sceneManager = (() => {
         renderer.setPixelRatio(window.devicePixelRatio);
         renderer.toneMapping = THREE.ACESFilmicToneMapping;
         renderer.toneMappingExposure = 1.0;
-        renderer.outputEncoding = THREE.sRGBEncoding;
+        renderer.outputEncoding = THREE.SRGBColorSpace;
         domContainer.appendChild(renderer.domElement);
         container = domContainer;
 
