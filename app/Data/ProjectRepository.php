@@ -492,10 +492,268 @@ class ProjectRepository
         ],
     ];
 
+    protected static array $archived = [
+        [
+            'classification' => Classification::ENTERTAINMENT,
+            'title' => 'HARRY POTTER: MAGIC AWAKENED',
+            'client' => 'Warner Bros. Games',
+        ],
+        [
+            'classification' => Classification::ENTERTAINMENT,
+            'title' => 'MORTAL KOMBAT 11',
+            'client' => 'Warner Bros. Games',
+        ],
+        [
+            'classification' => Classification::ENTERTAINMENT,
+            'title' => 'YOOM',
+            'client' => 'Yoom',
+        ],
+        [
+            'classification' => Classification::OTHER,
+            'title' => 'DOG CAN HUNT',
+            'client' => 'Dog Can Hunt',
+        ],
+        [
+            'classification' => Classification::ECOMMERCE,
+            'title' => 'CARDINAL HEALTH',
+            'client' => 'Invocure',
+        ],
+        [
+            'classification' => Classification::OTHER,
+            'title' => 'THE RESORT AT PAWS UP',
+            'client' => 'The Resort at Paws Up',
+        ],
+        [
+            'classification' => Classification::OTHER,
+            'title' => 'PUBLICSQUARE',
+            'client' => 'PublicSquare',
+        ],
+        [
+            'classification' => Classification::OTHER,
+            'title' => 'THE GREENO',
+            'client' => 'The Resort at Paws Up',
+        ],
+        [
+            'classification' => Classification::OTHER,
+            'title' => 'PANDEXIT WORLD',
+            'client' => 'Dog Can Hunt',
+        ],
+        [
+            'classification' => Classification::OTHER,
+            'title' => 'GLAMPING.COM',
+            'client' => 'Dog Can Hunt',
+        ],
+        [
+            'classification' => Classification::ECOMMERCE,
+            'title' => 'CHECKERED PAST',
+            'client' => 'Dog Can Hunt',
+        ],
+        [
+            'classification' => Classification::ENTERTAINMENT,
+            'title' => 'RAINBOW BILLY',
+            'client' => 'Skybound',
+        ],
+        [
+            'classification' => Classification::ENTERTAINMENT,
+            'title' => 'SPIRITFARER',
+            'client' => 'Skybound',
+        ],
+        [
+            'classification' => Classification::ENTERTAINMENT,
+            'title' => 'GANG BEASTS',
+            'client' => 'Skybound',
+        ],
+        [
+            'classification' => Classification::ENTERTAINMENT,
+            'title' => 'DISCO ELYSIUM',
+            'client' => 'Skybound',
+        ],
+        [
+            'classification' => Classification::ENTERTAINMENT,
+            'title' => 'ESCAPE ACADEMY',
+            'client' => 'Skybound',
+        ],
+        [
+            'classification' => Classification::ENTERTAINMENT,
+            'title' => 'WRESTLE QUEST',
+            'client' => 'Skybound',
+        ],
+        [
+            'classification' => Classification::ENTERTAINMENT,
+            'title' => 'GLITCH BUSTERS',
+            'client' => 'Skybound',
+        ],
+        [
+            'classification' => Classification::ENTERTAINMENT,
+            'title' => 'EASTWARD',
+            'client' => 'Skybound',
+        ],
+        [
+            'classification' => Classification::ENTERTAINMENT,
+            'title' => 'PSYCHONAUTS 2',
+            'client' => 'Skybound',
+        ],
+        [
+            'classification' => Classification::ENTERTAINMENT,
+            'title' => 'STRAY',
+            'client' => 'Skybound',
+        ],
+        [
+            'classification' => Classification::ENTERTAINMENT,
+            'title' => 'CUPBOARD',
+            'client' => 'Skybound',
+        ],
+        [
+            'classification' => Classification::ENTERTAINMENT,
+            'title' => 'MORTAL KOMBAT 30TH',
+            'client' => 'Warner Bros. Games',
+        ],
+        [
+            'classification' => Classification::ENTERTAINMENT,
+            'title' => 'MORTAL KOMBAT ONSLAUGHT',
+            'client' => 'Warner Bros. Games',
+        ],
+        [
+            'classification' => Classification::ENTERTAINMENT,
+            'title' => 'RUMBLEVERSE',
+            'client' => 'Epic Games',
+        ],
+        [
+            'classification' => Classification::ENTERTAINMENT,
+            'title' => 'PLAYER FIRST GAMES',
+            'client' => 'Player First Games',
+        ],
+        [
+            'classification' => Classification::ENTERTAINMENT,
+            'title' => 'PLATFORM LA',
+            'client' => 'The Platform Group',
+        ],
+        [
+            'classification' => Classification::ENTERTAINMENT,
+            'title' => 'THE CALLISTO PROTOCOL',
+            'client' => 'Krafton',
+        ],
+        [
+            'classification' => Classification::ENTERTAINMENT,
+            'title' => 'TOM & JERRY',
+            'client' => 'Warner Bros. Games',
+        ],
+        [
+            'classification' => Classification::ENTERTAINMENT,
+            'title' => 'WB GAMES',
+            'client' => 'Warner Bros. Games',
+        ],
+        [
+            'classification' => Classification::ENTERTAINMENT,
+            'title' => 'WB GAMES',
+            'client' => 'Warner Bros. Games',
+        ],
+        [
+            'classification' => Classification::OTHER,
+            'title' => 'BUBLUP',
+            'client' => 'Bublup',
+        ],
+        [
+            'classification' => Classification::ENTERTAINMENT,
+            'title' => 'WB GAMES',
+            'client' => 'Warner Bros. Games',
+        ],
+        [
+            'classification' => Classification::ENTERTAINMENT,
+            'title' => 'FINAL FANTASY XIV',
+            'client' => 'Square Enix',
+        ],
+        [
+            'classification' => Classification::ENTERTAINMENT,
+            'title' => 'FINAL FANTASY XV',
+            'client' => 'Square Enix',
+        ],
+        [
+            'classification' => Classification::ENTERTAINMENT,
+            'title' => 'RIME',
+            'client' => 'Grey Box',
+        ],
+        [
+            'classification' => Classification::ENTERTAINMENT,
+            'title' => 'SIX FOOT',
+            'client' => 'Six Foot',
+        ],
+        [
+            'classification' => Classification::ENTERTAINMENT,
+            'title' => 'DREADNAUGHT',
+            'client' => 'Grey Box',
+        ],
+        [
+            'classification' => Classification::ENTERTAINMENT,
+            'title' => 'GREYBOX',
+            'client' => 'Grey Box',
+        ],
+        [
+            'classification' => Classification::ENTERTAINMENT,
+            'title' => 'LEGO: THE INCREDIBLES',
+            'client' => 'Warner Bros. Games',
+        ],
+        [
+            'classification' => Classification::ENTERTAINMENT,
+            'title' => 'LEGO: DC SUPER-VILLIANS',
+            'client' => 'Warner Bros. Games',
+        ],
+        [
+            'classification' => Classification::ENTERTAINMENT,
+            'title' => 'LEGO: THE LEGO MOVIE 2',
+            'client' => 'Warner Bros. Games',
+        ],
+        [
+            'classification' => Classification::ENTERTAINMENT,
+            'title' => 'SCRIBBLENAUTS',
+            'client' => 'Warner Bros. Games',
+        ],
+        [
+            'classification' => Classification::ENTERTAINMENT,
+            'title' => 'NCSOFT',
+            'client' => 'Ncsoft',
+        ],
+        [
+            'classification' => Classification::ENTERTAINMENT,
+            'title' => 'STORYSCAPE',
+            'client' => 'FoxNext',
+        ],
+        [
+            'classification' => Classification::ENTERTAINMENT,
+            'title' => 'FOXNEXT',
+            'client' => 'FoxNext',
+        ],
+        [
+            'classification' => Classification::ENTERTAINMENT,
+            'title' => 'PORTKEY GAMES',
+            'client' => 'Portkey Games',
+        ],
+        [
+            'classification' => Classification::ENTERTAINMENT,
+            'title' => 'POOL BLITZ',
+            'client' => 'Warner Bros. Games',
+        ],
+        /*[
+            'classification' => Classification::OTHER,
+            'title' => 'BELKIN',
+            'client' => 'Belkin',
+        ],*/
+        [
+            'classification' => Classification::ENTERTAINMENT,
+            'title' => 'LIFE IS STRANGE',
+            'client' => 'Square Enix',
+        ],
+        [
+            'classification' => Classification::ECOMMERCE,
+            'title' => 'THE LIST',
+            'client' => 'The Resort at Paws Up',
+        ],
+    ];
+
     /**
      * Get all projects as a DataCollection.
      */
-    public static function all()
+    public static function allProjects()
     {
         $projects = collect(self::$projects)->map(function (array $project) {
 
@@ -527,11 +785,44 @@ class ProjectRepository
         return $projects;
     }
 
+    public static function allArchived()
+    {
+        $projects = collect(self::$archived)->map(function (array $project) {
+
+            // Normalize contributions to an array
+            /*$contributions = isset($project['contributions']) && is_array($project['contributions'])
+                ? $project['contributions']
+                : [];
+            $segments = isset($project['segments']) && is_array($project['segments'])
+                ? $project['segments']
+                : [];*/
+
+            return ProjectData::from([
+                'slug' => '',
+                'classification' => $project['classification'],
+                'contributions' => [],
+                'segments' => [],
+                'title' => $project['title'],
+                'client' => $project['client'],
+                'description' => '',
+                'size' => 0,
+                'keyart' => null,
+                'keyartMobile' => null,
+                'keyartLocation' => null,
+                'hasLogo' => false,
+                'hasBg' => false,
+            ]);
+        });
+
+        return $projects;
+    }
+
+
     /**
      * Find a project by slug.
      */
-    public static function find(string $slug): ?ProjectData
+    public static function findProject(string $slug): ?ProjectData
     {
-        return self::all()->first(fn (ProjectData $project) => $project->slug === $slug);
+        return self::allProjects()->first(fn (ProjectData $project) => $project->slug === $slug);
     }
 }

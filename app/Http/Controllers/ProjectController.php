@@ -12,8 +12,8 @@ class ProjectController extends Controller
 {
     public function show(string $project){
 
-        $project = ProjectRepository::find($project);
-        $projects = ProjectRepository::all();
+        $project = ProjectRepository::findProject($project);
+        $projects = ProjectRepository::allProjects();
 
         if (!$project) {
             abort(404, 'Project not found');

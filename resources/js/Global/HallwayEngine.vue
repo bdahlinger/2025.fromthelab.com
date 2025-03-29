@@ -128,7 +128,8 @@ const init = async () => {
     scene.background = new THREE.Color(0x000000);
     scene.fog = new THREE.Fog(0x000000, 700, sceneDistance);
 
-    camera = new THREE.PerspectiveCamera(screenStore.isMobile ? 95 : 75, window.innerWidth / window.innerHeight, 1, sceneDistance + 6000);
+
+    camera = new THREE.PerspectiveCamera(screenStore.isMobile ? screenStore.orientation === 'landscape' ? 90 : 120 : 75, window.innerWidth / window.innerHeight, 1, sceneDistance + 6000);
     camera.position.set(0, 0, 0); // Initial, overridden later
     camera.lookAt(0, 0, 1000);
 

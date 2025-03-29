@@ -105,11 +105,11 @@ export function useProjectCubes(
 
         const addPortal = () => {
 
-            const mobileScaleFactor = screenStore.isMobile ? 1.5 : 1.0;
+            const mobileScaleFactor = screenStore.isMobile ? 2.0 : 1.0;
 
             const innerRadius = 25 * mobileScaleFactor;
             const outerRadius = 40 * mobileScaleFactor;
-            const portalGeometry = new THREE.CircleGeometry(outerRadius, 24);
+            const portalGeometry = new THREE.CircleGeometry(outerRadius, 75);
             const portalEdges = new THREE.EdgesGeometry(portalGeometry);
             const portalMaterial = new THREE.LineBasicMaterial({
                 color: new THREE.Color(CUBE_COLOR),
@@ -127,7 +127,7 @@ export function useProjectCubes(
             const hitboxGeometry = new THREE.PlaneGeometry(hitboxSize, hitboxSize);
             const hitboxMaterial = new THREE.MeshBasicMaterial({
                 visible: false,
-                side: THREE.DoubleSide ,
+                side: THREE.DoubleSide,
             });
             const hitbox = new THREE.Mesh(hitboxGeometry, hitboxMaterial);
             hitbox.userData.isPortalHitbox = true;
@@ -163,9 +163,9 @@ export function useProjectCubes(
             const initialRingSpacing = 2 * mobileScaleFactor;
             const numRings = 25;
             for (let i = 1; i < numRings; i++) {
-                const newRingGeometry = new THREE.CircleGeometry(outerRadius, 24);
+                const newRingGeometry = new THREE.CircleGeometry(outerRadius, 75);
                 const newRingEdges = new THREE.EdgesGeometry(newRingGeometry);
-                const maxOpacity = THREE.MathUtils.lerp(1.0, 0.1, i / (numRings - 1));
+                const maxOpacity = THREE.MathUtils.lerp(0.125, 0.1, i / (numRings - 1));
                 const newRingMaterial = new THREE.LineBasicMaterial({
                     color: new THREE.Color(CUBE_COLOR),
                     transparent: true,
@@ -179,57 +179,86 @@ export function useProjectCubes(
                 ringPortals.push(newRing);
                 portal.add(newRing);
             }
-            portal.userData.maxOpacity = 1.0;
+            portal.userData.maxOpacity = 0.125;
 
-            let textHitbox: THREE.Mesh | null = null
+            let textCTAHitbox: THREE.Mesh | null = null
 
             if (font.value) {
-                const textSize = 3 * mobileScaleFactor;
-                const textGeometry = new TextGeometry(PORTAL_TEXT, {
+                const textCTASize = 3 * mobileScaleFactor;
+                const textCTAGeometry = new TextGeometry(PORTAL_TEXT, {
                     font: font.value,
-                    size: textSize,
+                    size: textCTASize,
                     depth: 0,
                     curveSegments: 12,
                     bevelEnabled: false
                 });
-                textGeometry.computeBoundingBox();
-                textGeometry.center(); // Center horizontally
-                const textMaterial = new THREE.MeshBasicMaterial({
+                textCTAGeometry.computeBoundingBox();
+                textCTAGeometry.center(); // Center horizontally
+                const textCTAMaterial = new THREE.MeshBasicMaterial({
                     color: 0xffffff,
                     transparent: true,
                     opacity: 0.0,
                     side: THREE.DoubleSide
                 });
-                const textMesh = new THREE.Mesh(textGeometry, textMaterial);
-                textMesh.visible = false;
-                textMesh.userData.isVisible = false;
-                textMesh.userData.isExploreText = true;
-                textMesh.userData.skipTextMeshes = true;
-                const textOffsetY = 45 * mobileScaleFactor; // Scale offset
-                textMesh.position.set(0, textOffsetY, 0);
-                textMesh.name = 'textMesh';
-                portal.add(textMesh);
-                portal.userData.exploreText = textMesh;
+                const textCTAMesh = new THREE.Mesh(textCTAGeometry, textCTAMaterial);
+                textCTAMesh.visible = false;
+                textCTAMesh.userData.isVisible = false;
+                textCTAMesh.userData.isExploreText = true;
+                textCTAMesh.userData.skipTextMeshes = true;
+                const textCTAOffsetY = -45 * mobileScaleFactor; // Scale offset
+                textCTAMesh.position.set(0, textCTAOffsetY, 0);
+                textCTAMesh.name = 'textMesh';
+                portal.add(textCTAMesh);
+                portal.userData.exploreText = textCTAMesh;
 
                 // Text hitbox
-                const textBoundingBox = textGeometry.boundingBox;
-                const textWidth = (textBoundingBox.max.x - textBoundingBox.min.x + 10) * mobileScaleFactor;
-                const textHeight = (textBoundingBox.max.y - textBoundingBox.min.y + 10) * mobileScaleFactor;
-                const textHitboxGeometry = new THREE.PlaneGeometry(textWidth, textHeight);
-                const textHitboxMaterial = new THREE.MeshBasicMaterial({
+                const textCTABoundingBox = textCTAGeometry.boundingBox;
+                const textCTAWidth = (textCTABoundingBox.max.x - textCTABoundingBox.min.x + 10) * mobileScaleFactor;
+                const textCTAHeight = (textCTABoundingBox.max.y - textCTABoundingBox.min.y + 10) * mobileScaleFactor;
+                const textCTAHitboxGeometry = new THREE.PlaneGeometry(textCTAWidth, textCTAHeight);
+                const textCTAHitboxMaterial = new THREE.MeshBasicMaterial({
                     transparent: true,
                     opacity: 0.0,
                     side: THREE.DoubleSide,
                     visible: false
                 });
-                textHitbox = new THREE.Mesh(textHitboxGeometry, textHitboxMaterial);
-                textHitbox.position.set(0, textOffsetY, 0);
-                textHitbox.userData.isExploreTextHitbox = true;
-                textHitbox.userData.portal = portal;
-                textHitbox.geometry.computeBoundingSphere();
-                textHitbox.name = 'textHitbox';
-                portal.add(textHitbox);
-                portal.userData.exploreTextHitbox = textHitbox;
+                textCTAHitbox = new THREE.Mesh(textCTAHitboxGeometry, textCTAHitboxMaterial);
+                textCTAHitbox.position.set(0, textCTAOffsetY, 0);
+                textCTAHitbox.userData.isExploreTextHitbox = true;
+                textCTAHitbox.userData.portal = portal;
+                textCTAHitbox.geometry.computeBoundingSphere();
+                textCTAHitbox.name = 'textHitbox';
+                portal.add(textCTAHitbox);
+                portal.userData.exploreTextHitbox = textCTAHitbox;
+
+                // Portal Title Text
+                const textTitleSize = 5;
+                const textTitleGeometry = new TextGeometry(project.title, {
+                    font: font.value,
+                    size: textTitleSize,
+                    depth: 0,
+                    curveSegments: 12,
+                    bevelEnabled: false
+                });
+                textTitleGeometry.computeBoundingBox();
+                textTitleGeometry.center(); // Center horizontally
+                const textTitleMaterial = new THREE.MeshBasicMaterial({
+                    color: 0xffffff,
+                    transparent: true,
+                    opacity: 0.0,
+                    side: THREE.DoubleSide
+                });
+                const textTitleMesh = new THREE.Mesh(textTitleGeometry, textTitleMaterial);
+                textTitleMesh.visible = false;
+                textTitleMesh.userData.isVisible = false;
+                textTitleMesh.userData.isTitleText = true;
+                textTitleMesh.userData.skipTextMeshes = true;
+                const textTitleOffsetY = screenStore.isMobile ? screenStore.orientation === 'portrait' ? 100 : 106 : 60; // Scale offset
+                textTitleMesh.position.set(0, textTitleOffsetY, 0);
+                portal.add(textTitleMesh);
+                portal.userData.titleText = textTitleMesh;
+
+
             } else {
                 console.warn("Font not loaded yet; 'EXPLORE' text skipped for this portal.");
             }
@@ -782,6 +811,10 @@ export function useProjectCubes(
                     child.children.forEach((grandchild) => {
                         if (grandchild instanceof THREE.Mesh && grandchild.userData.isExploreText) {
                             const material = grandchild.material as THREE.MeshBasicMaterial
+                            if (grandchild === child.userData.titleText && isInPortalFocus) {
+                                // Skip automatic opacity updates for title text during portal mode (handled by GSAP)
+                                return
+                            }
                             if (cubeDistance <= CUBE_PROXIMITY_THRESHOLD) {
                                 const progress = 1 - (cubeDistance / CUBE_PROXIMITY_THRESHOLD)
                                 material.opacity = Math.min(1.0, progress * 2)
@@ -831,19 +864,6 @@ export function useProjectCubes(
                             child.visible = false
                         }
                     }
-                } else if (child instanceof THREE.Group && child.userData.closeButton) {
-                    const distance = Math.abs(cameraZ - child.position.z)
-                    child.children.forEach((grandchild) => {
-                        if (grandchild instanceof THREE.Mesh && !grandchild.userData.isCloseHitbox) {
-                            const material = grandchild.material as THREE.MeshBasicMaterial
-                            if (distance <= CUBE_PROXIMITY_THRESHOLD) {
-                                const progress = 1 - (distance / CUBE_PROXIMITY_THRESHOLD)
-                                material.opacity = Math.min(1, progress * 2)
-                            } else {
-                                material.opacity = 0
-                            }
-                        }
-                    })
                 }
             })
         })
@@ -938,7 +958,7 @@ export function useProjectCubes(
         })
     }
 
-    const startMarqueeOpacity = (portal: THREE.LineSegments) => {
+    const startRingAnimation = (portal: THREE.LineSegments) => {
         const rings = [portal, ...portal.children.filter(child => child instanceof THREE.LineSegments && child.userData.isPortal)] as THREE.LineSegments[]
         const ringCount = rings.length
         const cycleDuration = 2 // Duration for one full fade cycle (down and back up) per ring
@@ -970,15 +990,30 @@ export function useProjectCubes(
         })
     }
 
-    const stopMarqueeOpacity = (portal: THREE.LineSegments) => {
+    const stopRingAnimation = (portal: THREE.LineSegments) => {
         const rings = [portal, ...portal.children.filter(child => child instanceof THREE.LineSegments && child.userData.isPortal)] as THREE.LineSegments[]
+
+        // Kill the marquee timeline
         rings.forEach((ring) => {
             if (ring.userData.marqueeTimeline) {
                 ring.userData.marqueeTimeline.kill()
                 delete ring.userData.marqueeTimeline
-                const material = ring.material as THREE.LineBasicMaterial
-                material.opacity = ring.userData.maxOpacity // Reset to full opacity
             }
+        })
+
+        // Kill the expansion timeline if it exists
+        if (portal.userData.ringExpandTimeline) {
+            portal.userData.ringExpandTimeline.kill()
+            delete portal.userData.ringExpandTimeline
+        }
+
+        // Immediately reset all rings to their initial state
+        rings.forEach((ring, index) => {
+            const material = ring.material as THREE.LineBasicMaterial
+            gsap.killTweensOf(ring.position) // Kill any position tweens
+            gsap.killTweensOf(material) // Kill any material tweens
+            ring.position.z = -index * 2 // Reset to initial spacing (contracted state)
+            material.opacity = 0 // Reset opacity to 0
         })
     }
 
@@ -1080,10 +1115,6 @@ export function useProjectCubes(
         }
 
         const handleExitPortal = () => {
-            /*if (isCameraAnimating || (isScrollTriggerActive && isScrollTriggerActive())) {
-                return; // Prevent exit if scrubbing or animating
-            }*/
-
             const exitingPortal = activePortal
             const targetLookAt = originalCameraTarget ? originalCameraTarget.clone() : new THREE.Vector3(0, 0, MAX_Z)
             const originalZ = originalCameraPosition?.z ?? camera.position.z
@@ -1093,11 +1124,40 @@ export function useProjectCubes(
             isCameraAnimating = true
 
             if (exitingPortal) {
-                stopMarqueeOpacity(exitingPortal)
-            }
+                stopRingAnimation(exitingPortal)
 
-            const startLookAt = camera.userData.lockedLookAt ? camera.userData.lockedLookAt.clone() : camera.getWorldDirection(new THREE.Vector3()).multiplyScalar(1000).add(camera.position)
-            const progressObj = { progress: 0 }
+                // Fade out the titleTextMesh
+                const titleMesh = exitingPortal.userData.titleText as THREE.Mesh
+                if (titleMesh) {
+                    const titleMaterial = titleMesh.material as THREE.MeshBasicMaterial
+                    gsap.to(titleMaterial, {
+                        opacity: 0.0,
+                        duration: 0.5,
+                        ease: 'power2.out',
+                        onComplete: () => {
+                            titleMesh.visible = false
+                        }
+                    })
+                }
+
+                // Fade out the close button group
+                if (exitingPortal.userData.closeButton) {
+                    const closeGroup = exitingPortal.userData.closeButton as THREE.Group
+                    const materials = closeGroup.children
+                        .filter(child => child instanceof THREE.Mesh && !child.userData.isCloseHitbox)
+                        .map(child => (child as THREE.Mesh).material)
+                    if (materials.length > 0) {
+                        gsap.to(materials, {
+                            opacity: 0.0,
+                            duration: 0.5,
+                            ease: 'power2.out',
+                            onComplete: () => {
+                                closeGroup.visible = false
+                            }
+                        })
+                    }
+                }
+            }
 
             gsap.to(camera.position, {
                 x: originalCameraPosition?.x ?? camera.position.x,
@@ -1108,64 +1168,25 @@ export function useProjectCubes(
                 overwrite: 'auto',
                 onStart: () => {
                     const titleText = textMeshes[cubeIndex]
-                    // Fade in the specific title text
                     if (cubeIndex !== -1 && titleText) {
-                        const titleText = textMeshes[cubeIndex]
-                        if (titleText) {
-                            const material = titleText.material as THREE.MeshBasicMaterial
-                            const plane = titleText.userData.backgroundPlane as THREE.Mesh
-                            const zDistance = Math.abs(camera.position.z - titleText.position.z + 120)
-                            const targetOpacity = zDistance <= CUBE_PROXIMITY_THRESHOLD ? Math.min(1.0, (1 - zDistance / CUBE_PROXIMITY_THRESHOLD) * 2) : 0
-                            gsap.to(material, {
-                                opacity: targetOpacity,
+                        const material = titleText.material as THREE.MeshBasicMaterial
+                        const plane = titleText.userData.backgroundPlane as THREE.Mesh
+                        const zDistance = Math.abs(camera.position.z - titleText.position.z + 120)
+                        const targetOpacity = zDistance <= CUBE_PROXIMITY_THRESHOLD ? Math.min(1.0, (1 - zDistance / CUBE_PROXIMITY_THRESHOLD) * 2) : 0
+                        gsap.to(material, {
+                            opacity: targetOpacity,
+                            duration: 0.5,
+                            ease: 'power2.in'
+                        })
+                        if (plane) {
+                            gsap.to(plane.material, {
+                                opacity: targetOpacity * 0.8,
                                 duration: 0.5,
                                 ease: 'power2.in'
                             })
-                            if (plane) {
-                                gsap.to(plane.material, {
-                                    opacity: targetOpacity * 0.8,
-                                    duration: 0.5,
-                                    ease: 'power2.in'
-                                })
-                            }
                         }
                     }
-                    if (cube?.userData.closeButton) {
-
-                        const currentCloseGroupPos = cube.userData.closeButton.position
-
-                        gsap.to(cube.userData.closeButton.rotation, {
-                            z: 0,
-                            duration: 0.3,
-                            ease: 'power2.inOut',
-                        });
-                        gsap.to(cube.userData.closeButton.position, {
-                            x: currentCloseGroupPos.x+2,
-                            duration: 0.3,
-                            ease: 'power2.inOut',
-                        });
-
-                        const materials = cube.userData.closeButton.children
-                            .filter(child => child instanceof THREE.Mesh)
-                            .map(child => (child as THREE.Mesh).material)
-                        gsap.to(materials, {
-                            opacity: 0,
-                            duration: 0.5,
-                            onUpdate: () => {
-
-                            },
-                            onComplete: () => {
-                                cube.userData.closeButton.updateMatrixWorld(true)
-                                cube.userData.closeButton.visible = false
-                                cube.userData.lockedPosition = null
-                                closeGroupAnimating = false
-                            }
-                        })
-
-                        if (exitingPortal) {
-                            animateRings(exitingPortal, false)
-                        }
-                    }
+                    // Remove the existing close button fade-out and position/rotation animations from onStart
                 },
                 onUpdate: () => {
                     const progress = progressObj.progress
@@ -1181,23 +1202,14 @@ export function useProjectCubes(
                     activePortal = null
                     document.body.classList.remove('no-scrollbar')
                     if (screenStore.isMobile) {
-                        document.body.style.overflow = '';
-                        //document.body.style.position = '';
-                        //document.body.style.top = '';
-                       // window.scrollTo(0, lockedScrollY!);
+                        document.body.style.overflow = ''
                     }
                     if (onPortalFocusChange) onPortalFocusChange(false)
-                    if (exitingPortal) {
-                        stopMarqueeOpacity(exitingPortal)
-                    }
-
                     lockedScrollY = null
                     originalCameraPosition = null
                     originalCameraTarget = null
                     camera.userData.lockedLookAt = null
                     isCameraAnimating = false
-
-                    // Restart clickHere particles
                     projectCubes.forEach(cube => {
                         if (Math.abs(camera.position.z - cube.position.z + 90) <= CUBE_PROXIMITY_THRESHOLD) {
                             lastEmissionTimes.set(cube, 0)
@@ -1205,6 +1217,8 @@ export function useProjectCubes(
                     })
                 }
             })
+            const startLookAt = camera.userData.lockedLookAt ? camera.userData.lockedLookAt.clone() : camera.getWorldDirection(new THREE.Vector3()).multiplyScalar(1000).add(camera.position)
+            const progressObj = { progress: 0 }
             gsap.to(progressObj, {
                 progress: 1,
                 duration: 2,
@@ -1217,6 +1231,14 @@ export function useProjectCubes(
             const rings = [portal, ...portal.children.filter(child => child instanceof THREE.LineSegments && child.userData.isPortal)] as THREE.LineSegments[]
             const targetSpacing = expand ? 25 : 2
 
+            const tl = gsap.timeline({
+                onComplete: () => {
+                    if (expand && rings[0] === portal) { // Only trigger for the main ring
+                        startRingAnimation(portal)
+                    }
+                }
+            })
+
             rings.forEach((ring, index) => {
                 let targetZ = -index * targetSpacing
                 if (portal.position.y > 0 && portal.rotation.x === -Math.PI / 2) {
@@ -1226,24 +1248,21 @@ export function useProjectCubes(
                 }
                 const targetOpacity = expand ? ring.userData.maxOpacity : 0
 
-                gsap.to(ring.position, {
+                tl.to(ring.position, {
                     z: targetZ,
                     duration: 1,
                     ease: 'power3.out',
-                    delay: 0.5,
-                    onComplete: () => {
-                        if (expand && index === 0) { // Only trigger once, after the main ring's animation
-                            startMarqueeOpacity(portal)
-                        }
-                    }
-                })
-                gsap.to(ring.material, {
+                    delay: 0.5
+                }, 0) // Parallel execution at t=0
+                tl.to(ring.material, {
                     opacity: targetOpacity,
                     duration: 1,
                     ease: 'power3.out',
-                    delay: 0.5,
-                })
+                    delay: 0.5
+                }, 0)
             })
+
+            portal.userData.ringExpandTimeline = tl
         }
 
         const onMouseMove = (event: MouseEvent) => {
@@ -1520,7 +1539,6 @@ export function useProjectCubes(
                         if (screenStore.isMobile) {
                             document.body.style.overflow = 'hidden'
                         }
-                        animateRings(clickedPortal, true)
                         cube.userData.lockedPosition = cube.position.clone()
                         disposeParticles(cube)
 
@@ -1541,27 +1559,42 @@ export function useProjectCubes(
                                 })
                             }
                         }
-                    },
-                    onComplete: () => {
+
+                        // Fade in the titleTextMesh
+                        const titleMesh = clickedPortal.userData.titleText as THREE.Mesh
+                        if (titleMesh) {
+                            titleMesh.visible = true
+                            const titleMaterial = titleMesh.material as THREE.MeshBasicMaterial
+                            gsap.to(titleMaterial, {
+                                opacity: 1.0,
+                                duration: 1.0,
+                                ease: 'power2.in',
+                                delay: 0.5
+                            })
+                        }
+
+                        // Fade in the close button group
                         if (clickedPortal.userData.closeButton) {
-                            clickedPortal.userData.closeButton.visible = true
-                            cube.updateMatrixWorld(true)
-                            const materials = clickedPortal.userData.closeButton.children
+                            const closeGroup = clickedPortal.userData.closeButton as THREE.Group
+                            closeGroup.visible = true
+                            const materials = closeGroup.children
                                 .filter(child => child instanceof THREE.Mesh && !child.userData.isCloseHitbox)
                                 .map(child => (child as THREE.Mesh).material)
-
                             if (materials.length > 0) {
                                 gsap.to(materials, {
-                                    opacity: 1,
+                                    opacity: 1.0,
                                     duration: 0.5,
-                                    onComplete: () => {
-                                        clickedPortal.userData.closeButton.updateMatrixWorld(true)
-                                    }
+                                    ease: 'power2.in',
+                                    delay: 0.5 // Match title text timing
                                 })
                             }
-                        } else {
-                            console.warn('Close button not found in portal.userData')
                         }
+                    },
+                    onComplete: () => {
+                        animateRings(clickedPortal, true)
+                        isEnteringPortal = false
+                        isCameraAnimating = false
+                        camera.userData.lockedLookAt = portalWorldPosition.clone()
                     }
                 })
                 gsap.to({}, {
@@ -1579,9 +1612,6 @@ export function useProjectCubes(
                     onComplete: () => {
                         camera.lookAt(portalWorldPosition.x, portalWorldPosition.y, portalWorldPosition.z)
                         camera.updateMatrixWorld(true)
-                        isEnteringPortal = false
-                        isCameraAnimating = false
-                        camera.userData.lockedLookAt = portalWorldPosition.clone()
                     }
                 })
             }
@@ -1618,7 +1648,7 @@ export function useProjectCubes(
             window.removeEventListener('wheel', handleScroll)
             window.removeEventListener('scroll', handleScroll)
             if (activePortal) {
-                stopMarqueeOpacity(activePortal);
+                stopRingAnimation(activePortal);
             }
             if (screenStore.isMobile) {
                 document.body.style.overflow = '';

@@ -66,10 +66,14 @@ let hoverAnimation: gsap.core.Tween | null = null;
 
 const getCubeColor = (classification: App.Enums.Classification): number => {
     switch (classification) {
-        case App.Enums.Classification.ENTERTAINMENT: return 0xff5555;
-        case App.Enums.Classification.ECOMMERCE: return 0x55ff55;
-        case App.Enums.Classification.OTHER: return 0x5555ff;
-        default: return 0xffffff;
+        case App.Enums.Classification.ENTERTAINMENT:
+            return 0xff5555;
+        case App.Enums.Classification.ECOMMERCE:
+            return 0x55ff55;
+        case App.Enums.Classification.OTHER:
+            return 0x5555ff;
+        default:
+            return 0xffffff;
     }
 };
 
