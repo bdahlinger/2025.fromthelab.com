@@ -128,7 +128,6 @@ const init = async () => {
     scene.background = new THREE.Color(0x000000);
     scene.fog = new THREE.Fog(0x000000, 700, sceneDistance);
 
-
     camera = new THREE.PerspectiveCamera(screenStore.isMobile ? screenStore.orientation === 'landscape' ? 90 : 120 : 75, window.innerWidth / window.innerHeight, 1, sceneDistance + 6000);
     camera.position.set(0, 0, 0); // Initial, overridden later
     camera.lookAt(0, 0, 1000);
@@ -221,11 +220,6 @@ const init = async () => {
 
     projectCubesInstance = useProjectCubes(scene, { CUBE_SIZE, CUBE_SPACING, FIRST_CUBE_Z }, props.projects, props.projectGridFile, props.projectGridFile2, settings, textureCache, fontLoader.font);
 
-    /*console.log('Before projectCubesInstance creation:', {
-        fontValue: !!fontLoader.font.value,
-        timestamp: Date.now(),
-    });*/
-
     try {
         await projectCubesInstance.getInitializedData().then(({ maxZ, updateCubeColors, projectCubes }) => {
 
@@ -234,11 +228,6 @@ const init = async () => {
             if (projectMaxZ === undefined || isNaN(projectMaxZ)) {
                 throw new Error('Invalid maxZ from projectCubesInstance');
             }
-
-            /*console.log('Before introCubes creation:', {
-                fontValue: !!fontLoader.font.value,
-                timestamp: Date.now(),
-            });*/
 
             const { introCubes } = useIntroCubes(scene, fontLoader.font, { CUBE_SIZE, FIRST_CUBE_Z }, settings);
             allCubes = [...introCubes, ...projectCubes];

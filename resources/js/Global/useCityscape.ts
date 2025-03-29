@@ -17,7 +17,7 @@ export function useCityscape(
     const BUILDING_COUNT_X = screenStore.isMobile ? 24 : 32;
     const CITY_POSITION_Y = -600;
     const CITY_POSITION_Z = -500;
-    const CITY_BUFFER = 1000;
+    const CITY_BUFFER = 500;
     const FADE_COLUMNS = screenStore.isMobile ? 5 : 10;
     const MIN_OPACITY = 0.05;
     const MAX_OPACITY = 1.0;

@@ -28,6 +28,12 @@ export function useProjectCubes(
     const MAX_Z = FIRST_CUBE_Z - (projects.length + 1) * CUBE_SPACING
     const CUBE_COLOR = 0x00ffff
     const CUBE_COLOR_ACTIVE = 0xff00ff
+    const CUBE_COLOR_R = (CUBE_COLOR >> 16 & 255) / 255;
+    const CUBE_COLOR_G = (CUBE_COLOR >> 8 & 255) / 255;
+    const CUBE_COLOR_B = (CUBE_COLOR & 255) / 255;
+    const CUBE_COLOR_ACTIVE_R = (CUBE_COLOR_ACTIVE >> 16 & 255) / 255;
+    const CUBE_COLOR_ACTIVE_G = (CUBE_COLOR_ACTIVE >> 8 & 255) / 255;
+    const CUBE_COLOR_ACTIVE_B = (CUBE_COLOR_ACTIVE & 255) / 255;
     const CUBE_ROTATION_INCREMENT = THREE.MathUtils.degToRad(15)
     const CUBE_PROXIMITY_THRESHOLD = 1000
     const ACTIVE_THRESHOLD = 0.5
@@ -46,12 +52,11 @@ export function useProjectCubes(
     const CLICK_HERE_CONE_HEIGHT = tunnelStore.isMobile ? 2.0 : 3.5
     const CLICK_HERE_FADE_LENGTH = 1.0
 
+
     let projectCubes: THREE.Group[] = []
     projectCubes.length = 0
-    let fontLoader: FontLoader | null = null
-    let loadedFont: THREE.Font | null = null
+    let textMeshes: THREE.Mesh[] = []
     let isInitialized = false
-    let sceneInitialized = false
     let raycaster = new THREE.Raycaster()
     let mouse = new THREE.Vector2()
     let hoveredPortal: THREE.LineSegments | null = null
@@ -606,6 +611,11 @@ export function useProjectCubes(
                 createTextObject(project.title, 0, project.size - 15, FIRST_CUBE_Z + 90 - (index + 1) * CUBE_SPACING, project.size);
             }
         });
+        scene.traverse(o => {
+            if (o instanceof THREE.Mesh && o.geometry?.type === 'TextGeometry' && !o.userData.skipTextMeshes) {
+                textMeshes.push(o);
+            }
+        });
     };
 
     const getInitializedData = (): Promise<{
@@ -753,13 +763,6 @@ export function useProjectCubes(
         frustum.setFromProjectionMatrix(camera.projectionMatrix.clone().multiply(camera.matrixWorldInverse))
 
         const cameraZ = camera.position.z
-        let textMeshes: THREE.Mesh[] = []
-
-        scene.traverse(o => o instanceof THREE.Mesh && o.geometry?.type === 'TextGeometry' && !o.userData.skipTextMeshes && textMeshes.push(o))
-
-        if (!sceneInitialized) {
-            sceneInitialized = true
-        }
 
         projectCubes.forEach((cube, index) => {
             const sphere = cube.boundingSphere
@@ -787,21 +790,9 @@ export function useProjectCubes(
                 if (child instanceof THREE.LineSegments && !child.userData.isPortal && !child.userData.isPortalHitbox) {
                     const material = child.material as THREE.LineBasicMaterial
                     if (cubeDistance <= CUBE_PROXIMITY_THRESHOLD) {
-                        const r = THREE.MathUtils.lerp(
-                            (CUBE_COLOR >> 16 & 255) / 255,
-                            (CUBE_COLOR_ACTIVE >> 16 & 255) / 255,
-                            lineProgress
-                        )
-                        const g = THREE.MathUtils.lerp(
-                            (CUBE_COLOR >> 8 & 255) / 255,
-                            (CUBE_COLOR_ACTIVE >> 8 & 255) / 255,
-                            lineProgress
-                        )
-                        const b = THREE.MathUtils.lerp(
-                            (CUBE_COLOR & 255) / 255,
-                            (CUBE_COLOR_ACTIVE & 255) / 255,
-                            lineProgress
-                        )
+                        const r = THREE.MathUtils.lerp(CUBE_COLOR_R, CUBE_COLOR_ACTIVE_R, lineProgress)
+                        const g = THREE.MathUtils.lerp(CUBE_COLOR_G, CUBE_COLOR_ACTIVE_G, lineProgress)
+                        const b = THREE.MathUtils.lerp(CUBE_COLOR_B, CUBE_COLOR_ACTIVE_B, lineProgress)
                         material.color.set(r, g, b)
                         material.opacity = Math.min(1, lineProgress * 2)
                     } else {
@@ -826,32 +817,32 @@ export function useProjectCubes(
                         }
                     })
 
-                    if (sceneInitialized) {
-                        const pulsesGroup = child.userData.pulsesGroup as THREE.Group;
-                        if (lineProgress > 0.1) {
-                            if (pulsesGroup) {
-                                pulsesGroup.children.forEach((pulse) => {
-                                    if (pulse instanceof THREE.Mesh) {
-                                        pulse.material.visible = true;
-                                        if (!child.userData.animationStarted && settings.showPortalPulses) {
-                                            animatePulses(child);
-                                            child.userData.animationStarted = true;
-                                        }
+
+                    const pulsesGroup = child.userData.pulsesGroup as THREE.Group;
+                    if (lineProgress > 0.1) {
+                        if (pulsesGroup) {
+                            pulsesGroup.children.forEach((pulse) => {
+                                if (pulse instanceof THREE.Mesh) {
+                                    pulse.material.visible = true;
+                                    if (!child.userData.animationStarted && settings.showPortalPulses) {
+                                        animatePulses(child);
+                                        child.userData.animationStarted = true;
                                     }
-                                });
-                            }
-                        } else if (lineProgress <= 0.1 && child.userData.animationStarted) {
-                            if (pulsesGroup) {
-                                pulsesGroup.children.forEach((pulse) => {
-                                    if (pulse instanceof THREE.Mesh) {
-                                        pulse.material.visible = false;
-                                    }
-                                });
-                            }
-                            stopPulseAnimation(child);
-                            delete child.userData.animationStarted;
+                                }
+                            });
                         }
+                    } else if (lineProgress <= 0.1 && child.userData.animationStarted) {
+                        if (pulsesGroup) {
+                            pulsesGroup.children.forEach((pulse) => {
+                                if (pulse instanceof THREE.Mesh) {
+                                    pulse.material.visible = false;
+                                }
+                            });
+                        }
+                        stopPulseAnimation(child);
+                        delete child.userData.animationStarted;
                     }
+
                 } else if (child instanceof THREE.Mesh && !child.userData.isPortalHitbox && !child.userData.isCloseHitbox) {
                     const material = child.material as THREE.MeshBasicMaterial
                     if (child.userData.isLoaded || child.userData.isGridPlane) {
@@ -1033,14 +1024,8 @@ export function useProjectCubes(
         let isEnteringPortal = false
         let swipeCooldown = false
         let isCameraAnimating = false
-        let textMeshes: THREE.Mesh[] = []
         let closeGroupAnimating = false
 
-        scene.traverse(o => {
-            if (o instanceof THREE.Mesh && o.geometry?.type === 'TextGeometry' && !o.userData.skipTextMeshes) {
-                textMeshes.push(o)
-            }
-        })
         const onTouchStart = (event: TouchEvent) => {
             if (isInPortalFocus) {
                 touchStartY = event.touches[0].clientY;

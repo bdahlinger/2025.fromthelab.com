@@ -67,7 +67,7 @@ const getClassificationColor = (classification: App.Enums.Classification): numbe
             <h2 class="mb-4 text-white">OTHER WEB PROJECTS</h2>
 
             <ul class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <li class="text-xs text-white/60 flex items-center gap-2" v-for="(project, index) in sortedArchived" :key="index">
+                <li class="text-xs text-white/80 flex items-center gap-2" v-for="(project, index) in sortedArchived" :key="index">
                     <svg class="size-1.5 md:size-[.375vw] 3xl:size-[.375rem]" :class="getClassificationColor(project.classification)" viewBox="0 0 6 6" aria-hidden="true">
                         <circle cx="3" cy="3" r="3"/>
                     </svg>
@@ -75,7 +75,7 @@ const getClassificationColor = (classification: App.Enums.Classification): numbe
                 </li>
             </ul>
 
-            <ul class="flex justify-center items-center gap-8 text-xs text-white/60 uppercase mt-12">
+            <ul class="flex justify-center items-center gap-8 text-xs text-white/80 uppercase mt-12">
                 <li class="flex items-center gap-2" v-for="classification in classificationValues" :key="classification">
                     <svg class="size-3" :class="getClassificationColor(classification)" viewBox="0 0 6 6" aria-hidden="true">
                         <circle cx="3" cy="3" r="3"/>
