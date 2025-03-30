@@ -154,8 +154,8 @@ watch(() => props.camera, (newCamera) => {
         <svg class="absolute inset-0 w-full h-full pointer-events-none " aria-hidden="true">
             <defs>
                 <pattern id="grid-pattern2" width="12" height="12" patternUnits="userSpaceOnUse">
-                    <line x1="0" y1="0" x2="0" y2="12" stroke="white" stroke-width="1" opacity="0.075"/>
-                    <line x1="0" y1="0" x2="12" y2="0" stroke="white" stroke-width="1" opacity="0.075"/>
+                    <line x1="0" y1="0" x2="0" y2="12" stroke="green" stroke-width="1" opacity="0.15"/>
+                    <line x1="0" y1="0" x2="12" y2="0" stroke="green" stroke-width="1" opacity="0.15"/>
                 </pattern>
             </defs>
             <rect width="100%" height="100%" fill="url(#grid-pattern2)"/>
