@@ -22,13 +22,16 @@ const FIRST_CUBE_Z = projectStore.firstCubeZ; // -500
 
 // Reactive size configuration
 const isMobile = computed(() => screenWidth.value < 768);
-const sizeScale = computed(() => (isMobile.value ? 0.55 : 1.0)); // 0.55 for mobile (10% more than 0.5)
-const cubeWidth = computed(() => 16 * sizeScale.value); // 16px desktop, 8.8px mobile
-const svgWidth = computed(() => 8 * sizeScale.value);   // 8px desktop, 4.4px mobile
 const totalCubes = 1 + projects.length; // Intro + projects = 18
 const totalDepth = 10000; // Total Z depth
-const mapWidth = computed(() => (totalCubes - 1) * cubeWidth.value * 2); // 544px desktop, 299.2px mobile
-const scaleFactor = computed(() => mapWidth.value / totalDepth); // 0.0544 desktop, 0.02992 mobile
+const mapWidth = computed(() => {
+    return isMobile.value ? screenWidth.value - 16 : (totalCubes - 1) * 16 * 2; // Mobile: screenWidth - 16px, Desktop: 544px
+});
+const cubeWidth = computed(() => {
+    return isMobile.value ? mapWidth.value / ((totalCubes - 1) * 2) : 16; // Mobile: dynamic, Desktop: 16px
+});
+const svgWidth = computed(() => cubeWidth.value / 2); // Half of cubeWidth
+const scaleFactor = computed(() => mapWidth.value / totalDepth); // Dynamic based on mapWidth
 
 const cameraPosition = ref(0); // SVG left position in px
 
@@ -64,6 +67,7 @@ watch(progress, (newProgress) => {
             cameraPosition.value = Math.min(Math.max(cameraPosition.value, 0), mapWidth.value - svgWidth.value);
         },
     });
+
 }, { immediate: true });
 
 // Handle resize
@@ -72,7 +76,6 @@ const handleResize = () => {
 };
 
 onMounted(() => {
-    console.log('HUDMiniMap mounted');
     updateCameraPosition(progress.value);
 
     if (mapContainer.value) {
@@ -123,9 +126,10 @@ watch(projects, () => {
         ></div>
 
         <!-- Intro Cube -->
+
         <div
             ref="introCube"
-            class="border border-l-pink-600 border-r-green-600 border-t-blue-600 border-b-yellow-600 absolute top-1/2 -translate-y-1/2 hidden-el"
+            class="border border-l-pink-600 border-r-green-600 border-t-blue-600 border-b-yellow-600 absolute top-1/2 -translate-y-1/2 hidden-el introCube"
             :style="{ width: `${cubeWidth}px`, height: `${cubeWidth}px`, left: `${introCubePosition}px` }"
         >
             <div
@@ -151,7 +155,7 @@ watch(projects, () => {
             :ref="el => projectCubes[index] = el as HTMLElement"
             class="border absolute top-1/2 -translate-y-1/2 hidden-el"
             :class="{
-                'border-blue-600': props.project?.slug === projectItem.slug && props.project !== null,
+                'border-blue-600 shadow-blue': props.project?.slug === projectItem.slug && props.project !== null,
                 'border-white/40': props.project?.slug !== projectItem.slug || props.project === null,
             }"
             :style="{ width: `${cubeWidth}px`, height: `${cubeWidth}px`, left: `${projectCubePositions[index]}px` }"
@@ -174,6 +178,19 @@ watch(projects, () => {
 </template>
 
 <style scoped>
+@keyframes spin {
+    from {
+        transform: rotate(0deg) translateY(-50%);
+    }
+    to {
+        transform: rotate(360deg) translateY(-50%);
+    }
+}
+.introCube{
+    animation: spin 4s linear infinite;
+    transform-origin: top center;
+}
+
 .hidden-el {
     opacity: 0;
 }

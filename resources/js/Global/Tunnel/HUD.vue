@@ -91,6 +91,25 @@ const getClassificationColor = computed((): string => {
     }
 })
 
+const determineColorByContributionClass = (type:App.Enums.Contributions) => {
+    switch(type) {
+        case App.Enums.Contributions.BACKEND:
+            return 'fill-red-400'
+        case App.Enums.Contributions.FRONTEND:
+            return 'fill-blue-400'
+        case App.Enums.Contributions.DEVOPS:
+            return 'fill-green-500'
+        case App.Enums.Contributions.DESIGN:
+            return 'fill-purple-400'
+        case App.Enums.Contributions.IDEATION:
+            return 'fill-magenta-400'
+        case App.Enums.Contributions.UX:
+            return 'fill-yellow-400'
+        default:
+            return 'fill-green-500'
+    }
+}
+
 const handleNavigate = () => {
     if (currentProject.value) {
         projectStore.setScrollPosition(window.scrollY)
@@ -132,47 +151,68 @@ watch(() => props.camera, (newCamera) => {
 
 <template>
     <div class="fixed inset-0 pointer-events-none z-10 font-sans">
-        <div class="px-2 md:px-4 py-4 flex items-center justify-between bg-black/50">
+        <svg class="absolute inset-0 w-full h-full pointer-events-none " aria-hidden="true">
+            <defs>
+                <pattern id="grid-pattern2" width="12" height="12" patternUnits="userSpaceOnUse">
+                    <line x1="0" y1="0" x2="0" y2="12" stroke="white" stroke-width="1" opacity="0.075"/>
+                    <line x1="0" y1="0" x2="12" y2="0" stroke="white" stroke-width="1" opacity="0.075"/>
+                </pattern>
+            </defs>
+            <rect width="100%" height="100%" fill="url(#grid-pattern2)"/>
+        </svg>
+        <div class="px-2 md:px-4 py-2 md:py-4 md:flex items-center justify-between bg-black/70">
+
             <div
-                class="flex items-center gap-4 pointer-events-auto"
+                ref="projectTitleEl"
+                class="md:flex md:items-center gap-4 md:gap-[1vw] 3xl:gap-[1rem] pointer-events-auto"
+                style="opacity: 0"
             >
                 <div
-                    ref="projectTitleEl"
-                    class="flex items-center gap-4 pointer-events-auto"
-                    style="opacity: 0"
+
+                    class="md:flex items-center gap-4 md:gap-[1vw] 3xl:gap-[1rem] pointer-events-auto"
+
                 >
-                    <h1 class="tracking-tighter md:tracking-normal font-mono text-white text-xxs md:text-xs md:text-[0.75vw]    3xl:text-[0.75rem] md:leading-[1.0vw] 3xl:leading-[1.0rem]">
+                    <h1 class="flex-shrink-0 tracking-tighter md:tracking-normal font-mono text-white  md:text-[0.75vw] 3xl:text-[0.75rem] md:leading-[1.0vw] 3xl:leading-[1.0rem]">
                         {{ currentProject?.title || '' }}
                     </h1>
-                    <h2 v-if="currentProject" class="hidden md:block font-mono text-xs md:text-[0.75vw] 3xl:text-[0.75rem] md:leading-[1.0vw] 3xl:leading-[1.0rem]">
+                    <h2 class="flex-shrink-0 font-mono text-xs md:text-[0.75vw] 3xl:text-[0.75rem] md:leading-[1.0vw] 3xl:leading-[1.0rem]">
                         <span class="text-white/50 font-medium" v-html="currentProject?.client || ''"></span>
                         ·
                         <span :class="getClassificationColor" v-html="currentProject?.classification || ''"></span>
                     </h2>
                 </div>
 
-
-
+                <div class="contributions flex flex-wrap md:flex-nowrap gap-0.5 md:gap-[.125vw] 3xl:gap-[.125rem] mt-1 md:mt-0" v-if="currentProject?.contributions.length > 0">
+                    <span
+                        v-for="(type,index) in currentProject?.contributions" :key="index"
+                        class="inline-flex items-center gap-x-2 md:gap-x-[.5vw] 3xl:gap-x-[.5rem] rounded-full px-2 md:px-[.5vw] 3xl:px-[.5rem] py-1 md:py-[.25vw] 3xl:py-[.25rem] text-[8px] md:text-[.575vw] 3xl:text-[.575rem] font-medium ring-1 ring-inset">
+                        <svg class="size-1.5 md:size-[.375vw] 3xl:size-[.375rem]" :class="determineColorByContributionClass(type)" viewBox="0 0 6 6" aria-hidden="true">
+                          <circle cx="3" cy="3" r="3"/>
+                        </svg>
+                        {{type}}
+                    </span>
+                </div>
+                <div class="segments flex flex-wrap gap-0.5 md:gap-[.125vw] 3xl:gap-[.125rem] mt-1 md:mt-0" v-if="currentProject?.segments.length > 0">
+                    <span
+                        v-for="(type,index) in currentProject?.segments" :key="index"
+                        class="inline-flex items-center rounded-full px-2 md:px-[.375vw] 3xl:px-[.375rem] py-1 md:py-[.25vw] 3xl:py-[.25rem] text-[8px] md:text-[.5vw] 3xl:text-[.5rem] font-medium ring-1 ring-inset fill-white-400/10 text-white-400 ring-white/20">
+                        {{type}}
+                    </span>
+                </div>
             </div>
 
-
-
-<!--            <project-navigator
-                :project="project"
-                :projects="projects"
-                :previous-project="previousProject"
-                :next-project="nextProject"
-            />-->
-
+            <div class="flex justify-end md:block">
             <button
                 ref="clickHereEl"
                 @click="handleNavigate"
-                class="border border-current rounded-none px-2 py-1 font-mono text-xs text-white rounded transition-opacity duration-300 pointer-events-auto hover:text-green-500 hover:border-green-500"
+                class="border border-current rounded-none px-2 py-1 mt-2 md:mt-0 whitespace-nowrap font-mono text-xxs text-white rounded transition-opacity duration-300 pointer-events-auto hover:text-green-500 hover:border-green-500"
                 style="opacity: 0"
             >
                 SEE PROJECT DETAILS
             </button>
+            </div>
         </div>
+
         <div ref="borderTopEl" class="flex justify-center">
             <div class="bg-white/30 h-px opacity-0"></div>
         </div>
@@ -181,7 +221,7 @@ watch(() => props.camera, (newCamera) => {
             <div ref="borderBottomEl" class="flex justify-center">
                 <div class="bg-white/30 h-px opacity-0"></div>
             </div>
-            <svg class="absolute inset-0 w-full h-full pointer-events-none " aria-hidden="true">
+<!--            <svg class="absolute inset-0 w-full h-full pointer-events-none " aria-hidden="true">
                 <defs>
                     <pattern id="grid-pattern1" width="12" height="12" patternUnits="userSpaceOnUse">
                         <line x1="0" y1="0" x2="0" y2="12" stroke="white" stroke-width="1" opacity="0.1"/>
@@ -189,8 +229,13 @@ watch(() => props.camera, (newCamera) => {
                     </pattern>
                 </defs>
                 <rect width="100%" height="100%" fill="url(#grid-pattern1)"/>
-            </svg>
+            </svg>-->
             <h-u-d-mini-map :project="currentProject" />
+
+            <div class="absolute hidden font-mono md:block text-green-400/50 text-xxxs left-[90%] top-1/2 -translate-y-1/2">
+                <span>{{projectStore.progress.toString().padStart(10, '0') + '.00'}}</span>
+            </div>
+
         </div>
 
     </div>

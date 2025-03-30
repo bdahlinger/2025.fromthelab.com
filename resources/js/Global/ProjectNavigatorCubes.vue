@@ -289,9 +289,7 @@ const createTooltipElements = (title: string, x: number, y: number) => {
     document.body.appendChild(tooltipEl);
     document.body.appendChild(tooltipAnchorEl);
 
-    const tooltipWidth = tooltipEl.offsetWidth;
-    const adjustedX = x;
-    tooltipAnchorEl.style.left = `${adjustedX}px`;
+    tooltipAnchorEl.style.left = `${x}px`;
     tooltipAnchorEl.style.top = `${y}px`;
 
     popperInstance = createPopper(tooltipAnchorEl, tooltipEl, {

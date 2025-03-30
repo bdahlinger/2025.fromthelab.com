@@ -31,6 +31,9 @@ export default {
             },
             animation: {
                 'spin-slow': 'spin 3s linear infinite',
+            },
+            boxShadow: {
+                'blue': '0 0 6px 0 rgba(0, 0, 255, 1), 0 0 4px 0 rgba(0, 0, 255, 1), 0 0 2px 0 rgba(0, 0, 255, 1)',
             }
         },
     },
