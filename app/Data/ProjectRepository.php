@@ -121,7 +121,7 @@ class ProjectRepository
             'classification' => Classification::ECOMMERCE,
             'slug' => 'jade-complexions',
             'title' => 'JADÉ COMPLEXIONS',
-            'client' => 'JADÉ Complexions',
+            'client' => 'The Celestial Alchemist',
             'description' => 'For a beauty skincare brand, we designed and developed a custom Shopify eCommerce site with a dynamic frontend powered by VueJS, SCSS, and Vite. The site includes a tailored system to differentiate between regular consumers, professional estheticians, and wholesale buyers, ensuring a personalized shopping experience. We also integrated various Shopify apps and leveraged Klaviyo to manage email and SMS marketing, enhancing customer engagement and retention.',
             'keyart' => 'projects/jade-complexions.jpg',
             'keyartMobile' => 'projects/qc-m.jpg',

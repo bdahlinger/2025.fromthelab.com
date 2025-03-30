@@ -218,7 +218,7 @@ export function useIntroCubes(
             font: font,
             size: screenStore.isMobile ? 30 : 8,
             depth: 0,
-            curveSegments: 12,
+            curveSegments: 4,
             bevelEnabled: false
         })
         textGeometry.computeBoundingBox()

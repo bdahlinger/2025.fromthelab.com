@@ -42,7 +42,7 @@ const nextProject = computed(() => {
             prefetch
             :href="route('project.show', { project: previousProject.slug })"
             as="button"
-            class="text-white text-xs hover:text-gray-300 flex gap-1"
+            class="font-mono text-white text-xs hover:text-gray-300 flex gap-1"
         >
             <angle-right-sharp class="w-1 h-auto -scale-x-100" />
             <span v-html="screenStore.screenWidth > 768 ? previousProject.title : 'Previous Project'"></span>
@@ -58,7 +58,7 @@ const nextProject = computed(() => {
             :href="route('project.show', { project: nextProject.slug })"
             as="button"
             prefetch
-            class="text-white text-xs hover:text-gray-300 flex gap-1"
+            class="font-mono text-white text-xs hover:text-gray-300 flex gap-1"
         >
             <span v-html="screenStore.screenWidth > 768 ? nextProject.title : 'Next Project'"></span>
             <angle-right-sharp class="w-1 h-auto" />

@@ -23,7 +23,8 @@ export function useProjectCubes(
 ) {
     const screenStore = useScreenStore();
 
-    const tunnelStore = useProjectStore()
+    const projectStore = useProjectStore()
+
     const { CUBE_SIZE, CUBE_SPACING, FIRST_CUBE_Z } = config
     const MAX_Z = FIRST_CUBE_Z - (projects.length + 1) * CUBE_SPACING
     const CUBE_COLOR = 0x00ffff
@@ -194,7 +195,7 @@ export function useProjectCubes(
                     font: font.value,
                     size: textCTASize,
                     depth: 0,
-                    curveSegments: 12,
+                    curveSegments: 4,
                     bevelEnabled: false
                 });
                 textCTAGeometry.computeBoundingBox();
@@ -242,7 +243,7 @@ export function useProjectCubes(
                     font: font.value,
                     size: textTitleSize,
                     depth: 0,
-                    curveSegments: 12,
+                    curveSegments: 4,
                     bevelEnabled: false
                 });
                 textTitleGeometry.computeBoundingBox();
@@ -557,7 +558,7 @@ export function useProjectCubes(
             font: font.value,
             size: size,
             depth: 0,
-            curveSegments: 12,
+            curveSegments: 4,
             bevelEnabled: false
         })
         textGeometry.computeBoundingBox()
@@ -1492,7 +1493,7 @@ export function useProjectCubes(
                     },
                     onComplete: () => {
                         if (project?.slug) {
-                            tunnelStore.setScrollPosition(window.scrollY)
+                            projectStore.setScrollPosition(window.scrollY)
                             router.visit(route('project.show', { project: project.slug }), { preserveScroll: false })
                         }
                         isCameraAnimating = false

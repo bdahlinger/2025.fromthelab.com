@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3';
 import LogoMark from "@/Global/LogoMark.vue";
+import { useProjectStore } from '@/Stores/projectStore'
 //import ThreeDSpheres from "@/Global/ThreeDSpheres.vue";
 import CubeStrip from "@/Global/CubeStrip.vue";
 //import Hallway from "@/Global/Hallway.vue";
@@ -12,6 +13,7 @@ import GlobalFooter from "@/Global/GlobalFooter.vue";
 import AppWrap from '@/Pages/App.vue';
 import { computed, ref } from 'vue';
 import IntroMessage from "@/Global/Tunnel/IntroMessage.vue";
+import Hud from "@/Global/Tunnel/HUD.vue";
 
 const props = defineProps<{
     //canLogin: boolean
@@ -22,7 +24,12 @@ const props = defineProps<{
     archived: ProjectData[]
 }>()
 
+const projectStore = useProjectStore()
+const camera = ref<THREE.PerspectiveCamera | null>(null)
 
+const onCameraReady = (cam: THREE.PerspectiveCamera) => {
+    camera.value = cam
+}
 
 const sortedArchived = computed(() => {
     return [...props.archived].sort((a, b) => a.title.localeCompare(b.title));
@@ -59,13 +66,16 @@ const getClassificationColor = (classification: App.Enums.Classification): numbe
 
         </nav>
 
-	    <div class="overflow-hidden">
+	    <div class="overflow-hidden relative">
             <hallway-engine
                 :projects="projects"
                 :project-grid-file="projectGridFile"
-                :project-grid-file2="projectGridFile2" />
+                :project-grid-file2="projectGridFile2"
+                @camera-ready="onCameraReady"
+            />
 
             <intro-message/>
+            <hud :camera="camera"/>
 	    </div>
         <div class="mt-16 px-4 md:px-16">
 

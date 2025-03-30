@@ -37,7 +37,7 @@ onMounted(() => {
 })
 
 watch(progress, (newValue, oldValue) => {
-    console.log(`Progress changed from ${oldValue} to ${newValue}`);
+    //console.log(`Progress changed from ${oldValue} to ${newValue}`);
 
     if (!message.value) return;
 

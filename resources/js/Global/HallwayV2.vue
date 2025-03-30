@@ -231,7 +231,7 @@ const createTextObject = (
         font: font,
         size: size,
         depth: 0,
-        curveSegments: 12,
+        curveSegments: 4,
         bevelEnabled: false
     })
 

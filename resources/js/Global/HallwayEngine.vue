@@ -28,6 +28,8 @@ const props = defineProps<{
     initialSlug?: string;
 }>();
 
+const emit = defineEmits(['camera-ready'])
+
 const projectStore = useProjectStore();
 projectStore.projects = props.projects;
 const screenStore = useScreenStore();
@@ -169,10 +171,7 @@ const init = async () => {
     }
 
     stats = new Stats();
-    stats.dom.style.position = 'fixed';
-    stats.dom.style.top = '0px';
-    stats.dom.style.left = '0px';
-    stats.dom.style.zIndex = '1000';
+    stats.dom.setAttribute('style', 'position: fixed; bottom: 0px; left: 0px; z-index: 1000;')
     document.body.appendChild(stats.dom);
 
     const keyartCount = props.projects.filter(project => project.keyart).length;
@@ -227,6 +226,8 @@ const init = async () => {
             const { introCubes } = useIntroCubes(scene, fontLoader.font, { CUBE_SIZE, FIRST_CUBE_Z }, settings);
             allCubes = [...introCubes, ...projectCubes];
             updateCubeColorsInternal = updateCubeColors;
+
+            emit('camera-ready', camera)
         });
 
         if( settings.showCars ){
@@ -252,6 +253,7 @@ const init = async () => {
         projectMaxZ = FIRST_CUBE_Z - (props.projects.length + 1) * CUBE_SPACING;
 
     }
+
 };
 
 let lastFrameTime = 0;

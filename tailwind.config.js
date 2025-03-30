@@ -18,6 +18,7 @@ export default {
                 sans: ['Montserrat', ...defaultTheme.fontFamily.sans],
             },
             fontSize: {
+                xxxs: "0.5rem",
                 xxs: "0.675rem",
             },
             aspectRatio: {
