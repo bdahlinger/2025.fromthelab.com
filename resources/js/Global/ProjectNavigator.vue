@@ -20,19 +20,6 @@ const currentIndex = computed(() => {
     return props.projects.findIndex((p) => p.slug === props.project.slug);
 });
 
-/*const previousProject = computed(() => {
-    if (!props.projects || currentIndex.value === -1) return null;
-    const totalProjects = props.projects.length;
-    const prevIndex = currentIndex.value === 0 ? totalProjects - 1 : currentIndex.value - 1;
-    return props.projects[prevIndex];
-});
-
-const nextProject = computed(() => {
-    if (!props.projects || currentIndex.value === -1) return null;
-    const totalProjects = props.projects.length;
-    const nextIndex = currentIndex.value === totalProjects - 1 ? 0 : currentIndex.value + 1;
-    return props.projects[nextIndex];
-});*/
 </script>
 
 <template>

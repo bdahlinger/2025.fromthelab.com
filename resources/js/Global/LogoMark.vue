@@ -3,7 +3,6 @@ import { onMounted, onUnmounted, ref } from 'vue'
 import * as THREE from 'three'
 import { gsap } from 'gsap'
 import { useScreenStore } from '@/Stores/screenStore' // Adjust the import path to your Pinia store
-import { useThreeStore } from '@/Stores/threeStore';
 // Define types for the boxes
 interface Box {
     mesh: THREE.Mesh
@@ -29,7 +28,6 @@ let blueRotationAnim: gsap.core.Tween | null = null
 
 // Pinia store for screen size
 const screenStore = useScreenStore()
-const threeStore = useThreeStore();
 
 const hoverEffect = () => {
     redRotationAnim?.kill()

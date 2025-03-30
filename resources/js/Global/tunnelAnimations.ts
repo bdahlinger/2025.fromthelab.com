@@ -70,6 +70,7 @@ export function setupScrollAnimation(
                             updateCounter++;
                             if (updateCounter % 4 === 0 || newZ < 1) { // Only update on even counts
                                 projectStore.setProgress(Math.round(Math.abs(newZ)));
+                                //console.log(Math.round(Math.abs(newZ)))
                             }
                         }
                         updateCubeColors(camera);

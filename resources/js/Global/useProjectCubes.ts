@@ -22,7 +22,6 @@ export function useProjectCubes(
     font: Ref<THREE.Font | null>
 ) {
     const screenStore = useScreenStore();
-
     const projectStore = useProjectStore()
 
     const { CUBE_SIZE, CUBE_SPACING, FIRST_CUBE_Z } = config

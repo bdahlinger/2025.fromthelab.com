@@ -4,8 +4,11 @@ import { onMounted, onUnmounted, ref, watch, computed } from 'vue'
 import { gsap } from 'gsap'
 import { useProjectStore } from '@/Stores/projectStore'
 import { useScreenStore } from '@/Stores/screenStore'
+import { storeToRefs } from 'pinia';
 import { App } from "@/Types/enums"
 import { router } from "@inertiajs/vue3"
+import ProjectNavigator from "@/Global/ProjectNavigator.vue";
+import HUDMiniMap from "@/Global/Tunnel/HUDMiniMap.vue";
 
 const props = defineProps<{
     camera: THREE.PerspectiveCamera | null
@@ -13,10 +16,12 @@ const props = defineProps<{
 
 const projectStore = useProjectStore()
 const screenStore = useScreenStore()
+
 const projectIndex = ref(0)
 const currentProject = ref<App.Data.ProjectData | null>(null)
 const clickHereEl = ref<HTMLElement | null>(null)
 const projectTitleEl = ref<HTMLElement | null>(null)
+const borderTopEl = ref<HTMLElement | null>(null)
 const borderBottomEl = ref<HTMLElement | null>(null)
 
 const CUBE_SPACING = projectStore.cubeSpacing
@@ -68,7 +73,10 @@ const updateHUD = (newProgress: number, oldProgress: number | undefined) => {
         fadeOutTween = gsap.to(elements, {
             opacity: 0,
             duration: FADE_DURATION,
-            overwrite: 'auto'
+            overwrite: 'auto',
+            onComplete: () => {
+                currentProject.value = null
+            }
         })
     }
 }
@@ -91,10 +99,11 @@ const handleNavigate = () => {
 }
 
 onMounted(() => {
+    const topBorder = borderTopEl.value?.querySelector('div')
     const bottomBorder = borderBottomEl.value?.querySelector('div')
-    if (bottomBorder) {
+    if (topBorder && bottomBorder) {
         const width = window.innerWidth - (screenStore.isMobile ? 16 : 42 )
-        gsap.to(bottomBorder, {
+        gsap.to([topBorder,bottomBorder], {
             opacity: 1,
             width: width,
             duration: 2,
@@ -125,19 +134,36 @@ watch(() => props.camera, (newCamera) => {
     <div class="fixed inset-0 pointer-events-none z-10 font-sans">
         <div class="px-2 md:px-4 py-4 flex items-center justify-between bg-black/50">
             <div
-                ref="projectTitleEl"
                 class="flex items-center gap-4 pointer-events-auto"
-                style="opacity: 0"
             >
-                <h1 class="tracking-tighter md:tracking-normal font-mono text-white text-xxs md:text-xs md:text-[0.75vw] 3xl:text-[0.75rem] md:leading-[1.0vw] 3xl:leading-[1.0rem]">
-                    {{ currentProject?.title || '' }}
-                </h1>
-                <h2 v-if="currentProject" class="hidden md:block font-mono text-xs md:text-[0.75vw] 3xl:text-[0.75rem] md:leading-[1.0vw] 3xl:leading-[1.0rem]">
-                    <span class="text-white/50 font-medium" v-html="currentProject?.client || ''"></span>
-                    ·
-                    <span :class="getClassificationColor" v-html="currentProject?.classification || ''"></span>
-                </h2>
+                <div
+                    ref="projectTitleEl"
+                    class="flex items-center gap-4 pointer-events-auto"
+                    style="opacity: 0"
+                >
+                    <h1 class="tracking-tighter md:tracking-normal font-mono text-white text-xxs md:text-xs md:text-[0.75vw]    3xl:text-[0.75rem] md:leading-[1.0vw] 3xl:leading-[1.0rem]">
+                        {{ currentProject?.title || '' }}
+                    </h1>
+                    <h2 v-if="currentProject" class="hidden md:block font-mono text-xs md:text-[0.75vw] 3xl:text-[0.75rem] md:leading-[1.0vw] 3xl:leading-[1.0rem]">
+                        <span class="text-white/50 font-medium" v-html="currentProject?.client || ''"></span>
+                        ·
+                        <span :class="getClassificationColor" v-html="currentProject?.classification || ''"></span>
+                    </h2>
+                </div>
+
+
+
             </div>
+
+
+
+<!--            <project-navigator
+                :project="project"
+                :projects="projects"
+                :previous-project="previousProject"
+                :next-project="nextProject"
+            />-->
+
             <button
                 ref="clickHereEl"
                 @click="handleNavigate"
@@ -147,9 +173,26 @@ watch(() => props.camera, (newCamera) => {
                 SEE PROJECT DETAILS
             </button>
         </div>
-        <div ref="borderBottomEl" class="flex justify-center">
-            <div class="bg-white/20 h-px opacity-0"></div>
+        <div ref="borderTopEl" class="flex justify-center">
+            <div class="bg-white/30 h-px opacity-0"></div>
         </div>
+
+        <div class="absolute bottom-0 left-1/2 -translate-x-1/2 bg-black/70 h-12 w-full">
+            <div ref="borderBottomEl" class="flex justify-center">
+                <div class="bg-white/30 h-px opacity-0"></div>
+            </div>
+            <svg class="absolute inset-0 w-full h-full pointer-events-none " aria-hidden="true">
+                <defs>
+                    <pattern id="grid-pattern1" width="12" height="12" patternUnits="userSpaceOnUse">
+                        <line x1="0" y1="0" x2="0" y2="12" stroke="white" stroke-width="1" opacity="0.1"/>
+                        <line x1="0" y1="0" x2="12" y2="0" stroke="white" stroke-width="1" opacity="0.1"/>
+                    </pattern>
+                </defs>
+                <rect width="100%" height="100%" fill="url(#grid-pattern1)"/>
+            </svg>
+            <h-u-d-mini-map :project="currentProject" />
+        </div>
+
     </div>
 </template>
 

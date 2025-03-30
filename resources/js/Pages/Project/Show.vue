@@ -363,7 +363,7 @@ onUnmounted(() => {
                 :alt="project.title + ' logo'"
             >
             <h1 class="text-lg md:text-[2vw] 3xl:text-[2rem] leading-tight md:leading-[2vw] 3xl:leading-[2rem] mb-1 md:mb-[0.5vw] 3xl:mb-[0.5rem] text-white">{{ project.title }}</h1>
-            <h2 class="md:text-[1vw] 3xl:text-[1rem] md:leading-[1.5vw] 3xl:leading-[1.5rem] md:mb-[1.5vw] 3xl:mb-[1.5rem] ">
+            <h2 class="md:text-[1vw] 3xl:text-[1rem] md:leading-[1.5vw] 3xl:leading-[1.5rem] mb-5 md:mb-[1.5vw] 3xl:mb-[1.5rem] ">
                 <span class="text-white/50 font-medium" v-html="project.client"></span>
                 &middot;
                 <span :class="getClassificationColor()" v-html="project.classification"></span>
