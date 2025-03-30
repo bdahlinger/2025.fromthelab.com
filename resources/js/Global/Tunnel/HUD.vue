@@ -129,7 +129,7 @@ watch(() => props.camera, (newCamera) => {
                 class="flex items-center gap-4 pointer-events-auto"
                 style="opacity: 0"
             >
-                <h1 class="font-mono text-white text-xxs md:text-xs md:text-[0.75vw] 3xl:text-[0.75rem] md:leading-[1.0vw] 3xl:leading-[1.0rem]">
+                <h1 class="tracking-tighter md:tracking-normal font-mono text-white text-xxs md:text-xs md:text-[0.75vw] 3xl:text-[0.75rem] md:leading-[1.0vw] 3xl:leading-[1.0rem]">
                     {{ currentProject?.title || '' }}
                 </h1>
                 <h2 v-if="currentProject" class="hidden md:block font-mono text-xs md:text-[0.75vw] 3xl:text-[0.75rem] md:leading-[1.0vw] 3xl:leading-[1.0rem]">
