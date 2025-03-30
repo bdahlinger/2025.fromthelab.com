@@ -3,7 +3,7 @@ import { onMounted, onUnmounted, ref } from 'vue'
 import * as THREE from 'three'
 import { gsap } from 'gsap'
 import { useScreenStore } from '@/Stores/screenStore' // Adjust the import path to your Pinia store
-
+import { useThreeStore } from '@/Stores/threeStore';
 // Define types for the boxes
 interface Box {
     mesh: THREE.Mesh
@@ -13,6 +13,7 @@ interface Box {
 // Reference to the canvas element
 const canvasRef = ref<HTMLCanvasElement | null>(null)
 const logoRef = ref<HTMLCanvasElement | null>(null)
+const componentId = 'logo-mark-' + Math.random().toString(36).substr(2, 9);
 
 // Setup Three.js scene, camera, and renderer
 let scene: THREE.Scene
@@ -20,7 +21,7 @@ let camera: THREE.PerspectiveCamera
 let renderer: THREE.WebGLRenderer
 let boxes: Box[] = []
 let boxGroup: THREE.Group
-
+let animationFrameId: number | null = null
 // Store GSAP animation instances for cleanup
 let redRotationAnim: gsap.core.Tween | null = null
 let greenRotationAnim: gsap.core.Tween | null = null
@@ -28,6 +29,7 @@ let blueRotationAnim: gsap.core.Tween | null = null
 
 // Pinia store for screen size
 const screenStore = useScreenStore()
+const threeStore = useThreeStore();
 
 const hoverEffect = () => {
     redRotationAnim?.kill()
@@ -47,11 +49,10 @@ const hoverOffEffect = () => {
     gsap.to(boxes[2].mesh.rotation, { y: 0, duration: 0.5, ease: 'none', onComplete: () => (blueRotationAnim = null) })
 }
 
+
+
 onMounted(() => {
     if (!canvasRef.value) return
-
-    // Initialize Pinia store resize listener
-    screenStore.initResizeListener()
 
     // Initialize scene
     scene = new THREE.Scene()
@@ -168,22 +169,75 @@ onMounted(() => {
     })
 
     function animate() {
-        requestAnimationFrame(animate)
+        animationFrameId = requestAnimationFrame(animate)
         renderer.render(scene, camera)
     }
     animate()
 })
 
 onUnmounted(() => {
-    renderer.dispose()
-    scene.clear()
-    boxes = []
-    boxGroup = null as any
+
+    // Cancel animation loop first
+    if (animationFrameId !== null) {
+        cancelAnimationFrame(animationFrameId)
+        animationFrameId = null
+    }
+
+    // Kill GSAP animations
     redRotationAnim?.kill()
     greenRotationAnim?.kill()
     blueRotationAnim?.kill()
+    redRotationAnim = null
+    greenRotationAnim = null
+    blueRotationAnim = null
+
+    // Dispose of renderer
+    if (renderer) {
+        renderer.dispose()
+        renderer.forceContextLoss()
+        if (renderer.domElement && renderer.domElement.parentNode) {
+            renderer.domElement.parentNode.removeChild(renderer.domElement)
+        }
+        renderer = null
+    }
+
+    // Dispose of boxes and boxGroup
+    if (boxes.length > 0) {
+        boxes.forEach(box => {
+            if (box.mesh.geometry) box.mesh.geometry.dispose()
+            if (box.mesh.material) box.mesh.material.dispose()
+            if (boxGroup) boxGroup.remove(box.mesh)
+        })
+        boxes = []
+    }
+    if (boxGroup && scene) {
+        scene.remove(boxGroup)
+        boxGroup = null
+    }
+
+    // Safely remove lights
+    if (scene) {
+        const lights: THREE.Light[] = []
+        scene.traverse(object => {
+            if (object instanceof THREE.Light) {
+                lights.push(object)
+            }
+        })
+        lights.forEach(light => {
+            if (scene) scene.remove(light)
+        })
+        scene.clear()
+    }
+
+    // Remove resize listener
     window.removeEventListener('resize', () => {})
+
+    // Nullify references
+    scene = null
+    camera = null
 })
+
+
 </script>
 
 <template>

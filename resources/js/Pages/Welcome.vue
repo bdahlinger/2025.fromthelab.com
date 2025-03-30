@@ -58,7 +58,7 @@ const getClassificationColor = (classification: App.Enums.Classification): numbe
     <app-wrap>
     <Head title="Welcome" />
 
-    <div class="relative bg-gray-50 text-black/50 dark:bg-black dark:text-white/50">
+    <div class="relative bg-black text-white">
 
         <nav class="absolute z-10 flex flex-col items-center justify-center top-32 left-1/2 transform -translate-x-1/2">
 

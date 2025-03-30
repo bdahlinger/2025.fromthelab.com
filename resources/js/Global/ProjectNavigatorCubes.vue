@@ -56,14 +56,14 @@ let tooltipEl: HTMLElement | null = null;
 let tooltipAnchorEl: HTMLElement | null = null;
 let popperInstance: ReturnType<typeof createPopper> | null = null;
 
-const scene = new THREE.Scene();
+let scene: THREE.Scene | null = null;
 const camera = new THREE.OrthographicCamera();
 let renderer: THREE.WebGLRenderer | null = null;
 let cubes: THREE.Mesh[] = [];
 let activeWireframeGroup: THREE.Group | null = null;
 let hoveredCube: THREE.Mesh | null = null;
 let hoverAnimation: gsap.core.Tween | null = null;
-
+let animationFrameId: number | null = null;
 const getCubeColor = (classification: App.Enums.Classification): number => {
     switch (classification) {
         case App.Enums.Classification.ENTERTAINMENT:
@@ -108,7 +108,7 @@ const createWireframeCube = (size: number): THREE.Group => {
 
 const initializeScene = () => {
     if (!canvasRef.value) return;
-
+    scene = new THREE.Scene();
     const aspect = canvasWidthUnits.value / (CANVAS_HEIGHT * 16);
     const viewSize = CANVAS_HEIGHT * 16;
     camera.left = -aspect * viewSize / 2;
@@ -250,7 +250,7 @@ const resize = () => {
 };
 
 const animate = () => {
-    requestAnimationFrame(animate);
+    animationFrameId = requestAnimationFrame(animate);
     if (renderer) renderer.render(scene, camera);
 };
 
@@ -408,7 +408,7 @@ onMounted(() => {
     }
 });
 
-onUnmounted(() => {
+/*onUnmounted(() => {
     window.removeEventListener('resize', resize);
     if (canvasRef.value) {
         canvasRef.value.removeEventListener('mousemove', onMouseMove);
@@ -423,9 +423,83 @@ onUnmounted(() => {
     if (popperInstance) popperInstance.destroy();
     if (tooltipEl && tooltipEl.parentNode) document.body.removeChild(tooltipEl);
     if (tooltipAnchorEl && tooltipAnchorEl.parentNode) document.body.removeChild(tooltipAnchorEl);
-    renderer?.dispose();
+    renderer.dispose();
     scene.clear();
+});*/
+
+onUnmounted(() => {
+
+    // Cancel animation loop
+    if (animationFrameId !== null) {
+        cancelAnimationFrame(animationFrameId);
+        animationFrameId = null;
+    }
+
+    window.removeEventListener('resize', resize);
+    if (canvasRef.value) {
+        canvasRef.value.removeEventListener('mousemove', onMouseMove);
+        canvasRef.value.removeEventListener('click', onClick);
+    }
+
+    // Dispose of cubes
+    if (scene) {
+        cubes.forEach(cube => {
+            if (cube.geometry) cube.geometry.dispose();
+            if (cube.material) cube.material.dispose();
+            scene.remove(cube);
+        });
+    }
+    cubes = [];
+
+    // Dispose of wireframe
+    if (activeWireframeGroup && scene) {
+        activeWireframeGroup.traverse(object => {
+            if (object instanceof THREE.LineSegments) {
+                if (object.geometry) object.geometry.dispose();
+                if (object.material) object.material.dispose();
+            }
+        });
+        scene.remove(activeWireframeGroup);
+        activeWireframeGroup = null;
+    }
+
+    // Safely remove lights
+    if (scene) {
+        const lights: THREE.Light[] = [];
+        scene.traverse(object => {
+            if (object instanceof THREE.Light) {
+                lights.push(object);
+            }
+        });
+        lights.forEach(light => {
+            if (scene) scene.remove(light);
+        });
+        scene.clear();
+    }
+
+    // Dispose of renderer and remove canvas
+    if (renderer) {
+        renderer.dispose();
+        renderer.forceContextLoss();
+        if (renderer.domElement && renderer.domElement.parentNode) {
+            renderer.domElement.parentNode.removeChild(renderer.domElement);
+        }
+        renderer = null;
+    }
+
+    // Clean up tooltip
+    if (popperInstance) popperInstance.destroy();
+    if (tooltipEl && tooltipEl.parentNode) document.body.removeChild(tooltipEl);
+    if (tooltipAnchorEl && tooltipAnchorEl.parentNode) document.body.removeChild(tooltipAnchorEl);
+
+    // Nullify references
+    scene = null;
+    hoveredCube = null;
+    hoverAnimation?.kill();
+    hoverAnimation = null;
 });
+
+
 </script>
 
 <template>

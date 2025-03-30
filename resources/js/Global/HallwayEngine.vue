@@ -436,7 +436,7 @@ onMounted(() => {
     window.addEventListener('resize', onResize)
 })
 
-onUnmounted(() => {
+/*onUnmounted(() => {
     if (animationFrameId !== null) {
         cancelAnimationFrame(animationFrameId); // Clean up
     }
@@ -450,8 +450,87 @@ onUnmounted(() => {
     if (settings.showStarfield && starfieldDispose) starfieldDispose();
     if (settings.showChasers && chaserPathDispose) chaserPathDispose();
     if (cityscapeDispose) cityscapeDispose();
-});
+});*/
+onUnmounted(() => {
+    if (animationFrameId !== null) {
+        cancelAnimationFrame(animationFrameId);
+    }
+    if (cleanupInteractivity) cleanupInteractivity();
+    window.removeEventListener('resize', onResize);
+    ScrollTrigger.getAll().forEach(trigger => trigger.kill());
 
+    // Dispose of composer and passes
+    if (composer) {
+        composer.passes.forEach(pass => {
+            if (pass.dispose) pass.dispose();
+        });
+        composer.dispose();
+    }
+
+    // Dispose of bloomPass explicitly
+    if (bloomPass) bloomPass.dispose();
+
+    // Dispose of textures in textureCache
+    textureCache.forEach(texture => {
+        texture.dispose();
+    });
+    textureCache.clear();
+
+    // Dispose of scene objects
+    scene.traverse(object => {
+        if (object instanceof THREE.Mesh) {
+            if (object.geometry) object.geometry.dispose();
+            if (object.material) {
+                if (Array.isArray(object.material)) {
+                    object.material.forEach(mat => mat.dispose());
+                } else {
+                    object.material.dispose();
+                }
+            }
+        }
+    });
+    if (scene.fog) scene.fog = null;
+    if (scene.background instanceof THREE.Color) scene.background = null;
+    scene.clear();
+
+    // Dispose of renderer and remove canvas
+    if (renderer) {
+        renderer.dispose();
+        renderer.forceContextLoss(); // Forcefully release WebGL context
+        if (renderer.domElement && renderer.domElement.parentNode) {
+            renderer.domElement.parentNode.removeChild(renderer.domElement);
+        }
+    }
+
+    // Remove stats DOM element
+    if (stats && stats.dom && stats.dom.parentNode) {
+        stats.dom.parentNode.removeChild(stats.dom);
+    }
+
+    // Cleanup composables
+    if (starfieldDispose) starfieldDispose();
+    if (chaserPathDispose) chaserPathDispose();
+    if (cityscapeDispose) cityscapeDispose();
+
+    // Nullify references
+    animationFrameId = null;
+    renderer = null;
+    composer = null;
+    bloomPass = null;
+    scene = null;
+    camera = null;
+    stats = null;
+    updateCityParticles = null;
+    starfieldDispose = null;
+    cleanupInteractivity = null;
+    chaserPathDispose = null;
+    updateChasers = null;
+    cityscapeDispose = null;
+    allCubes = [];
+    updateCubeColorsInternal = null;
+    projectCubesInstance = null;
+    scrollTriggerActiveCheck = null;
+});
 
 </script>
 
