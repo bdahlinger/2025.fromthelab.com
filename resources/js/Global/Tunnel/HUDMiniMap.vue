@@ -94,9 +94,7 @@ onMounted(() => {
             stagger: 0.1,
             delay: 0.5,
             overwrite: false,
-            onComplete: () => {
-                console.log('Animation complete');
-            },
+
         });
     }
 
@@ -121,7 +119,7 @@ watch(projects, () => {
         <!-- Dashed path -->
         <div
             ref="dashedPath"
-            class="absolute top-1/2 -translate-y-1/2 h-px border-dashed border-t border-sky-500/50 hidden-el"
+            class="absolute top-1/2 -translate-y-1/2 h-px border-dashed border-t border-sky-500/80 hidden-el"
             :style="{ width: `${mapWidth - svgWidth}px`, left: `${svgWidth / 2}px` }"
         ></div>
 

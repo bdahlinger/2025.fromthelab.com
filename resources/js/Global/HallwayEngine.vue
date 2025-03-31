@@ -28,7 +28,7 @@ const props = defineProps<{
     initialSlug?: string;
 }>();
 
-const emit = defineEmits(['camera-ready'])
+const emit = defineEmits(['camera-ready','scene-ready'])
 
 const projectStore = useProjectStore();
 projectStore.projects = props.projects;
@@ -248,6 +248,8 @@ const init = async () => {
         }
 
         updateRendererSize();
+
+        emit('scene-ready')
     } catch (error) {
         console.error('Error initializing project cubes:', error);
         projectMaxZ = FIRST_CUBE_Z - (props.projects.length + 1) * CUBE_SPACING;

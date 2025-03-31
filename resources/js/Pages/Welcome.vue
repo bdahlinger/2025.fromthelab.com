@@ -11,9 +11,10 @@ import { ProjectData } from '@/Types/generated';
 import { App } from '@/Types/enums';
 import GlobalFooter from "@/Global/GlobalFooter.vue";
 import AppWrap from '@/Pages/App.vue';
-import { computed, ref } from 'vue';
+import { computed, ref, onMounted } from 'vue';
 import IntroMessage from "@/Global/Tunnel/IntroMessage.vue";
 import Hud from "@/Global/Tunnel/HUD.vue";
+import {gsap} from "gsap";
 
 const props = defineProps<{
     //canLogin: boolean
@@ -26,7 +27,9 @@ const props = defineProps<{
 
 const projectStore = useProjectStore()
 const camera = ref<THREE.PerspectiveCamera | null>(null)
-
+const sceneReady = ref<boolen>(false)
+const showTunnel = ref<boolen>(false)
+const hudReady = ref<boolen>(false)
 const onCameraReady = (cam: THREE.PerspectiveCamera) => {
     camera.value = cam
 }
@@ -51,6 +54,12 @@ const getClassificationColor = (classification: App.Enums.Classification): numbe
     }
 };
 
+onMounted(() => {
+
+    //gsap.delayedCall(1, ()=>showTunnel.value=true)
+
+})
+
 </script>
 
 <template>
@@ -66,16 +75,25 @@ const getClassificationColor = (classification: App.Enums.Classification): numbe
 
         </nav>
 
-	    <div class="overflow-hidden relative">
+	    <div class="scene-wrap overflow-hidden relative"  :class="{'ready':sceneReady}">
+
             <hallway-engine
+                v-if="hudReady"
                 :projects="projects"
                 :project-grid-file="projectGridFile"
                 :project-grid-file2="projectGridFile2"
                 @camera-ready="onCameraReady"
+                @scene-ready="sceneReady = true"
             />
 
             <intro-message/>
-            <hud :camera="camera"/>
+
+            <hud
+                :camera="camera"
+                :ready="sceneReady"
+                @scene-ready="hudReady = true"
+            />
+
 	    </div>
         <div class="mt-16 px-4 md:px-16">
 
@@ -117,3 +135,11 @@ const getClassificationColor = (classification: App.Enums.Classification): numbe
     </div>
     </app-wrap>
 </template>
+<style scoped>
+.scene-wrap {
+    padding-top: 100vh;
+}
+.scene-wrap.ready{
+    padding-top:0;
+}
+</style>

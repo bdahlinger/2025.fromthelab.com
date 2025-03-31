@@ -315,9 +315,10 @@ class ProjectRepository
             ],
             'segments' => [
                 Segments::AWS,
+                Segments::STATIC,
+                Segments::GRIDSOME,
                 Segments::VUE_JS,
                 Segments::SCSS,
-                Segments::STATIC,
                 Segments::LOCALIZED,
             ],
             'keyart' => 'projects/conv.jpg',
