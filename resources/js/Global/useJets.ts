@@ -13,15 +13,16 @@ export function useJets(
     const MAX_Z = -10000
     const JET_MODEL_PATH = '/3D/jet.obj'
     const JET_SPEED = 1200
-    const START_Y = 400
-    const START_Z = -1000
+    const START_Y = 500
+    const START_Z = -500
     const FOV = 75
-    const SPACING_MULTIPLIER = 3
+    const SPACING_MULTIPLIER = 2
 
     let jets: THREE.Group[] = []
     let flames: THREE.LineSegments[] = []
     let isInitialized = false
     let disposeJets: (() => void) | null = null
+    let jetTemplateBounds: THREE.Box3 | null = null
 
     const loadJetModel = (): Promise<THREE.Group> => {
         return new Promise((resolve, reject) => {
@@ -34,6 +35,7 @@ export function useJets(
                     const box = new THREE.Box3().setFromObject(model)
                     const center = box.getCenter(new THREE.Vector3())
                     model.position.sub(center)
+
                     model.traverse((child) => {
                         if (child instanceof THREE.Mesh) {
                             const edges = new THREE.EdgesGeometry(child.geometry, 1)
@@ -48,11 +50,10 @@ export function useJets(
                             child.parent?.remove(child)
                         }
                     })
+                    jetTemplateBounds = box // Store for flame positioning
                     resolve(model)
                 },
-                (progress) => {
-                    console.log(`Jet loading progress: ${(progress.loaded / progress.total * 100).toFixed(2)}%`)
-                },
+                undefined, // Removed progress logging
                 (error) => {
                     console.error('Failed to load jet model:', error)
                     reject(error)
@@ -66,12 +67,21 @@ export function useJets(
         const wireframeGeo = new THREE.WireframeGeometry(coneGeometry)
         const wireframeMaterial = new THREE.LineBasicMaterial({
             color: 0xffffff,
-            depthTest: false
+            depthTest: false,
+            fog: false
         })
         const wireframe = new THREE.LineSegments(wireframeGeo, wireframeMaterial)
         wireframe.frustumCulled = false
         wireframe.name = 'flame'
-        wireframe.position.set(0, -17.5, 45)
+
+        if (jetTemplateBounds) {
+            const jetHeight = jetTemplateBounds.max.y - jetTemplateBounds.min.y
+            const tailZ = jetTemplateBounds.max.z
+            const tailY = jetTemplateBounds.min.y + jetHeight / 2
+            wireframe.position.set(0, tailY - 20, tailZ + 45)
+        } else {
+            wireframe.position.set(0, 0, 45)
+        }
         wireframe.rotation.x = Math.PI / 2
         return wireframe
     }
@@ -80,7 +90,7 @@ export function useJets(
         const positions: THREE.Vector3[] = []
         const aspect = window.innerWidth / window.innerHeight
         const fovRad = THREE.MathUtils.degToRad(FOV)
-        const visibleWidth = 2 * Math.tan(fovRad / 2) * (START_Y - START_Z) // Adjust for z=-1000
+        const visibleWidth = 2 * Math.tan(fovRad / 2) * (START_Y - START_Z)
         const spacing = (visibleWidth / (NUM_JETS - 1)) * SPACING_MULTIPLIER
 
         const halfWidth = (spacing * (NUM_JETS - 1)) / 2
@@ -91,16 +101,31 @@ export function useJets(
         return positions
     }
 
-    const animateJets = (jet: THREE.Group, flame: THREE.LineSegments, startPos: THREE.Vector3) => {
+    const calculateInitialRotations = () => {
+        const rotations: number[] = []
+        const minAngle = -80
+        const maxAngle = 80
+        const angleStep = (maxAngle - minAngle) / (NUM_JETS - 1)
+
+        for (let i = 0; i < NUM_JETS; i++) {
+            const angleDeg = minAngle + i * angleStep
+            rotations.push(THREE.MathUtils.degToRad(angleDeg))
+        }
+        return rotations
+    }
+
+    const animateJets = (jet: THREE.Group, flame: THREE.LineSegments, startPos: THREE.Vector3, initialRotation: number) => {
         jet.position.copy(startPos)
+        jet.rotation.z = initialRotation
         jet.visible = true
 
         const distance = Math.abs(MAX_Z - startPos.z)
-        const duration = distance / JET_SPEED
+        const totalDuration = distance / JET_SPEED
+        const rotationDuration = totalDuration * 0.3
 
         gsap.to(jet.position, {
             z: MAX_Z,
-            duration: duration,
+            duration: totalDuration,
             ease: 'none',
             onComplete: () => {
                 scene.remove(jet)
@@ -111,6 +136,12 @@ export function useJets(
                     flames.splice(jetIndex, 1)
                 }
             }
+        })
+
+        gsap.to(jet.rotation, {
+            z: 0,
+            duration: rotationDuration,
+            ease: 'none'
         })
     }
 
@@ -130,14 +161,12 @@ export function useJets(
     }
 
     const initializeJets = async () => {
-        if (!settings.showJets) {
-            console.log('Jets are disabled in settings.')
-            return
-        }
+        if (!settings.showJets) return
 
         try {
             const jetTemplate = await loadJetModel()
             const startingPositions = calculateStartingPositions()
+            const initialRotations = calculateInitialRotations()
 
             for (let i = 0; i < NUM_JETS; i++) {
                 const jet = jetTemplate.clone()
@@ -145,6 +174,7 @@ export function useJets(
 
                 jet.add(flame)
                 jet.position.copy(startingPositions[i])
+                jet.rotation.z = initialRotations[i]
                 jet.visible = false
                 scene.add(jet)
                 jets.push(jet)
@@ -172,8 +202,9 @@ export function useJets(
                 dispose: disposeJets || (() => {}),
                 startJetAnimation: () => {
                     const positions = calculateStartingPositions()
+                    const rotations = calculateInitialRotations()
                     jets.forEach((jet, i) => {
-                        animateJets(jet, flames[i], positions[i])
+                        animateJets(jet, flames[i], positions[i], rotations[i])
                     })
                 }
             })
@@ -206,8 +237,9 @@ export function useJets(
             dispose: disposeJets,
             startJetAnimation: () => {
                 const positions = calculateStartingPositions()
+                const rotations = calculateInitialRotations()
                 jets.forEach((jet, i) => {
-                    animateJets(jet, flames[i], positions[i])
+                    animateJets(jet, flames[i], positions[i], rotations[i])
                 })
             }
         }

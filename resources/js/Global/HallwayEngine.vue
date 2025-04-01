@@ -86,6 +86,9 @@ let projectMaxZ: number;
 let scrollTriggerActiveCheck: (() => boolean) | null = null;
 let lastOrientation: string | null = null;
 let resizeTimeout: number | null = null;
+let jetsInstance: ReturnType<typeof useJets> | null = null;
+let startJetAnimation: (() => void) | null = null;
+
 
 const fontLoader = useFontLoader('/fonts/Poppins_Regular.json');
 
@@ -214,16 +217,17 @@ const init = async () => {
     projectCubesInstance = useProjectCubes(scene, { CUBE_SIZE, CUBE_SPACING, FIRST_CUBE_Z }, props.projects, props.projectGridFile, props.projectGridFile2, settings, textureCache, fontLoader.font);
 
     if (settings.showJets) {
-        const jetsInstance = useJets(scene, settings);
-        await jetsInstance.getInitializedData().then(({ dispose }) => {
+        jetsInstance = useJets(scene, settings);
+        await jetsInstance.getInitializedData().then(({ dispose, startJetAnimation: animateJets }) => {
             jetsDispose = dispose;
+            startJetAnimation = animateJets; // Store the function
             updateProgress();
         }).catch((error) => {
             console.error('Jets initialization failed:', error);
-            updateProgress(); // Progress anyway to avoid stalling
+            updateProgress();
         });
     } else {
-        updateProgress(); // Increment for skipped jet
+        updateProgress();
     }
 
     try {
@@ -430,9 +434,9 @@ onMounted(() => {
                         onComplete: () => {
                             camera.position.z = 0
                             isIntroComplete.value = true
-                            jetsInstance?.getInitializedData().then(({ startJetAnimation }) => {
-                                startJetAnimation() // Jets animate here
-                            })
+                            if (startJetAnimation) {
+                                startJetAnimation()
+                            }
                         }
                     })
                 })
@@ -446,31 +450,9 @@ onMounted(() => {
         console.error('Initialization failed:', error)
     });
 
-    if (settings.showJets) {
-        jetsInstance = useJets(scene, settings)
-        jetsInstance.getInitializedData().then(({ dispose }) => {
-            jetsDispose = dispose
-        })
-    }
-
     window.addEventListener('resize', onResize)
 })
 
-/*onUnmounted(() => {
-    if (animationFrameId !== null) {
-        cancelAnimationFrame(animationFrameId); // Clean up
-    }
-    if (cleanupInteractivity) cleanupInteractivity();
-    window.removeEventListener('resize', onResize);
-    ScrollTrigger.getAll().forEach(trigger => trigger.kill());
-    renderer.dispose();
-    composer.dispose();
-    scene.clear();
-    document.body.removeChild(stats.dom);
-    if (settings.showStarfield && starfieldDispose) starfieldDispose();
-    if (settings.showChasers && chaserPathDispose) chaserPathDispose();
-    if (cityscapeDispose) cityscapeDispose();
-});*/
 onUnmounted(() => {
     if (animationFrameId !== null) {
         cancelAnimationFrame(animationFrameId);
@@ -575,15 +557,6 @@ onUnmounted(() => {
     padding-top:0;
 }
 
-/*.tunnel-wrapper {
-    width: 100%;
-    height: 100vh;
-    position: relative;
-    top: 0;
-    left: 0;
-    overflow-x: hidden;
-    max-width: none;
-}*/
 .tunnel-wrapper {
     width: 100%;
     height: 100vh;
@@ -602,19 +575,6 @@ onUnmounted(() => {
     width: 100% !important;
     max-width: none !important;
     overflow-x: hidden !important;
-
-
-
 }
 
-/* Vue Transition styles */
-/*.fade-enter-active,
-.fade-leave-active {
-    transition: opacity 0.5s ease;
-}
-
-.fade-enter-from,
-.fade-leave-to {
-    opacity: 0;
-}*/
 </style>
