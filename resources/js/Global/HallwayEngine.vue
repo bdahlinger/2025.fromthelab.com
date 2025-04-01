@@ -63,6 +63,9 @@ const isIntroComplete = ref(false);
 
 const textureCache = new Map<string, THREE.Texture>();
 const sceneDistance = 4000
+const keyartCount = props.projects.filter(project => project.keyart).length;
+const totalAssets = keyartCount + 2 + 1 + 2; // Keyarts + 2 grids + 1 font + 2 (jet + ufo)
+let loadedAssets = 0;
 
 let scene: THREE.Scene;
 let camera: THREE.PerspectiveCamera;
@@ -177,7 +180,7 @@ const init = async () => {
     document.body.appendChild(stats.dom);
 
     const keyartCount = props.projects.filter(project => project.keyart).length;
-    const totalAssets = keyartCount + 2 + 1 + 1; // Keyarts + 2 grids + 1 font + 1 jet
+    const totalAssets = keyartCount + 2 + 1 + 1; // Keyarts + 2 grids + 1 font + 1 (jets unit)
     let loadedAssets = 0;
 
     const updateProgress = () => {
@@ -217,7 +220,7 @@ const init = async () => {
     projectCubesInstance = useProjectCubes(scene, { CUBE_SIZE, CUBE_SPACING, FIRST_CUBE_Z }, props.projects, props.projectGridFile, props.projectGridFile2, settings, textureCache, fontLoader.font);
 
     if (settings.showJets) {
-        jetsInstance = useJets(scene, settings);
+        jetsInstance = useJets(scene, settings, camera);
         await jetsInstance.getInitializedData().then(({ dispose, startJetAnimation: animateJets }) => {
             jetsDispose = dispose;
             startJetAnimation = animateJets; // Store the function
