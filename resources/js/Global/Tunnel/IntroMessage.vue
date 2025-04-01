@@ -69,7 +69,7 @@ watch(progress, (newValue, oldValue) => {
 
     <div class="wrap fixed inset-x-0 bottom-0 z-10 pb-28">
 
-        <div ref="message" class="message flex flex-col items-center text-white text-lg md:text-sm ">
+        <div ref="message" class="message flex flex-col items-center text-white text-lg md:text-sm drop-shadow-white">
             <svg v-if="screenStore.isMobile" class="swipe w-9 mb-1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 922.17">
                 <g>
                     <g>

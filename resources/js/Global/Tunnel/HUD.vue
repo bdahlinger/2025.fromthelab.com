@@ -21,7 +21,7 @@ const emit = defineEmits(['scene-ready'])
 
 const projectStore = useProjectStore()
 const screenStore = useScreenStore()
-const { projects } = storeToRefs(projectStore);
+const { projects, isInPortalLock, activeProjectIndex } = storeToRefs(projectStore);
 const showIntroMessage = ref(true)
 const projectIndex = ref(0)
 const currentProject = ref<App.Data.ProjectData | null>(null)
@@ -93,8 +93,8 @@ const updateHUD = (newProgress: number, oldProgress: number | undefined) => {
 const getClassificationColor = computed((): string => {
     if (!currentProject.value) return 'text-white/50'
     switch (currentProject.value.classification) {
-        case App.Enums.Classification.ENTERTAINMENT: return 'text-red-600'
-        case App.Enums.Classification.ECOMMERCE: return 'text-green-600'
+        case App.Enums.Classification.ENTERTAINMENT: return 'text-red-600 drop-shadow-red'
+        case App.Enums.Classification.ECOMMERCE: return 'text-green-600 drop-shadow-green'
         case App.Enums.Classification.OTHER: return 'text-blue-600'
         default: return 'text-white/50'
     }
@@ -206,7 +206,7 @@ watch( () => props.ready, (val) => {
             <div
                 v-if="showIntroMessage"
                 ref="introMessageRef"
-                class="relative pointer-events-auto font-mono text-xs text-green-500 text-center w-full text-white"
+                class="relative pointer-events-auto font-mono text-xs text-green-500 text-center w-full text-white drop-shadow-white"
                 v-html="hasPassedIntroTextZone ? introText : 'X540%512053%)4KF405=31650-3215-503=4400%254=053-50135FFKMFLKFJ04-3515-FFLH>F'"
             >
             </div>
@@ -223,7 +223,7 @@ watch( () => props.ready, (val) => {
                         class="md:flex items-center gap-4 md:gap-[1vw] 3xl:gap-[1rem] pointer-events-auto"
 
                     >
-                        <h1 class="flex-shrink-0 tracking-tighter md:tracking-normal font-mono text-white  md:text-[0.75vw] 3xl:text-[0.75rem] md:leading-[1.0vw] 3xl:leading-[1.0rem]">
+                        <h1 class="flex-shrink-0 tracking-tighter md:tracking-normal font-mono text-white  md:text-[0.75vw] 3xl:text-[0.75rem] md:leading-[1.0vw] 3xl:leading-[1.0rem] drop-shadow-white">
                             {{ currentProject?.title || '' }}
                         </h1>
                         <h2 class="flex-shrink-0 font-mono text-xs md:text-[0.75vw] 3xl:text-[0.75rem] md:leading-[1.0vw] 3xl:leading-[1.0rem]">
@@ -243,7 +243,7 @@ watch( () => props.ready, (val) => {
                             {{type}}
                         </span>
                     </div>
-                    <div class="segments flex flex-wrap gap-0.5 md:gap-[.125vw] 3xl:gap-[.125rem] mt-1 md:mt-0" v-if="currentProject?.segments.length > 0">
+                    <div class="segments flex flex-wrap gap-0.5 md:gap-[.125vw] 3xl:gap-[.125rem] mt-1 md:mt-0 drop-shadow-white" v-if="currentProject?.segments.length > 0">
                         <span
                             v-for="(type,index) in currentProject?.segments" :key="index"
                             class="inline-flex items-center rounded-full px-2 md:px-[.375vw] 3xl:px-[.375rem] py-1 md:py-[.25vw] 3xl:py-[.25rem] text-[8px] md:text-[.5vw] 3xl:text-[.5rem] font-medium ring-1 ring-inset fill-white-400/10 text-white-400 ring-white/20">
@@ -256,7 +256,7 @@ watch( () => props.ready, (val) => {
                     <button
 
                         @click="handleNavigate"
-                        class="border border-current rounded-none px-2 py-1 mt-2 md:mt-0 whitespace-nowrap font-mono text-xxs text-white rounded transition-opacity duration-300 pointer-events-auto hover:text-green-500 hover:border-green-500"
+                        class="border border-current rounded-none px-2 py-1 mt-2 md:mt-0 whitespace-nowrap font-mono text-xxs text-white rounded transition-opacity duration-300 pointer-events-auto hover:text-green-500 hover:border-green-500 drop-shadow-white"
 
                     >
                         SEE PROJECT DETAILS

@@ -34,6 +34,15 @@ export default {
             },
             boxShadow: {
                 'blue': '0 0 6px 0 rgba(0, 0, 255, 1), 0 0 4px 0 rgba(0, 0, 255, 1), 0 0 2px 0 rgba(0, 0, 255, 1)',
+                'fuchsia': '0 0 6px 0 rgba(219, 39, 119, 0.8), 0 0 4px 0 rgba(219, 39, 119, 0.8)',
+            },
+            dropShadow: {
+                'white': '0 0 6px rgba(255, 255, 255, 1)',
+                'white-md': '0 0 8px rgba(255, 255, 255, 1)',
+                'blue': '0 0 6px rgba(0, 0, 255, 1)',
+                'red': '0 0 6px rgba(255, 0, 0, 1)',
+                'green': '0 0 6px rgba(0, 255, 0, 1)',
+
             }
         },
     },

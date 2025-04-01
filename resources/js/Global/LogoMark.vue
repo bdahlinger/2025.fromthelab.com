@@ -243,7 +243,7 @@ onUnmounted(() => {
         <div class="logo-3d-container">
             <canvas ref="canvasRef" class="logo-3d-canvas"></canvas>
         </div>
-        <svg ref="logoRef" class="relative h-3.5 md:h-[.875vw] 3xl:h-[.875rem] -mt-2 md:-mt-[.5vw] 3xl:-mt-[.5rem]" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 238.54 17.28">
+        <svg ref="logoRef" class="relative h-3.5 md:h-[.875vw] 3xl:h-[.875rem] -mt-2 md:-mt-[.5vw] 3xl:-mt-[.5rem] drop-shadow-white-md" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 238.54 17.28">
             <g>
                 <g>
                     <path d="M3.12,2.86v5.11h4.94l-1.44,2.59-3.5.05v6.43H0V.24h12.26l-1.45,2.62H3.12Z" style="fill: #fff;"/>

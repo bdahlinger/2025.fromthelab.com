@@ -13,7 +13,7 @@ const props = defineProps<{
 const screenStore = useScreenStore();
 const projectStore = useProjectStore();
 const projects = projectStore.projects || [];
-const { progress } = storeToRefs(projectStore);
+const { progress, isInPortalLock, activeProjectIndex, cubeMetadata } = storeToRefs(projectStore); // Add new refs
 const { screenWidth } = storeToRefs(screenStore);
 
 // Constants from projectStore
@@ -34,7 +34,7 @@ const svgWidth = computed(() => cubeWidth.value / 2); // Half of cubeWidth
 const scaleFactor = computed(() => mapWidth.value / totalDepth); // Dynamic based on mapWidth
 
 const cameraPosition = ref(0); // SVG left position in px
-
+const cameraRotation = ref(0);
 // Refs for DOM elements
 const mapContainer = ref<HTMLElement | null>(null);
 const dashedPath = ref<HTMLElement | null>(null);
@@ -51,7 +51,7 @@ const projectCubePositions = computed(() =>
     })
 );
 
-// Update camera position
+// Update camera position based on progress
 const updateCameraPosition = (newProgress: number) => {
     const scaledPosition = newProgress * scaleFactor.value + cubeWidth.value / 2;
     cameraPosition.value = Math.min(Math.max(scaledPosition, 0), mapWidth.value - svgWidth.value);
@@ -59,17 +59,77 @@ const updateCameraPosition = (newProgress: number) => {
 
 // Animate camera position with GSAP
 watch(progress, (newProgress) => {
-    gsap.to(cameraPosition, {
-        value: newProgress * scaleFactor.value + cubeWidth.value / 2,
-        duration: 0.3,
-        ease: 'power2.out',
-        onUpdate: () => {
-            cameraPosition.value = Math.min(Math.max(cameraPosition.value, 0), mapWidth.value - svgWidth.value);
-        },
-    });
-
+    if (!isInPortalLock.value) { // Only update if not in portal lock
+        gsap.to(cameraPosition, {
+            value: newProgress * scaleFactor.value + cubeWidth.value / 2,
+            duration: 0.3,
+            ease: 'power2.out',
+            onUpdate: () => {
+                cameraPosition.value = Math.min(Math.max(cameraPosition.value, 0), mapWidth.value - svgWidth.value);
+            },
+        });
+    }
 }, { immediate: true });
 
+watch(projects, () => {
+    console.log('Projects changed, re-rendering cubes');
+});
+
+watch([isInPortalLock, activeProjectIndex], ([newLock, newIndex], [oldLock]) => {
+    if (newLock && newIndex !== null && !oldLock) { // Entering portal lock
+        const targetPosition = projectCubePositions.value[newIndex] + cubeWidth.value / 2;
+        let targetRotation = 0; // Default (pointing right)
+        const keyartLocation = projects[newIndex]?.keyartLocation;
+        const cubeMeta = cubeMetadata.value?.find(meta => meta.index === newIndex);
+        const isFlipped = cubeMeta?.flipped || false;
+
+        // Determine portal face and rotation
+        switch (keyartLocation) {
+            case 'left': // Portal on right
+            case 'bottom': // Portal on top
+                targetRotation = isFlipped ? -90 : 90; // Flipped: up, Normal: down
+                break;
+            case 'right': // Portal on left
+            case 'top': // Portal on bottom
+                targetRotation = isFlipped ? 90 : -90; // Flipped: down, Normal: up
+                break;
+        }
+
+        gsap.to(cameraPosition, {
+            value: targetPosition,
+            duration: 1,
+            ease: 'power2.out',
+            onUpdate: () => {
+                cameraPosition.value = Math.min(Math.max(cameraPosition.value, 0), mapWidth.value - svgWidth.value);
+            },
+        });
+        gsap.to(cameraSvg.value, {
+            rotation: targetRotation,
+            duration: 1,
+            ease: 'power2.out',
+            onUpdate: () => {
+                cameraRotation.value = cameraSvg.value?.rotation || 0;
+            },
+        });
+    } else if (!newLock && oldLock) { // Exiting portal lock
+        gsap.to(cameraPosition, {
+            value: progress.value * scaleFactor.value + cubeWidth.value / 2,
+            duration: 2,
+            ease: 'power3.inOut',
+            onUpdate: () => {
+                cameraPosition.value = Math.min(Math.max(cameraPosition.value, 0), mapWidth.value - svgWidth.value);
+            },
+        });
+        gsap.to(cameraSvg.value, {
+            rotation: 0, // Return to default (pointing right)
+            duration: 2,
+            ease: 'power3.inOut',
+            onUpdate: () => {
+                cameraRotation.value = cameraSvg.value?.rotation || 0;
+            },
+        });
+    }
+});
 // Handle resize
 const handleResize = () => {
     updateCameraPosition(progress.value); // Recalculate positions on resize
@@ -105,9 +165,9 @@ onUnmounted(() => {
     window.removeEventListener('resize', handleResize);
 });
 
-watch(projects, () => {
-    console.log('Projects changed, re-rendering cubes');
-});
+
+
+
 </script>
 
 <template>
@@ -119,7 +179,7 @@ watch(projects, () => {
         <!-- Dashed path -->
         <div
             ref="dashedPath"
-            class="absolute top-1/2 -translate-y-1/2 h-px border-dashed border-t border-sky-500/80 hidden-el"
+            class="absolute top-1/2 -translate-y-1/2 h-px border-dotted border-t border-green-500/60 hidden-el"
             :style="{ width: `${mapWidth - svgWidth}px`, left: `${svgWidth / 2}px` }"
         ></div>
 
@@ -153,25 +213,25 @@ watch(projects, () => {
             :ref="el => projectCubes[index] = el as HTMLElement"
             class="border absolute top-1/2 -translate-y-1/2 hidden-el"
             :class="{
-                'border-blue-600 shadow-blue': props.project?.slug === projectItem.slug && props.project !== null,
-                'border-white/40': props.project?.slug !== projectItem.slug || props.project === null,
+                'border-fuchsia-600 shadow-fuchsia': props.project?.slug === projectItem.slug && props.project !== null,
+                'border-cyan-600/60': props.project?.slug !== projectItem.slug || props.project === null,
             }"
             :style="{ width: `${cubeWidth}px`, height: `${cubeWidth}px`, left: `${projectCubePositions[index]}px` }"
         ></div>
 
-        <!-- Camera (SVG Triangle) -->
         <svg
             ref="cameraSvg"
             xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 512 512"
-            class="absolute top-1/2 rotate-90 -translate-y-1/2 -translate-x-1/2 hidden-el"
+            viewBox="0 0 448 512"
+            class="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 hidden-el"
             :style="{ width: `${svgWidth}px`, left: `${cameraPosition}px` }"
         >
             <path
                 class="fill-green-500"
-                d="M0 480l18.3-32L237.6 64.2 256 32l18.4 32.2L493.7 448 512 480l-36.9 0L36.9 480 0 480zM256 96.5L55.1 448l401.7 0L256 96.5z"
+                  d="M0,0l32,18.3,383.8,219.3,32.2,18.4-32.2,18.4L32,493.7,0,512V0ZM383.5,256L32,55.1v401.7l351.5-200.8Z"
             />
         </svg>
+
     </div>
 </template>
 

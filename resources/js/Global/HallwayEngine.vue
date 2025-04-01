@@ -17,7 +17,7 @@ import { setupScrollAnimation } from './tunnelAnimations';
 import { useStarfield } from './useStarfield';
 import { useChaserPath } from './useChaserPath';
 import { useFontLoader } from './useFontLoader';
-import Preloader from './Preloader.vue';
+import { useJets } from './useJets';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -53,14 +53,14 @@ const settings = {
     showIntroCubes: true,
     showScrollTrigger: true,
     showStats: true,
+    showJets: true,
 };
 
 const tunnelWrapper = ref<HTMLElement | null>(null);
 const wrapper = ref<HTMLElement | null>(null);
 const isLoaded = ref(false);
-const loadingProgress = ref(0);
 const isIntroComplete = ref(false);
-const showPreloader = ref(true);
+
 const textureCache = new Map<string, THREE.Texture>();
 const sceneDistance = 4000
 
@@ -76,6 +76,7 @@ let cleanupInteractivity: (() => void) | null = null;
 let chaserPathDispose: (() => void) | null = null;
 let updateChasers: ((delta: number) => void) | null = null;
 let cityscapeDispose: (() => void) | null = null;
+let jetsDispose: (() => void) | null = null;
 let allCubes: THREE.Group[] = [];
 let updateCubeColorsInternal: ((camera: THREE.PerspectiveCamera) => void) | null = null;
 let animationFrameId: number | null = null;
@@ -99,7 +100,6 @@ const updateRendererSize = () => {
     composer.setSize(width * scaleFactor, height * scaleFactor);
 
     camera.aspect = width / height;
-    //camera.far = 60000;
     camera.updateProjectionMatrix();
 
     renderer.domElement.style.width = `${width}px`;
@@ -150,7 +150,6 @@ const init = async () => {
     const renderPass = new RenderPass(scene, camera);
     composer.addPass(renderPass);
 
-
     const bloomResolution = new THREE.Vector2(
         Math.floor(window.innerWidth / 2),
         Math.floor(window.innerHeight / 2)
@@ -175,14 +174,14 @@ const init = async () => {
     document.body.appendChild(stats.dom);
 
     const keyartCount = props.projects.filter(project => project.keyart).length;
-    const totalAssets = keyartCount + 2 + 1; // Keyarts + 2 grids + 1 font
+    const totalAssets = keyartCount + 2 + 1 + 1; // Keyarts + 2 grids + 1 font + 1 jet
     let loadedAssets = 0;
 
     const updateProgress = () => {
         loadedAssets++;
         const assetProgress = (loadedAssets / totalAssets) * 100;
         const fontProgress = fontLoader.loadingProgress.value;
-        loadingProgress.value = (assetProgress + fontProgress / totalAssets) / (1 + 1 / totalAssets);
+        projectStore.setLoadingProgress( (assetProgress + fontProgress / totalAssets) / (1 + 1 / totalAssets) );
         if (loadedAssets === totalAssets && fontLoader.isLoaded.value) {
             isLoaded.value = true;
         }
@@ -213,6 +212,19 @@ const init = async () => {
     }
 
     projectCubesInstance = useProjectCubes(scene, { CUBE_SIZE, CUBE_SPACING, FIRST_CUBE_Z }, props.projects, props.projectGridFile, props.projectGridFile2, settings, textureCache, fontLoader.font);
+
+    if (settings.showJets) {
+        const jetsInstance = useJets(scene, settings);
+        await jetsInstance.getInitializedData().then(({ dispose }) => {
+            jetsDispose = dispose;
+            updateProgress();
+        }).catch((error) => {
+            console.error('Jets initialization failed:', error);
+            updateProgress(); // Progress anyway to avoid stalling
+        });
+    } else {
+        updateProgress(); // Increment for skipped jet
+    }
 
     try {
         await projectCubesInstance.getInitializedData().then(({ maxZ, updateCubeColors, projectCubes }) => {
@@ -258,9 +270,6 @@ const init = async () => {
 
 };
 
-let lastFrameTime = 0;
-const TARGET_FPS = 60;
-const FRAME_DURATION = 1000 / TARGET_FPS; // ~16.67 ms
 
 const animate = (time: number = 0) => {
     animationFrameId = requestAnimationFrame(animate)
@@ -293,7 +302,7 @@ const animate = (time: number = 0) => {
             progress = (camera.position.z - BLOOM_FADE_START_Z) / fadeRange
         }
 
-        const minStrength = 0.01 // Adjust this to taste
+        const minStrength = 0.375 // minimal bloom when down tunnel
         const easedProgress = 1 - Math.pow(1 - progress, 2) // Smooth ease-out
         let targetStrength: number
         if (screenStore.isMobile) {
@@ -337,6 +346,9 @@ const onResize = () => {
 };
 
 onMounted(() => {
+
+    let jetsInstance: ReturnType<typeof useJets> | null = null
+
     init().then(() => {
         if (isLoaded.value) {
             animationFrameId = requestAnimationFrame(animate)
@@ -345,13 +357,13 @@ onMounted(() => {
             let scrollTrigger = null
             let setReverting = null
 
-            const setupPromise = projectCubesInstance!.getInitializedData().then(({ projectCubes }) => {
+            const setupPromise = projectCubesInstance!.getInitializedData().then(({ projectCubes, maxZ }) => {
 
                 projectCubes.forEach((cube) => {
                     cube.userData.isActive = true;
                 })
 
-                const maxZ = FIRST_CUBE_Z - (props.projects.length - 1) * CUBE_SPACING
+                //const maxZ = FIRST_CUBE_Z - (props.projects.length - 1) * CUBE_SPACING
 
                 camera.position.set(0, 0, 5000)
                 camera.lookAt(0, 0, maxZ)
@@ -395,38 +407,36 @@ onMounted(() => {
                 window.scrollTo({ top: 0, behavior: 'auto' })
             });
 
-
             const startIntro = () => {
                 setupPromise.then(() => {
-                    showPreloader.value = false;
-
-                    camera.position.set(0, 0, 5000);
-                    camera.updateProjectionMatrix();
+                    camera.position.set(0, 0, 5000)
+                    camera.updateProjectionMatrix()
 
                     gsap.to(renderer.domElement, {
                         opacity: 1,
                         duration: 0.5,
                         ease: 'power4.out'
-                    });
+                    })
 
-                    const cameraPos = { z: 5000 };
+                    const cameraPos = { z: 5000 }
                     gsap.to(cameraPos, {
                         z: 0,
                         duration: 2,
                         ease: 'power4.out',
                         onUpdate: () => {
-                            camera.position.z = cameraPos.z;
-                            camera.updateProjectionMatrix();
+                            camera.position.z = cameraPos.z
+                            camera.updateProjectionMatrix()
                         },
                         onComplete: () => {
-                            camera.position.z = 0;
-                            isIntroComplete.value = true;
+                            camera.position.z = 0
+                            isIntroComplete.value = true
+                            jetsInstance?.getInitializedData().then(({ startJetAnimation }) => {
+                                startJetAnimation() // Jets animate here
+                            })
                         }
-                    });
-                });
+                    })
+                })
             }
-
-
 
             gsap.delayedCall(0.5, startIntro)
 
@@ -435,6 +445,14 @@ onMounted(() => {
     }).catch((error) => {
         console.error('Initialization failed:', error)
     });
+
+    if (settings.showJets) {
+        jetsInstance = useJets(scene, settings)
+        jetsInstance.getInitializedData().then(({ dispose }) => {
+            jetsDispose = dispose
+        })
+    }
+
     window.addEventListener('resize', onResize)
 })
 
@@ -513,6 +531,7 @@ onUnmounted(() => {
     if (starfieldDispose) starfieldDispose();
     if (chaserPathDispose) chaserPathDispose();
     if (cityscapeDispose) cityscapeDispose();
+    if (jetsDispose) jetsDispose();
 
     // Nullify references
     animationFrameId = null;
@@ -538,9 +557,7 @@ onUnmounted(() => {
 
 <template>
     <section ref="wrapper" class="wrapper"  :class="{'ready':ready}">
-        <Transition name="fade">
-            <Preloader v-if="showPreloader" :progress="loadingProgress" />
-        </Transition>
+
         <div ref="tunnelWrapper" class="tunnel-wrapper"></div>
     </section>
 </template>
@@ -591,7 +608,7 @@ onUnmounted(() => {
 }
 
 /* Vue Transition styles */
-.fade-enter-active,
+/*.fade-enter-active,
 .fade-leave-active {
     transition: opacity 0.5s ease;
 }
@@ -599,5 +616,5 @@ onUnmounted(() => {
 .fade-enter-from,
 .fade-leave-to {
     opacity: 0;
-}
+}*/
 </style>

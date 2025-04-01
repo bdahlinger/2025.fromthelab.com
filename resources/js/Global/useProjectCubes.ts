@@ -64,7 +64,7 @@ export function useProjectCubes(
     let originalCameraTarget: THREE.Vector3 | null = null
     let isInPortalFocus = false
     let onPortalFocusChange: ((isFocused: boolean, originalPosition?: THREE.Vector3, originalTarget?: THREE.Vector3) => void) | null = null
-
+    let cubeMetadata: CubeMetadata[] = [];
     // Particle system management
     interface ClickHereParticle {
         mesh: THREE.Mesh
@@ -386,62 +386,66 @@ export function useProjectCubes(
 
             const texture = textureCache.get(keyart)
             if (texture) {
-                const planeGeometry = new THREE.PlaneGeometry(size - 1, size - 1)
+                const planeGeometry = new THREE.PlaneGeometry(size - 1, size - 1);
                 const planeMaterial = new THREE.MeshBasicMaterial({
                     map: texture,
                     transparent: true,
                     opacity: 0,
                     blending: THREE.AdditiveBlending,
                     side: THREE.DoubleSide
-                })
-                const plane = new THREE.Mesh(planeGeometry, planeMaterial)
-                plane.userData.isLoaded = true
+                });
+                const plane = new THREE.Mesh(planeGeometry, planeMaterial);
+                plane.userData.isLoaded = true;
                 switch (keyartLocation) {
                     case 'left':
-                        plane.position.set(-halfSize, 0, 0)
+                        plane.position.set(-halfSize, 0, 0);
                         if (rotation >= THREE.MathUtils.degToRad(120)) {
-                            plane.rotation.y = Math.PI / 2
-                            plane.rotation.z = -Math.PI
+                            plane.rotation.y = Math.PI / 2;
+                            plane.rotation.z = -Math.PI;
+                            group.userData.flipped = true; // Flip when rotated >= 120°
                         } else {
-                            plane.rotation.y = Math.PI / 2
+                            plane.rotation.y = Math.PI / 2;
                         }
-                        break
+                        break;
                     case 'top':
-                        plane.position.set(0, -halfSize, 0)
-                        plane.rotation.x = -Math.PI / 2
-                        plane.rotation.z = -Math.PI / 2
-                        break
+                        plane.position.set(0, -halfSize, 0);
+                        plane.rotation.x = -Math.PI / 2;
+                        plane.rotation.z = -Math.PI / 2;
+                        break;
                     case 'right':
-                        plane.position.set(halfSize, 0, 0)
+                        plane.position.set(halfSize, 0, 0);
                         if (rotation >= THREE.MathUtils.degToRad(120)) {
-                            plane.rotation.y = -Math.PI / 2
-                            plane.rotation.z = -Math.PI
+                            plane.rotation.y = -Math.PI / 2;
+                            plane.rotation.z = -Math.PI;
+                            group.userData.flipped = true; // Flip when rotated >= 120°
                         } else {
-                            plane.rotation.y = -Math.PI / 2
+                            plane.rotation.y = -Math.PI / 2;
                         }
-                        break
+                        break;
                     case 'bottom':
-                        plane.position.set(0, halfSize, 0)
+                        plane.position.set(0, halfSize, 0);
                         if (rotation >= THREE.MathUtils.degToRad(180)) {
                             if (rotation >= THREE.MathUtils.degToRad(220)) {
-                                plane.rotation.x = Math.PI / 2
-                                plane.rotation.z = Math.PI / 2
+                                plane.rotation.x = Math.PI / 2;
+                                plane.rotation.z = Math.PI / 2;
+                                group.userData.flipped = true; // Flip when rotated >= 220°
                             } else {
-                                plane.rotation.x = -Math.PI / 2
-                                plane.rotation.z = Math.PI / 2
+                                plane.rotation.x = -Math.PI / 2;
+                                plane.rotation.z = Math.PI / 2;
+                                group.userData.flipped = true; // Flip when rotated >= 180°
                             }
                         } else {
-                            plane.rotation.x = Math.PI / 2
-                            plane.rotation.z = -Math.PI / 2
+                            plane.rotation.x = Math.PI / 2;
+                            plane.rotation.z = -Math.PI / 2;
                         }
-                        break
+                        break;
                 }
-                plane.geometry.computeBoundingSphere()
-                addChildWithBounds(plane)
-                addPortal()
+                plane.geometry.computeBoundingSphere();
+                addChildWithBounds(plane);
+                addPortal();
             } else {
-                console.warn(`Keyart texture not preloaded for ${project.title}: ${keyart}`)
-                addPortal()
+                console.warn(`Keyart texture not preloaded for ${project.title}: ${keyart}`);
+                addPortal();
             }
         } else {
             addPortal()
@@ -622,14 +626,21 @@ export function useProjectCubes(
         projectCubes: THREE.Group[]
         updateCubeColors: (camera: THREE.PerspectiveCamera) => void
         loadedFont: THREE.Font
-        maxZ: number
+        maxZ: number,
+        cubeMetadata: CubeMetadata[]
     }> => {
         if (isInitialized) {
-            return Promise.resolve({ projectCubes, updateCubeColors, maxZ: MAX_Z });
+            return Promise.resolve({ projectCubes, updateCubeColors, maxZ: MAX_Z, cubeMetadata });
         }
         initializeScene();
         isInitialized = true;
-        return Promise.resolve({ projectCubes, updateCubeColors, maxZ: MAX_Z });
+        cubeMetadata = projectCubes.map(cube => ({
+            index: cube.userData.cubeIndex,
+            rotation: THREE.MathUtils.radToDeg(cube.rotation.z),
+            flipped: cube.userData.flipped
+        }));
+        projectStore.setCubeMetadata(cubeMetadata);
+        return Promise.resolve({ projectCubes, updateCubeColors, maxZ: MAX_Z, cubeMetadata });
     }
 
     const animatePulses = (portal: THREE.LineSegments) => {
@@ -1107,6 +1118,7 @@ export function useProjectCubes(
             const cubeIndex = exitingPortal ? projectCubes.indexOf(cube) : -1
 
             isCameraAnimating = true
+            projectStore.setPortalLock(false);
 
             if (exitingPortal) {
                 stopRingAnimation(exitingPortal)
@@ -1200,6 +1212,7 @@ export function useProjectCubes(
                             lastEmissionTimes.set(cube, 0)
                         }
                     })
+
                 }
             })
             const startLookAt = camera.userData.lockedLookAt ? camera.userData.lockedLookAt.clone() : camera.getWorldDirection(new THREE.Vector3()).multiplyScalar(1000).add(camera.position)
@@ -1574,6 +1587,8 @@ export function useProjectCubes(
                                 })
                             }
                         }
+
+                        projectStore.setPortalLock(true, cubeIndex);
                     },
                     onComplete: () => {
                         animateRings(clickedPortal, true)

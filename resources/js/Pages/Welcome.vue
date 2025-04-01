@@ -2,6 +2,8 @@
 import { Head, Link } from '@inertiajs/vue3';
 import LogoMark from "@/Global/LogoMark.vue";
 import { useProjectStore } from '@/Stores/projectStore'
+import { storeToRefs } from 'pinia';
+
 //import ThreeDSpheres from "@/Global/ThreeDSpheres.vue";
 import CubeStrip from "@/Global/CubeStrip.vue";
 //import Hallway from "@/Global/Hallway.vue";
@@ -15,6 +17,7 @@ import { computed, ref, onMounted } from 'vue';
 import IntroMessage from "@/Global/Tunnel/IntroMessage.vue";
 import Hud from "@/Global/Tunnel/HUD.vue";
 import {gsap} from "gsap";
+import Preloader from "@/Global/Preloader.vue";
 
 const props = defineProps<{
     //canLogin: boolean
@@ -26,10 +29,13 @@ const props = defineProps<{
 }>()
 
 const projectStore = useProjectStore()
+const { loadingProgress } = storeToRefs(projectStore);
+
 const camera = ref<THREE.PerspectiveCamera | null>(null)
 const sceneReady = ref<boolen>(false)
 const showTunnel = ref<boolen>(false)
 const hudReady = ref<boolen>(false)
+
 const onCameraReady = (cam: THREE.PerspectiveCamera) => {
     camera.value = cam
 }
@@ -86,6 +92,10 @@ onMounted(() => {
                 @scene-ready="sceneReady = true"
             />
 
+            <Transition name="fade">
+                <Preloader v-if="!sceneReady" :progress="loadingProgress || 0" />
+            </Transition>
+
             <intro-message/>
 
             <hud
@@ -141,5 +151,14 @@ onMounted(() => {
 }
 .scene-wrap.ready{
     padding-top:0;
+}
+.fade-enter-active,
+.fade-leave-active {
+    transition: opacity 0.5s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+    opacity: 0;
 }
 </style>
