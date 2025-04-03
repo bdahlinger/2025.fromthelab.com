@@ -49,8 +49,9 @@ const classificationValues = computed(() => {
 });
 const handleGesture = () => {
     console.log('handleGesture()', projectStore.audioEnabled)
-    if (!projectStore.audioEnabled) {
+    if ( !projectStore.audioEnabled ) {
         projectStore.audioEnabled = true
+        projectStore.userEngaged = true
         window.removeEventListener('click', handleGesture)
         window.removeEventListener('touchstart', handleGesture)
         window.removeEventListener('keydown', handleGesture)

@@ -143,6 +143,7 @@ const handleNavigate = () => {
 }
 
 const toggleAudio = () => {
+    if(!projectStore.userEngaged) return
     projectStore.toggleAudio();
 };
 

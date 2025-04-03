@@ -32,6 +32,7 @@ export function useJets(
     const FOV = 75
     const SPACING_MULTIPLIER = 2
     const showDebugPath = false
+    const MAX_SOUND_FADE_DISTANCE = 2500
 
     const SIM_BOUNDS = {
         xMin: -800,
@@ -71,6 +72,16 @@ export function useJets(
     let minigunAudioBuffer: AudioBuffer | null = null
     let minigunWindDownAudioBuffer: AudioBuffer | null = null
     let explosionAudioBuffer: AudioBuffer | null = null // New: Explosion audio buffer
+    let audioTweens: { [key in keyof typeof audioTracks]?: gsap.core.Tween | null } = {}
+
+    const maxVolumes = {
+        initialJet: 1.0,
+        battleJet: 0.6,
+        battleUfo: 0.2,
+        minigun: 0.2,
+        minigunWindDown: 0.2,
+        explosion: 0.8
+    } as const
 
     const audioTracks = {
         initialJet: { source: null as AudioBufferSourceNode | null, panner: null as StereoPannerNode | null, gain: null as GainNode | null, active: false },
@@ -78,7 +89,7 @@ export function useJets(
         battleUfo: { source: null as AudioBufferSourceNode | null, panner: null as StereoPannerNode | null, gain: null as GainNode | null, active: false },
         minigun: { source: null as AudioBufferSourceNode | null, panner: null as StereoPannerNode | null, gain: null as GainNode | null, active: false },
         minigunWindDown: { source: null as AudioBufferSourceNode | null, panner: null as StereoPannerNode | null, gain: null as GainNode | null, active: false },
-        explosion: { source: null as AudioBufferSourceNode | null, panner: null as StereoPannerNode | null, gain: null as GainNode | null, active: false } // New: Explosion track
+        explosion: { source: null as AudioBufferSourceNode | null, panner: null as StereoPannerNode | null, gain: null as GainNode | null, active: false }
     }
 
     const loadJetModel = (): Promise<THREE.Group> => {
@@ -336,7 +347,7 @@ export function useJets(
         battleUfo.visible = false
         stopAudio('battleUfo')
         if (audioEnabled.value) {
-            startAudio('explosion', battleUfo) // Play explosion sound
+            startAudio('explosion', battleUfo)
         }
 
         const explosionCenter = battleUfo.position.clone()
@@ -417,22 +428,8 @@ export function useJets(
             }
         })
 
-        // Update explosion sound panning and volume during animation
-        if (audioTracks.explosion.panner && audioTracks.explosion.gain) {
-            gsap.to(audioTracks.explosion, {
-                duration: 1.5,
-                onUpdate: () => {
-                    const panValue = THREE.MathUtils.clamp((explosionCenter.x / 500) * 2, -1, 1)
-                    audioTracks.explosion.panner!.pan.value = panValue
-                    const zDistance = Math.abs(camera.position.z - explosionCenter.z)
-                    const maxDistance = 4000
-                    const volume = THREE.MathUtils.clamp(1 - (zDistance / maxDistance), 0, 1)
-                    audioTracks.explosion.gain!.gain.value = volume
-                },
-                onComplete: () => {
-                    stopAudio('explosion')
-                }
-            })
+        if (audioEnabled.value && explosionAudioBuffer) {
+            gsap.delayedCall(explosionAudioBuffer.duration, () => stopAudio('explosion'))
         }
     }
 
@@ -461,6 +458,51 @@ export function useJets(
                 if (!hasFiredFirstBullet && audioEnabled.value) {
                     startAudio('minigun', battleJet)
                     hasFiredFirstBullet = true
+
+                    const startMinigunPositional = () => {
+                        if (audioTracks.minigun.panner && audioTracks.minigun.gain) {
+                            audioTweens.minigun = gsap.to(audioTracks.minigun, {
+                                duration: (numBullets - i) * 0.05 + 0.5, // Use numBullets here
+                                onUpdate: () => {
+                                    if (!battleJet || !audioTracks.minigun.panner || !audioTracks.minigun.gain) {
+                                        console.warn('Minigun update skipped: invalid state', {
+                                            battleJet,
+                                            panner: audioTracks.minigun.panner,
+                                            gain: audioTracks.minigun.gain,
+                                            active: audioTracks.minigun.active
+                                        })
+                                        return
+                                    }
+                                    const panValue = THREE.MathUtils.clamp((battleJet.position.x / 500) * 2, -1, 1)
+                                    audioTracks.minigun.panner.pan.value = panValue
+                                    const zDistance = Math.abs(camera.position.z - battleJet.position.z)
+                                    const distanceFactor = THREE.MathUtils.clamp(1 - (zDistance / MAX_SOUND_FADE_DISTANCE), 0, 1)
+                                    const newVolume = maxVolumes.minigun * distanceFactor
+                                    if (!Number.isFinite(newVolume)) {
+                                        console.error('Non-finite volume for minigun', {
+                                            zDistance,
+                                            maxDistance,
+                                            distanceFactor,
+                                            maxVol: maxVolumes.minigun
+                                        })
+                                        return
+                                    }
+                                    audioTracks.minigun.gain.gain.value = newVolume
+                                },
+                                onComplete: () => {
+                                    audioTweens.minigun = null
+                                }
+                            })
+                        } else {
+                            console.error('Minigun audio not initialized properly', audioTracks.minigun)
+                        }
+                    }
+
+                    if (audioContext.state === 'suspended') {
+                        audioContext.resume().then(startMinigunPositional)
+                    } else {
+                        startMinigunPositional()
+                    }
                 }
 
                 const bulletSpeed = 1200
@@ -499,7 +541,7 @@ export function useJets(
                                 const bulletSphere = bullet.geometry.boundingSphere.clone()
                                 bulletSphere.applyMatrix4(bullet.matrixWorld)
                                 if (bulletSphere.intersectsSphere(ufoSphere)) {
-                                    console.log('Bullet HIT UFO at:', bullet.position, 'UFO position:', battleUfo.position)
+                                    //console.log('Bullet HIT UFO at:', bullet.position, 'UFO position:', battleUfo.position)
                                     ufoDestroyed = true
                                     explodeUfo()
                                 }
@@ -585,9 +627,12 @@ export function useJets(
                     const panValue = THREE.MathUtils.clamp((jet.position.x / 500) * 2, -1, 1)
                     audioTracks.initialJet.panner!.pan.value = panValue
                     const zDistance = Math.abs(camera.position.z - jet.position.z)
-                    const maxDistance = 4000
-                    const volume = THREE.MathUtils.clamp(1 - (zDistance / maxDistance), 0, 1)
-                    audioTracks.initialJet.gain!.gain.value = volume
+                    const fadeDistance = MAX_SOUND_FADE_DISTANCE + 1000 // 3500
+                    const offset = 400 // Adjust this value
+                    const adjustedDistance = Math.max(zDistance - offset, 0)
+                    const distanceFactor = THREE.MathUtils.clamp(1 - (adjustedDistance / fadeDistance), 0, 1)
+                    const newVolume = maxVolumes.initialJet * distanceFactor
+                    audioTracks.initialJet.gain!.gain.value = newVolume
                 }
             },
             onComplete: () => {
@@ -685,6 +730,7 @@ export function useJets(
     }
 
     const startBattle = (jetTemplate: THREE.Group, ufoTemplate: THREE.Group) => {
+        console.log('startBattle')
         if (battleTimeline) {
             battleTimeline.kill()
             battleTimeline = null
@@ -692,7 +738,7 @@ export function useJets(
 
         stopAudio('battleJet')
         stopAudio('battleUfo')
-        stopAudio('explosion') // Ensure explosion sound is stopped
+        stopAudio('explosion')
 
         const path = generateBattlePath()
         createDebugPath(path)
@@ -746,17 +792,19 @@ export function useJets(
                     const panValue = THREE.MathUtils.clamp((battleJet.position.x / 500) * 2, -1, 1)
                     audioTracks.battleJet.panner!.pan.value = panValue
                     const zDistance = Math.abs(camera.position.z - battleJet.position.z)
-                    const maxDistance = 4000
-                    const volume = THREE.MathUtils.clamp(1 - (zDistance / maxDistance), 0, 1)
-                    audioTracks.battleJet.gain!.gain.value = volume
+                    const distanceFactor  = THREE.MathUtils.clamp(1 - (zDistance / MAX_SOUND_FADE_DISTANCE), 0, 1)
+                    audioTracks.battleJet.gain!.gain.value = maxVolumes.battleJet * distanceFactor
                 }
                 if (!ufoDestroyed && battleUfo && audioTracks.battleUfo.panner && audioTracks.battleUfo.gain && battleUfo.visible && audioEnabled.value) {
                     const panValue = THREE.MathUtils.clamp((battleUfo.position.x / 500) * 2, -1, 1)
                     audioTracks.battleUfo.panner!.pan.value = panValue
                     const zDistance = Math.abs(camera.position.z - battleUfo.position.z)
-                    const maxDistance = 4000
-                    const volume = THREE.MathUtils.clamp(1 - (zDistance / maxDistance), 0, 1)
-                    audioTracks.battleUfo.gain!.gain.value = volume
+                    const distanceFactor = THREE.MathUtils.clamp(1 - (zDistance / MAX_SOUND_FADE_DISTANCE), 0, 1)
+                    const newGain = maxVolumes.battleUfo * distanceFactor
+                    //console.log(`ufo gain: ${newGain}, zDistance: ${zDistance}, camera.z: ${camera.position.z}, ufo.z: ${battleUfo.position.z}`)
+                    audioTracks.battleUfo.gain!.gain.value = newGain
+                    // Test: Force a more drastic fade
+                    // audioTracks.battleUfo.gain!.gain.value = distanceFactor * 0.5 // Uncomment to exaggerate fade
                 }
             },
             onComplete: () => {
@@ -785,7 +833,7 @@ export function useJets(
                 ufoFragments = []
                 gsap.ticker.remove(tickExhaust)
                 exhaustTimer = 0
-                gsap.delayedCall(1, startBattle, [jetTemplate, ufoTemplate])
+                gsap.delayedCall(1.5 + Math.random() * (3 - 1.5), startBattle, [jetTemplate, ufoTemplate])
             }
         })
 
@@ -885,16 +933,26 @@ export function useJets(
         const buffer = track === 'battleUfo' ? ufoAudioBuffer :
             track === 'minigun' ? minigunAudioBuffer :
                 track === 'minigunWindDown' ? minigunWindDownAudioBuffer :
-                    track === 'explosion' ? explosionAudioBuffer : // New: Explosion buffer
+                    track === 'explosion' ? explosionAudioBuffer :
                         jetAudioBuffer
         if (!buffer) return
 
         const source = audioContext.createBufferSource()
         source.buffer = buffer
         source.loop = track === 'minigun'
-        const gain = audioContext.createGain()
-        gain.gain.value = (track === 'minigun' || track === 'minigunWindDown') ? 0.6 : track === 'explosion' ? 1.0 : 0.8 // Explosion at full volume
-        const panner = audioContext.createStereoPanner()
+
+        // Reuse existing gain and panner if available
+        const gain = audioTracks[track].gain || audioContext.createGain()
+        const panner = audioTracks[track].panner || audioContext.createStereoPanner()
+
+        const maxVol = maxVolumes[track]
+        const zDistance = Math.abs(camera.position.z - positionObj.position.z)
+        const distanceFactor = THREE.MathUtils.clamp(1 - (zDistance / MAX_SOUND_FADE_DISTANCE), 0, 1)
+        const panValue = THREE.MathUtils.clamp((positionObj.position.x / 500) * 2, -1, 1)
+
+        gain.gain.value = maxVol * distanceFactor
+        panner.pan.value = panValue
+
         source.connect(gain).connect(panner).connect(audioContext.destination)
 
         if (audioContext.state === 'suspended') {
@@ -910,6 +968,10 @@ export function useJets(
 
     const stopAudio = (track: keyof typeof audioTracks) => {
         if (audioTracks[track] && audioTracks[track].source && audioTracks[track].active) {
+            if (audioTweens[track]) {
+                audioTweens[track]!.kill()
+                audioTweens[track] = null
+            }
             audioTracks[track].source!.stop()
             audioTracks[track].source!.disconnect()
             audioTracks[track].source = null
@@ -1039,10 +1101,10 @@ export function useJets(
                 if (jets.length > 2 && jets[2] && jets[2].visible) {
                     startAudio('initialJet', jets[2])
                 }
-                if (battleJet && battleJet.visible) {
+                if (battleJet && battleJet.visible && !audioTracks.battleJet.active) {
                     startAudio('battleJet', battleJet)
                 }
-                if (battleUfo && battleUfo.visible && !ufoDestroyed) {
+                if (battleUfo && battleUfo.visible && !ufoDestroyed && !audioTracks.battleUfo.active) {
                     startAudio('battleUfo', battleUfo)
                 }
             } else {
