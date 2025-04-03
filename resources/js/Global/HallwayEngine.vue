@@ -1,6 +1,6 @@
 <!-- resources/js/Global/HallwayEngine.vue -->
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref } from 'vue';
+import {onBeforeMount, onMounted, onUnmounted, ref} from 'vue';
 import { useProjectStore } from '@/Stores/projectStore';
 import { useScreenStore } from "@/Stores/screenStore";
 import * as THREE from 'three';
@@ -63,9 +63,6 @@ const isIntroComplete = ref(false);
 
 const textureCache = new Map<string, THREE.Texture>();
 const sceneDistance = 4000
-const keyartCount = props.projects.filter(project => project.keyart).length;
-const totalAssets = keyartCount + 2 + 1 + 2; // Keyarts + 2 grids + 1 font + 2 (jet + ufo)
-let loadedAssets = 0;
 
 let scene: THREE.Scene;
 let camera: THREE.PerspectiveCamera;
@@ -180,14 +177,16 @@ const init = async () => {
     document.body.appendChild(stats.dom);
 
     const keyartCount = props.projects.filter(project => project.keyart).length;
-    const totalAssets = keyartCount + 2 + 1 + 1; // Keyarts + 2 grids + 1 font + 1 (jets unit)
+    const JET_ASSETS_COUNT = 7; // Updated: jet, ufo, jet sound, ufo sound, minigun, minigun wind-down, explosion
+    const totalAssets = keyartCount + 2 + 1 + JET_ASSETS_COUNT; // Keyarts + 2 grids + 1 font + 7 jet assets
     let loadedAssets = 0;
 
-    const updateProgress = () => {
-        loadedAssets++;
+    const updateProgress = (count: number = 1) => {
+        loadedAssets += count;
         const assetProgress = (loadedAssets / totalAssets) * 100;
         const fontProgress = fontLoader.loadingProgress.value;
-        projectStore.setLoadingProgress( (assetProgress + fontProgress / totalAssets) / (1 + 1 / totalAssets) );
+        const totalProgress = (assetProgress * (totalAssets / (totalAssets + 1))) + (fontProgress / (totalAssets + 1));
+        projectStore.setLoadingProgress(Math.min(totalProgress, 100));
         if (loadedAssets === totalAssets && fontLoader.isLoaded.value) {
             isLoaded.value = true;
         }
@@ -224,13 +223,13 @@ const init = async () => {
         await jetsInstance.getInitializedData().then(({ dispose, startJetAnimation: animateJets }) => {
             jetsDispose = dispose;
             startJetAnimation = animateJets; // Store the function
-            updateProgress();
+            updateProgress(JET_ASSETS_COUNT);
         }).catch((error) => {
             console.error('Jets initialization failed:', error);
-            updateProgress();
+            updateProgress(JET_ASSETS_COUNT);
         });
     } else {
-        updateProgress();
+        updateProgress(JET_ASSETS_COUNT);
     }
 
     try {
@@ -352,6 +351,8 @@ const onResize = () => {
     }
 };
 
+
+
 onMounted(() => {
 
     let jetsInstance: ReturnType<typeof useJets> | null = null
@@ -453,89 +454,92 @@ onMounted(() => {
         console.error('Initialization failed:', error)
     });
 
-    window.addEventListener('resize', onResize)
+
 })
 
 onUnmounted(() => {
     if (animationFrameId !== null) {
-        cancelAnimationFrame(animationFrameId);
+        cancelAnimationFrame(animationFrameId)
     }
-    if (cleanupInteractivity) cleanupInteractivity();
-    window.removeEventListener('resize', onResize);
-    ScrollTrigger.getAll().forEach(trigger => trigger.kill());
+    if (cleanupInteractivity) cleanupInteractivity()
+    window.removeEventListener('resize', onResize)
+    window.removeEventListener('click', handleGesture)
+    window.removeEventListener('touchstart', handleGesture)
+    window.removeEventListener('keydown', handleGesture)
+    ScrollTrigger.getAll().forEach(trigger => trigger.kill())
 
     // Dispose of composer and passes
     if (composer) {
         composer.passes.forEach(pass => {
-            if (pass.dispose) pass.dispose();
+            if (pass.dispose) pass.dispose()
         });
-        composer.dispose();
+        composer.dispose()
     }
 
     // Dispose of bloomPass explicitly
-    if (bloomPass) bloomPass.dispose();
+    if (bloomPass) bloomPass.dispose()
 
     // Dispose of textures in textureCache
     textureCache.forEach(texture => {
-        texture.dispose();
+        texture.dispose()
     });
-    textureCache.clear();
+    textureCache.clear()
 
     // Dispose of scene objects
     scene.traverse(object => {
         if (object instanceof THREE.Mesh) {
-            if (object.geometry) object.geometry.dispose();
+            if (object.geometry) object.geometry.dispose()
             if (object.material) {
                 if (Array.isArray(object.material)) {
-                    object.material.forEach(mat => mat.dispose());
+                    object.material.forEach(mat => mat.dispose())
                 } else {
-                    object.material.dispose();
+                    object.material.dispose()
                 }
             }
         }
     });
-    if (scene.fog) scene.fog = null;
-    if (scene.background instanceof THREE.Color) scene.background = null;
-    scene.clear();
+    if (scene.fog) scene.fog = null
+    if (scene.background instanceof THREE.Color) scene.background = null
+    scene.clear()
 
     // Dispose of renderer and remove canvas
     if (renderer) {
-        renderer.dispose();
-        renderer.forceContextLoss(); // Forcefully release WebGL context
+        renderer.dispose()
+        renderer.forceContextLoss() // Forcefully release WebGL context
         if (renderer.domElement && renderer.domElement.parentNode) {
-            renderer.domElement.parentNode.removeChild(renderer.domElement);
+            renderer.domElement.parentNode.removeChild(renderer.domElement)
         }
     }
 
     // Remove stats DOM element
     if (stats && stats.dom && stats.dom.parentNode) {
-        stats.dom.parentNode.removeChild(stats.dom);
+        stats.dom.parentNode.removeChild(stats.dom)
     }
 
     // Cleanup composables
-    if (starfieldDispose) starfieldDispose();
-    if (chaserPathDispose) chaserPathDispose();
-    if (cityscapeDispose) cityscapeDispose();
-    if (jetsDispose) jetsDispose();
+    if (starfieldDispose) starfieldDispose()
+    if (chaserPathDispose) chaserPathDispose()
+    if (cityscapeDispose) cityscapeDispose()
+    if (jetsDispose) jetsDispose()
 
     // Nullify references
-    animationFrameId = null;
-    renderer = null;
-    composer = null;
-    bloomPass = null;
-    scene = null;
-    camera = null;
-    stats = null;
-    updateCityParticles = null;
-    starfieldDispose = null;
-    cleanupInteractivity = null;
-    chaserPathDispose = null;
-    updateChasers = null;
-    cityscapeDispose = null;
-    allCubes = [];
-    updateCubeColorsInternal = null;
-    projectCubesInstance = null;
-    scrollTriggerActiveCheck = null;
+    animationFrameId = null
+    renderer = null
+    composer = null
+    bloomPass = null
+    scene = null
+    camera = null
+    stats = null
+    updateCityParticles = null
+    starfieldDispose = null
+    cleanupInteractivity = null
+    chaserPathDispose = null
+    updateChasers = null
+    cityscapeDispose = null
+    allCubes = []
+    updateCubeColorsInternal = null
+    projectCubesInstance = null
+    scrollTriggerActiveCheck = null
 });
 
 </script>

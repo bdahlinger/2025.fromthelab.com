@@ -13,11 +13,12 @@ import { ProjectData } from '@/Types/generated';
 import { App } from '@/Types/enums';
 import GlobalFooter from "@/Global/GlobalFooter.vue";
 import AppWrap from '@/Pages/App.vue';
-import { computed, ref, onMounted } from 'vue';
+import {computed, ref, onMounted, onBeforeMount, onUnmounted} from 'vue';
 import IntroMessage from "@/Global/Tunnel/IntroMessage.vue";
 import Hud from "@/Global/Tunnel/HUD.vue";
 import {gsap} from "gsap";
 import Preloader from "@/Global/Preloader.vue";
+import {ScrollTrigger} from "gsap/ScrollTrigger";
 
 const props = defineProps<{
     //canLogin: boolean
@@ -46,7 +47,15 @@ const sortedArchived = computed(() => {
 const classificationValues = computed(() => {
     return Object.values(App.Enums.Classification);
 });
-
+const handleGesture = () => {
+    console.log('handleGesture()', projectStore.audioEnabled)
+    if (!projectStore.audioEnabled) {
+        projectStore.audioEnabled = true
+        window.removeEventListener('click', handleGesture)
+        window.removeEventListener('touchstart', handleGesture)
+        window.removeEventListener('keydown', handleGesture)
+    }
+};
 const getClassificationColor = (classification: App.Enums.Classification): number => {
     switch (classification) {
         case App.Enums.Classification.ENTERTAINMENT:
@@ -60,12 +69,22 @@ const getClassificationColor = (classification: App.Enums.Classification): numbe
     }
 };
 
-onMounted(() => {
-
-    //gsap.delayedCall(1, ()=>showTunnel.value=true)
+onBeforeMount( () => {
 
 })
 
+onMounted(() => {
+    window.addEventListener('click', handleGesture)
+    window.addEventListener('touchstart', handleGesture)
+    window.addEventListener('keydown', handleGesture)
+})
+onUnmounted(() => {
+
+    window.removeEventListener('click', handleGesture)
+    window.removeEventListener('touchstart', handleGesture)
+    window.removeEventListener('keydown', handleGesture)
+
+});
 </script>
 
 <template>

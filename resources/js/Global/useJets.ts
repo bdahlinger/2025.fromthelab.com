@@ -4,6 +4,8 @@ import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader'
 import { useProjectStore } from '@/Stores/projectStore'
 import { gsap } from 'gsap'
 import { MotionPathPlugin } from 'gsap/MotionPathPlugin'
+import { storeToRefs } from 'pinia';
+import { watch } from 'vue';
 
 gsap.registerPlugin(MotionPathPlugin)
 
@@ -13,10 +15,18 @@ export function useJets(
     camera: THREE.PerspectiveCamera
 ) {
     const projectStore = useProjectStore()
+    const { audioEnabled } = storeToRefs(projectStore)
+    const audioContext = new (window.AudioContext || window.webkitAudioContext)()
+
     const NUM_JETS = 5
     const JET_MODEL_PATH = '/3D/jet.obj'
     const UFO_MODEL_PATH = '/3D/ufo.obj'
     const JET_SPEED = 1200
+    const JET_SOUND_PATH = '/sounds/spaceship.mp3'
+    const UFO_SOUND_PATH = '/sounds/ufo.mp3'
+    const MINIGUN_SOUND_PATH = '/sounds/minigun.mp3'
+    const MINIGUN_WIND_DOWN_SOUND_PATH = '/sounds/minigun-wind-down.mp3'
+    const EXPLOSION_SOUND_PATH = '/sounds/explosion.mp3' // New: Explosion sound path
     const START_Y = 500
     const START_Z = -500
     const FOV = 75
@@ -45,13 +55,31 @@ export function useJets(
     let debugPath: THREE.Line | null = null
     let bullets: THREE.Mesh[] = []
     let exhaustParticles: THREE.Mesh[] = []
+    let ufoFragments: THREE.Mesh[] = []
     let isInitialized = false
     let disposeJets: (() => void) | null = null
     let jetTemplateBounds: THREE.Box3 | null = null
     let ufoTemplateBounds: THREE.Box3 | null = null
+    let ufoTemplateGeometries: THREE.BufferGeometry[] = []
     let battleTimeline: gsap.core.Timeline | null = null
     let lastStartSide: number = 1
     let exhaustTimer = 0
+    let ufoDestroyed = false
+
+    let jetAudioBuffer: AudioBuffer | null = null
+    let ufoAudioBuffer: AudioBuffer | null = null
+    let minigunAudioBuffer: AudioBuffer | null = null
+    let minigunWindDownAudioBuffer: AudioBuffer | null = null
+    let explosionAudioBuffer: AudioBuffer | null = null // New: Explosion audio buffer
+
+    const audioTracks = {
+        initialJet: { source: null as AudioBufferSourceNode | null, panner: null as StereoPannerNode | null, gain: null as GainNode | null, active: false },
+        battleJet: { source: null as AudioBufferSourceNode | null, panner: null as StereoPannerNode | null, gain: null as GainNode | null, active: false },
+        battleUfo: { source: null as AudioBufferSourceNode | null, panner: null as StereoPannerNode | null, gain: null as GainNode | null, active: false },
+        minigun: { source: null as AudioBufferSourceNode | null, panner: null as StereoPannerNode | null, gain: null as GainNode | null, active: false },
+        minigunWindDown: { source: null as AudioBufferSourceNode | null, panner: null as StereoPannerNode | null, gain: null as GainNode | null, active: false },
+        explosion: { source: null as AudioBufferSourceNode | null, panner: null as StereoPannerNode | null, gain: null as GainNode | null, active: false } // New: Explosion track
+    }
 
     const loadJetModel = (): Promise<THREE.Group> => {
         return new Promise((resolve, reject) => {
@@ -102,6 +130,8 @@ export function useJets(
                     model.traverse((child) => {
                         if (child instanceof THREE.Mesh) {
                             meshes.push(child)
+                            child.geometry.computeBoundingSphere()
+                            ufoTemplateGeometries.push(child.geometry.clone())
                         }
                     })
                     meshes.forEach((mesh) => {
@@ -116,6 +146,10 @@ export function useJets(
                         mesh.parent?.add(wireframe)
                         mesh.parent?.remove(mesh)
                     })
+                    model.geometry = new THREE.BufferGeometry()
+                    model.geometry.boundingSphere = new THREE.Sphere()
+                    box.getBoundingSphere(model.geometry.boundingSphere)
+                    model.geometry.boundingSphere.radius *= 10
                     ufoTemplateBounds = box
                     resolve(model)
                 },
@@ -126,6 +160,91 @@ export function useJets(
                 }
             )
         })
+    }
+
+    const loadJetSound = (): Promise<AudioBuffer> => {
+        return fetch(JET_SOUND_PATH)
+            .then(response => {
+                if (!response.ok) throw new Error(`Failed to fetch ${JET_SOUND_PATH}: ${response.status}`)
+                return response.arrayBuffer()
+            })
+            .then(arrayBuffer => audioContext.decodeAudioData(arrayBuffer))
+            .then(audioBuffer => {
+                jetAudioBuffer = audioBuffer
+                return audioBuffer
+            })
+            .catch(err => {
+                console.error('Failed to load jet sound:', err)
+                throw err
+            })
+    }
+
+    const loadUfoSound = (): Promise<AudioBuffer> => {
+        return fetch(UFO_SOUND_PATH)
+            .then(response => {
+                if (!response.ok) throw new Error(`Failed to fetch ${UFO_SOUND_PATH}: ${response.status}`)
+                return response.arrayBuffer()
+            })
+            .then(arrayBuffer => audioContext.decodeAudioData(arrayBuffer))
+            .then(audioBuffer => {
+                ufoAudioBuffer = audioBuffer
+                return audioBuffer
+            })
+            .catch(err => {
+                console.error('Failed to load UFO sound:', err)
+                throw err
+            })
+    }
+
+    const loadMinigunSound = (): Promise<AudioBuffer> => {
+        return fetch(MINIGUN_SOUND_PATH)
+            .then(response => {
+                if (!response.ok) throw new Error(`Failed to fetch ${MINIGUN_SOUND_PATH}: ${response.status}`)
+                return response.arrayBuffer()
+            })
+            .then(arrayBuffer => audioContext.decodeAudioData(arrayBuffer))
+            .then(audioBuffer => {
+                minigunAudioBuffer = audioBuffer
+                return audioBuffer
+            })
+            .catch(err => {
+                console.error('Failed to load minigun sound:', err)
+                throw err
+            })
+    }
+
+    const loadMinigunWindDownSound = (): Promise<AudioBuffer> => {
+        return fetch(MINIGUN_WIND_DOWN_SOUND_PATH)
+            .then(response => {
+                if (!response.ok) throw new Error(`Failed to fetch ${MINIGUN_WIND_DOWN_SOUND_PATH}: ${response.status}`)
+                return response.arrayBuffer()
+            })
+            .then(arrayBuffer => audioContext.decodeAudioData(arrayBuffer))
+            .then(audioBuffer => {
+                minigunWindDownAudioBuffer = audioBuffer
+                return audioBuffer
+            })
+            .catch(err => {
+                console.error('Failed to load minigun wind-down sound:', err)
+                throw err
+            })
+    }
+
+    const loadExplosionSound = (): Promise<AudioBuffer> => { // New: Load explosion sound
+        return fetch(EXPLOSION_SOUND_PATH)
+            .then(response => {
+                if (!response.ok) throw new Error(`Failed to fetch ${EXPLOSION_SOUND_PATH}: ${response.status}`)
+                return response.arrayBuffer()
+            })
+            .then(arrayBuffer => audioContext.decodeAudioData(arrayBuffer))
+            .then(audioBuffer => {
+                explosionAudioBuffer = audioBuffer
+                return audioBuffer
+            })
+            .catch(err => {
+                console.error('Failed to load explosion sound:', err)
+                throw err
+            })
     }
 
     const createFlameModel = (): THREE.LineSegments => {
@@ -149,20 +268,6 @@ export function useJets(
         }
         wireframe.rotation.x = Math.PI / 2
         return wireframe
-    }
-
-    const createBullet = (position: THREE.Vector3, direction: THREE.Vector3): THREE.Mesh => {
-        const geometry = new THREE.OctahedronGeometry(3)
-        const material = new THREE.MeshBasicMaterial({
-            color: 0xff0000,
-            depthTest: true,
-            fog: true
-        })
-        const bullet = new THREE.Mesh(geometry, material)
-        bullet.position.copy(position)
-        bullet.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, -1), direction)
-        bullet.frustumCulled = false
-        return bullet
     }
 
     const createExhaustParticle = (position: THREE.Vector3): THREE.Mesh => {
@@ -197,7 +302,7 @@ export function useJets(
 
         gsap.to(particle.material, {
             opacity: 0,
-            duration: 1, // Your tweak from 2 to 1
+            duration: 1,
             ease: 'none',
             onComplete: () => {
                 scene.remove(particle)
@@ -209,11 +314,137 @@ export function useJets(
         })
     }
 
+    const createBullet = (position: THREE.Vector3, direction: THREE.Vector3): THREE.Mesh => {
+        const geometry = new THREE.OctahedronGeometry(3)
+        const material = new THREE.MeshBasicMaterial({
+            color: 0xff0000,
+            depthTest: true,
+            fog: true
+        })
+        const bullet = new THREE.Mesh(geometry, material)
+        bullet.position.copy(position)
+        bullet.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, -1), direction)
+        bullet.frustumCulled = false
+        bullet.geometry.computeBoundingSphere()
+        bullet.geometry.boundingSphere.radius *= 5
+        return bullet
+    }
+
+    const explodeUfo = () => {
+        if (!battleUfo || !battleUfo.visible || ufoFragments.length > 0) return
+
+        battleUfo.visible = false
+        stopAudio('battleUfo')
+        if (audioEnabled.value) {
+            startAudio('explosion', battleUfo) // Play explosion sound
+        }
+
+        const explosionCenter = battleUfo.position.clone()
+        const fragmentMaterial = new THREE.MeshBasicMaterial({
+            color: 0xffa500,
+            side: THREE.DoubleSide,
+            transparent: true,
+            depthTest: true,
+            fog: true
+        })
+
+        ufoTemplateGeometries.forEach((geometry) => {
+            const positionAttribute = geometry.getAttribute('position')
+            const indexAttribute = geometry.index
+            const indices = indexAttribute ? indexAttribute.array : null
+            const vertexCount = positionAttribute.count
+            const faceCount = indices ? indices.length / 3 : vertexCount / 3
+
+            for (let i = 0; i < faceCount; i++) {
+                const faceGeometry = new THREE.BufferGeometry()
+                const vertices = new Float32Array(9)
+                const faceIndices = indices ? [indices[i * 3], indices[i * 3 + 1], indices[i * 3 + 2]] : [i * 3, i * 3 + 1, i * 3 + 2]
+
+                for (let j = 0; j < 3; j++) {
+                    const vertexIndex = faceIndices[j]
+                    vertices[j * 3] = positionAttribute.array[vertexIndex * 3]
+                    vertices[j * 3 + 1] = positionAttribute.array[vertexIndex * 3 + 1]
+                    vertices[j * 3 + 2] = positionAttribute.array[vertexIndex * 3 + 2]
+                }
+
+                faceGeometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3))
+                faceGeometry.computeVertexNormals()
+
+                const fragment = new THREE.Mesh(faceGeometry, fragmentMaterial.clone())
+                fragment.position.copy(explosionCenter)
+                scene.add(fragment)
+                ufoFragments.push(fragment)
+
+                const centroid = new THREE.Vector3(
+                    (vertices[0] + vertices[3] + vertices[6]) / 3,
+                    (vertices[1] + vertices[4] + vertices[7]) / 3,
+                    (vertices[2] + vertices[5] + vertices[8]) / 3
+                ).add(explosionCenter)
+
+                const direction = centroid.clone().sub(explosionCenter).normalize()
+                const distance = THREE.MathUtils.randFloat(100, 200)
+
+                gsap.to(fragment.position, {
+                    x: explosionCenter.x + direction.x * distance,
+                    y: explosionCenter.y + direction.y * distance,
+                    z: explosionCenter.z + direction.z * distance,
+                    duration: 1.5,
+                    ease: 'power2.out',
+                    onComplete: () => {
+                        scene.remove(fragment)
+                        fragment.geometry.dispose()
+                        fragment.material.dispose()
+                        const index = ufoFragments.indexOf(fragment)
+                        if (index > -1) ufoFragments.splice(index, 1)
+                    }
+                })
+
+                gsap.to(fragment.scale, {
+                    x: 1.5,
+                    y: 1.5,
+                    z: 1.5,
+                    duration: 0.5,
+                    ease: 'power1.in',
+                    yoyo: true,
+                    repeat: 1
+                })
+
+                gsap.to(fragment.material, {
+                    opacity: 0,
+                    duration: 1.5,
+                    ease: 'power2.out'
+                })
+            }
+        })
+
+        // Update explosion sound panning and volume during animation
+        if (audioTracks.explosion.panner && audioTracks.explosion.gain) {
+            gsap.to(audioTracks.explosion, {
+                duration: 1.5,
+                onUpdate: () => {
+                    const panValue = THREE.MathUtils.clamp((explosionCenter.x / 500) * 2, -1, 1)
+                    audioTracks.explosion.panner!.pan.value = panValue
+                    const zDistance = Math.abs(camera.position.z - explosionCenter.z)
+                    const maxDistance = 4000
+                    const volume = THREE.MathUtils.clamp(1 - (zDistance / maxDistance), 0, 1)
+                    audioTracks.explosion.gain!.gain.value = volume
+                },
+                onComplete: () => {
+                    stopAudio('explosion')
+                }
+            })
+        }
+    }
+
     const fireBullets = () => {
-        if (!battleJet || !battleJet.visible) return
+        if (!battleJet || !battleJet.visible || ufoDestroyed) return
 
         const numBullets = THREE.MathUtils.randInt(10, 30)
         const noseOffset = jetTemplateBounds ? jetTemplateBounds.max.z : 20
+        let hasFiredFirstBullet = false
+
+        const frustum = new THREE.Frustum()
+        const padding = 0.2
 
         for (let i = 0; i < numBullets; i++) {
             gsap.delayedCall(i * 0.05, () => {
@@ -227,6 +458,11 @@ export function useJets(
                 scene.add(bullet)
                 bullets.push(bullet)
 
+                if (!hasFiredFirstBullet && audioEnabled.value) {
+                    startAudio('minigun', battleJet)
+                    hasFiredFirstBullet = true
+                }
+
                 const bulletSpeed = 1200
                 const distance = 3600
                 const duration = distance / bulletSpeed
@@ -237,14 +473,57 @@ export function useJets(
                     z: `+=${jetDirection.z * distance}`,
                     duration: duration,
                     ease: 'none',
+                    onUpdate: () => {
+                        if (bullet.geometry.boundingSphere) {
+                            bullet.geometry.boundingSphere.center.copy(bullet.position)
+                        }
+                        if (!ufoDestroyed && battleUfo && battleUfo.visible && bullet.geometry.boundingSphere && battleUfo.geometry?.boundingSphere) {
+                            camera.updateMatrixWorld()
+                            frustum.setFromProjectionMatrix(
+                                new THREE.Matrix4().multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse)
+                            )
+
+                            const jetInView = frustum.containsPoint(battleJet.position)
+                            const ufoInView = frustum.containsPoint(battleUfo.position)
+                            const paddingCheck = (point: THREE.Vector3) => {
+                                const screenPos = point.clone().project(camera)
+                                return Math.abs(screenPos.x) < 1 - padding && Math.abs(screenPos.y) < 1 - padding
+                            }
+                            const jetVisible = jetInView && paddingCheck(battleJet.position)
+                            const ufoVisible = ufoInView && paddingCheck(battleUfo.position)
+
+                            if (jetVisible && ufoVisible) {
+                                battleUfo.updateMatrixWorld()
+                                const ufoSphere = battleUfo.geometry.boundingSphere.clone()
+                                ufoSphere.applyMatrix4(battleUfo.matrixWorld)
+                                const bulletSphere = bullet.geometry.boundingSphere.clone()
+                                bulletSphere.applyMatrix4(bullet.matrixWorld)
+                                if (bulletSphere.intersectsSphere(ufoSphere)) {
+                                    console.log('Bullet HIT UFO at:', bullet.position, 'UFO position:', battleUfo.position)
+                                    ufoDestroyed = true
+                                    explodeUfo()
+                                }
+                            }
+                        }
+                    },
                     onComplete: () => {
                         scene.remove(bullet)
                         bullet.geometry.dispose()
                         bullet.material.dispose()
-                        const index = bullets.indexOf(bullet)
-                        if (index > -1) bullets.splice(index, 1)
+                        const bulletIndex = bullets.indexOf(bullet)
+                        if (bulletIndex > -1) bullets.splice(bulletIndex, 1)
                     }
                 })
+
+                if (i === numBullets - 1 && audioEnabled.value) {
+                    stopAudio('minigun')
+                    startAudio('minigunWindDown', battleJet)
+                    if (minigunWindDownAudioBuffer) {
+                        gsap.delayedCall(minigunWindDownAudioBuffer.duration, () => {
+                            stopAudio('minigunWindDown')
+                        })
+                    }
+                }
             })
         }
     }
@@ -276,6 +555,10 @@ export function useJets(
     }
 
     const animateInitialJets = (jet: THREE.Group, flame: THREE.LineSegments, startPos: THREE.Vector3, initialRotation: number) => {
+        const isCenterJet = jets.indexOf(jet) === 2
+        if (isCenterJet && audioEnabled.value) {
+            startAudio('initialJet', jet)
+        }
         jet.position.copy(startPos)
         jet.rotation.z = initialRotation
         jet.visible = true
@@ -286,7 +569,7 @@ export function useJets(
         let jetExhaustTimer = 0
         const tickJetExhaust = (delta: number) => {
             jetExhaustTimer += delta
-            if (jetExhaustTimer >= 1.0) { // Same interval as battleJet for consistency
+            if (jetExhaustTimer >= 1.0) {
                 spawnExhaustParticle(jet)
                 jetExhaustTimer -= 1.0
             }
@@ -297,8 +580,21 @@ export function useJets(
             z: -10000,
             duration: totalDuration,
             ease: 'none',
+            onUpdate: () => {
+                if (isCenterJet && audioTracks.initialJet.panner && audioTracks.initialJet.gain && jet.visible && audioEnabled.value) {
+                    const panValue = THREE.MathUtils.clamp((jet.position.x / 500) * 2, -1, 1)
+                    audioTracks.initialJet.panner!.pan.value = panValue
+                    const zDistance = Math.abs(camera.position.z - jet.position.z)
+                    const maxDistance = 4000
+                    const volume = THREE.MathUtils.clamp(1 - (zDistance / maxDistance), 0, 1)
+                    audioTracks.initialJet.gain!.gain.value = volume
+                }
+            },
             onComplete: () => {
                 gsap.ticker.remove(tickJetExhaust)
+                if (isCenterJet) {
+                    setTimeout(() => stopAudio('initialJet'), 3000)
+                }
                 scene.remove(jet)
                 disposeObject(jet)
                 const jetIndex = jets.indexOf(jet)
@@ -394,6 +690,10 @@ export function useJets(
             battleTimeline = null
         }
 
+        stopAudio('battleJet')
+        stopAudio('battleUfo')
+        stopAudio('explosion') // Ensure explosion sound is stopped
+
         const path = generateBattlePath()
         createDebugPath(path)
         const pathLength = path.getLength()
@@ -403,8 +703,25 @@ export function useJets(
         const jetSpeed = ufoSpeed * (0.9 + jetSpeedOffset)
         const jetDelay = 450 / ufoSpeed
 
+        if (!battleJet) {
+            battleJet = jetTemplate.clone()
+            battleFlame = createFlameModel()
+            battleJet.add(battleFlame)
+            scene.add(battleJet)
+        }
+        battleJet.visible = true
+        battleJet.position.copy(path.getPointAt(0))
+        battleJet.rotation.set(0, 0, 0)
+
         if (!battleUfo) {
             battleUfo = ufoTemplate.clone()
+            if (!battleUfo.geometry || !battleUfo.geometry.boundingSphere) {
+                const box = new THREE.Box3().setFromObject(battleUfo)
+                battleUfo.geometry = new THREE.BufferGeometry()
+                battleUfo.geometry.boundingSphere = new THREE.Sphere()
+                box.getBoundingSphere(battleUfo.geometry.boundingSphere)
+                battleUfo.geometry.boundingSphere.radius *= 10
+            }
             battleUfo.visible = false
             scene.add(battleUfo)
         }
@@ -412,35 +729,42 @@ export function useJets(
         battleUfo.position.copy(path.getPointAt(0))
         battleUfo.rotation.set(0, 0, 0)
 
-        if (!battleJet) {
-            battleJet = jetTemplate.clone()
-            battleFlame = createFlameModel()
-            battleJet.add(battleFlame)
-            battleJet.visible = false
-            scene.add(battleJet)
-        }
-        battleJet.visible = true
-        battleJet.position.copy(path.getPointAt(0))
-        battleJet.rotation.set(0, 0, 0)
+        ufoDestroyed = false
 
-        const ufoProxy = {
-            x: battleUfo.position.x,
-            y: battleUfo.position.y,
-            z: battleUfo.position.z,
-            progress: 0
-        }
-        const jetProxy = {
-            x: battleJet.position.x,
-            y: battleJet.position.y,
-            z: battleJet.position.z,
-            progress: 0
-        }
+        const ufoProxy = { x: battleUfo.position.x, y: battleUfo.position.y, z: battleUfo.position.z, progress: 0 }
         const ufoHoverOffset = { x: 0, y: 0, z: 0 }
+        const jetProxy = { x: battleJet.position.x, y: battleJet.position.y, z: battleJet.position.z, progress: 0 }
+
+        if (audioEnabled.value) {
+            if (battleJet) startAudio('battleJet', battleJet)
+            if (battleUfo) startAudio('battleUfo', battleUfo)
+        }
 
         battleTimeline = gsap.timeline({
+            onUpdate: () => {
+                if (battleJet && audioTracks.battleJet.panner && audioTracks.battleJet.gain && battleJet.visible && audioEnabled.value) {
+                    const panValue = THREE.MathUtils.clamp((battleJet.position.x / 500) * 2, -1, 1)
+                    audioTracks.battleJet.panner!.pan.value = panValue
+                    const zDistance = Math.abs(camera.position.z - battleJet.position.z)
+                    const maxDistance = 4000
+                    const volume = THREE.MathUtils.clamp(1 - (zDistance / maxDistance), 0, 1)
+                    audioTracks.battleJet.gain!.gain.value = volume
+                }
+                if (!ufoDestroyed && battleUfo && audioTracks.battleUfo.panner && audioTracks.battleUfo.gain && battleUfo.visible && audioEnabled.value) {
+                    const panValue = THREE.MathUtils.clamp((battleUfo.position.x / 500) * 2, -1, 1)
+                    audioTracks.battleUfo.panner!.pan.value = panValue
+                    const zDistance = Math.abs(camera.position.z - battleUfo.position.z)
+                    const maxDistance = 4000
+                    const volume = THREE.MathUtils.clamp(1 - (zDistance / maxDistance), 0, 1)
+                    audioTracks.battleUfo.gain!.gain.value = volume
+                }
+            },
             onComplete: () => {
                 battleUfo!.visible = false
                 battleJet!.visible = false
+                stopAudio('battleJet')
+                stopAudio('battleUfo')
+                stopAudio('explosion')
                 bullets.forEach(bullet => {
                     scene.remove(bullet)
                     bullet.geometry.dispose()
@@ -453,6 +777,12 @@ export function useJets(
                     particle.material.dispose()
                 })
                 exhaustParticles = []
+                ufoFragments.forEach(fragment => {
+                    scene.remove(fragment)
+                    fragment.geometry.dispose()
+                    fragment.material.dispose()
+                })
+                ufoFragments = []
                 gsap.ticker.remove(tickExhaust)
                 exhaustTimer = 0
                 gsap.delayedCall(1, startBattle, [jetTemplate, ufoTemplate])
@@ -460,34 +790,23 @@ export function useJets(
         })
 
         battleTimeline.to(ufoProxy, {
-            motionPath: {
-                path: path.getPoints(50),
-                autoRotate: false
-            },
+            motionPath: { path: path.getPoints(50), autoRotate: false },
             progress: 1,
             duration: battleDuration,
             ease: 'none',
             onUpdate: () => {
+                if (ufoDestroyed) return
                 const t = ufoProxy.progress
                 if (t === undefined || t < 0 || t > 1) return
                 const position = path.getPointAt(t)
-                battleUfo!.position.set(
-                    position.x + ufoHoverOffset.x,
-                    position.y + ufoHoverOffset.y,
-                    position.z + ufoHoverOffset.z
-                )
+                battleUfo!.position.set(position.x + ufoHoverOffset.x, position.y + ufoHoverOffset.y, position.z + ufoHoverOffset.z)
             }
         }, 0)
 
-        gsap.to(battleUfo!.rotation, {
-            y: "+=6.2832",
-            duration: 3,
-            repeat: -1,
-            ease: 'none'
-        })
+        gsap.to(battleUfo!.rotation, { y: "+=6.2832", duration: 3, repeat: -1, ease: 'none' })
 
         const animateUfoHover = () => {
-            if (!battleUfo || !battleUfo.visible) return
+            if (!battleUfo || !battleUfo.visible || ufoDestroyed) return
             gsap.to(ufoHoverOffset, {
                 x: THREE.MathUtils.randFloat(-20, 20),
                 y: THREE.MathUtils.randFloat(-20, 20),
@@ -500,13 +819,11 @@ export function useJets(
         animateUfoHover()
 
         battleTimeline.to(jetProxy, {
-            motionPath: {
-                path: path.getPoints(50),
-                autoRotate: false
-            },
+            motionPath: { path: path.getPoints(50), autoRotate: false },
             progress: 1,
             duration: battleDuration * (ufoSpeed / jetSpeed),
             ease: 'none',
+            onStart: () => { battleJet!.visible = true },
             onUpdate: () => {
                 const t = jetProxy.progress
                 if (t === undefined || t < 0 || t > 1) return
@@ -526,10 +843,26 @@ export function useJets(
             }
         }, jetDelay)
 
-        gsap.to({}, {
-            duration: 2,
-            repeat: Math.floor(battleDuration / 2) - 1,
-            onRepeat: fireBullets
+        const minFiringEvents = 1
+        const maxFiringEvents = 4
+        const minGap = 3
+        const firingCount = THREE.MathUtils.randInt(minFiringEvents, maxFiringEvents)
+        const availableTime = battleDuration - (firingCount - 1) * minGap
+        const firingTimes: number[] = []
+
+        for (let i = 0; i < firingCount; i++) {
+            if (i === 0) {
+                firingTimes.push(THREE.MathUtils.randFloat(0, availableTime / firingCount))
+            } else {
+                const minTime = firingTimes[i - 1] + minGap
+                const maxTime = minTime + (availableTime / firingCount)
+                firingTimes.push(THREE.MathUtils.randFloat(minTime, Math.min(maxTime, battleDuration)))
+            }
+        }
+
+        firingTimes.sort((a, b) => a - b)
+        firingTimes.forEach(time => {
+            gsap.delayedCall(time, fireBullets)
         })
 
         const tickExhaust = (delta: number) => {
@@ -540,6 +873,50 @@ export function useJets(
             }
         }
         gsap.ticker.add(tickExhaust)
+    }
+
+    const startAudio = (track: keyof typeof audioTracks, positionObj: THREE.Object3D) => {
+        if (!audioEnabled.value || (audioTracks[track] && audioTracks[track].active) || !positionObj) return
+
+        if (audioTracks[track] && audioTracks[track].source) {
+            stopAudio(track)
+        }
+
+        const buffer = track === 'battleUfo' ? ufoAudioBuffer :
+            track === 'minigun' ? minigunAudioBuffer :
+                track === 'minigunWindDown' ? minigunWindDownAudioBuffer :
+                    track === 'explosion' ? explosionAudioBuffer : // New: Explosion buffer
+                        jetAudioBuffer
+        if (!buffer) return
+
+        const source = audioContext.createBufferSource()
+        source.buffer = buffer
+        source.loop = track === 'minigun'
+        const gain = audioContext.createGain()
+        gain.gain.value = (track === 'minigun' || track === 'minigunWindDown') ? 0.6 : track === 'explosion' ? 1.0 : 0.8 // Explosion at full volume
+        const panner = audioContext.createStereoPanner()
+        source.connect(gain).connect(panner).connect(audioContext.destination)
+
+        if (audioContext.state === 'suspended') {
+            audioContext.resume().then(() => {
+                source.start()
+                audioTracks[track] = { source, panner, gain, active: true }
+            }).catch(err => console.error(`Failed to resume audioContext for ${track}:`, err))
+        } else {
+            source.start()
+            audioTracks[track] = { source, panner, gain, active: true }
+        }
+    }
+
+    const stopAudio = (track: keyof typeof audioTracks) => {
+        if (audioTracks[track] && audioTracks[track].source && audioTracks[track].active) {
+            audioTracks[track].source!.stop()
+            audioTracks[track].source!.disconnect()
+            audioTracks[track].source = null
+            audioTracks[track].panner = null
+            audioTracks[track].gain = null
+            audioTracks[track].active = false
+        }
     }
 
     const initializeJets = async () => {
@@ -586,13 +963,13 @@ export function useJets(
             })
         }
 
-        const totalAssets = 2
+        const totalAssets = 7 // Updated: Added explosion sound
         let loadedAssets = 0
 
         const updateProgress = () => {
             loadedAssets++
-            const assetProgress = (loadedAssets / totalAssets) * 100
-            projectStore.setLoadingProgress(assetProgress, 'jets')
+            const progress = (loadedAssets / totalAssets) * 100
+            projectStore.setLoadingProgress(progress, 'jets')
         }
 
         const jetTemplate = await loadJetModel().then((jet) => {
@@ -603,6 +980,12 @@ export function useJets(
             updateProgress()
             return ufo
         })
+
+        await loadJetSound().then(() => updateProgress())
+        await loadUfoSound().then(() => updateProgress())
+        await loadMinigunSound().then(() => updateProgress())
+        await loadMinigunWindDownSound().then(() => updateProgress())
+        await loadExplosionSound().then(() => updateProgress()) // New: Load explosion sound
 
         await initializeJets()
 
@@ -639,10 +1022,35 @@ export function useJets(
                 particle.material.dispose()
             })
             exhaustParticles = []
-            jets = []
-            flames = []
+            ufoFragments.forEach(fragment => {
+                scene.remove(fragment)
+                fragment.geometry.dispose()
+                fragment.material.dispose()
+            })
+            ufoFragments = []
+            ufoTemplateGeometries.forEach(geometry => geometry.dispose())
+            ufoTemplateGeometries = []
             if (battleTimeline) battleTimeline.kill()
+            Object.keys(audioTracks).forEach(track => stopAudio(track as keyof typeof audioTracks))
         }
+
+        watch(audioEnabled, (newValue) => {
+            if (newValue) {
+                if (jets.length > 2 && jets[2] && jets[2].visible) {
+                    startAudio('initialJet', jets[2])
+                }
+                if (battleJet && battleJet.visible) {
+                    startAudio('battleJet', battleJet)
+                }
+                if (battleUfo && battleUfo.visible && !ufoDestroyed) {
+                    startAudio('battleUfo', battleUfo)
+                }
+            } else {
+                Object.keys(audioTracks).forEach(track => {
+                    stopAudio(track as keyof typeof audioTracks)
+                })
+            }
+        }, { immediate: false })
 
         const startJetAnimation = () => {
             const positions = calculateStartingPositions()
@@ -650,7 +1058,7 @@ export function useJets(
             jets.forEach((jet, i) => {
                 animateInitialJets(jet, flames[i], positions[i], rotations[i])
             })
-            gsap.delayedCall(2, () => startBattle(jetTemplate, ufoTemplate))
+            gsap.delayedCall(3, () => startBattle(jetTemplate, ufoTemplate))
         }
 
         return {

@@ -21,7 +21,7 @@ const emit = defineEmits(['scene-ready'])
 
 const projectStore = useProjectStore()
 const screenStore = useScreenStore()
-const { projects, isInPortalLock, activeProjectIndex } = storeToRefs(projectStore);
+const { projects, isInPortalLock, activeProjectIndex, audioEnabled } = storeToRefs(projectStore);
 const showIntroMessage = ref(true)
 const projectIndex = ref(0)
 const currentProject = ref<App.Data.ProjectData | null>(null)
@@ -141,6 +141,10 @@ const handleNavigate = () => {
         router.visit(route('project.show', { project: currentProject.value.slug }), {})
     }
 }
+
+const toggleAudio = () => {
+    projectStore.toggleAudio();
+};
 
 onMounted(() => {
     const topBorder = borderTopEl.value?.querySelector('div')
@@ -275,19 +279,17 @@ watch( () => props.ready, (val) => {
             <div ref="borderBottomEl" class="flex justify-center">
                 <div class="bg-white/30 h-px opacity-0"></div>
             </div>
-<!--            <svg class="absolute inset-0 w-full h-full pointer-events-none " aria-hidden="true">
-                <defs>
-                    <pattern id="grid-pattern1" width="12" height="12" patternUnits="userSpaceOnUse">
-                        <line x1="0" y1="0" x2="0" y2="12" stroke="white" stroke-width="1" opacity="0.1"/>
-                        <line x1="0" y1="0" x2="12" y2="0" stroke="white" stroke-width="1" opacity="0.1"/>
-                    </pattern>
-                </defs>
-                <rect width="100%" height="100%" fill="url(#grid-pattern1)"/>
-            </svg>-->
+
             <h-u-d-mini-map v-if="ready" :project="currentProject" />
 
-            <div class="absolute hidden font-mono md:block text-green-400/50 text-xxxs left-[90%] top-1/2 -translate-y-1/2">
-                <span>{{projectStore.progress.toString().padStart(10, '0') + '.00'}}</span>
+            <div class="flex items-center gap-4 absolute hidden font-mono md:flex text-green-400/50 text-xxxs left-[90%] top-1/2 -translate-y-1/2">
+                <div>{{ projectStore.progress.toString().padStart(10, '0') + '.00' }}</div>
+                <button
+                    @click="toggleAudio"
+                    class="border border-current rounded-none px-2 py-1 whitespace-nowrap text-xxxs text-white transition-opacity duration-300 pointer-events-auto hover:text-green-500 hover:border-green-500 drop-shadow-white"
+                >
+                    {{ audioEnabled ? 'Audio: On' : 'Audio: Off' }}
+                </button>
             </div>
 
         </div>
