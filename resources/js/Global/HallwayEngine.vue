@@ -219,14 +219,14 @@ const init = async () => {
     projectCubesInstance = useProjectCubes(scene, { CUBE_SIZE, CUBE_SPACING, FIRST_CUBE_Z }, props.projects, props.projectGridFile, props.projectGridFile2, settings, textureCache, fontLoader.font);
 
     if (settings.showJets) {
-        jetsInstance = useJets(scene, settings, camera);
+        jetsInstance = useJets(scene, settings, camera, updateProgress);
         await jetsInstance.getInitializedData().then(({ dispose, startJetAnimation: animateJets }) => {
             jetsDispose = dispose;
             startJetAnimation = animateJets; // Store the function
-            updateProgress(JET_ASSETS_COUNT);
+            //updateProgress(JET_ASSETS_COUNT);
         }).catch((error) => {
             console.error('Jets initialization failed:', error);
-            updateProgress(JET_ASSETS_COUNT);
+            //updateProgress(JET_ASSETS_COUNT);
         });
     } else {
         updateProgress(JET_ASSETS_COUNT);
@@ -350,8 +350,6 @@ const onResize = () => {
         handleResize() // Desktop: immediate resize
     }
 };
-
-
 
 onMounted(() => {
 

@@ -18,8 +18,8 @@ interface RootState {
     activeProjectIndex: number | null
     cubeMetadata: CubeMetadata[] | null
     loadingProgress: number | null
-    audioEnabled: boolean
-    userEngaged: boolean
+    //audioEnabled: boolean
+    //userEngaged: boolean
 }
 
 export const useProjectStore = defineStore('project', {
@@ -37,8 +37,8 @@ export const useProjectStore = defineStore('project', {
         projectCubes: null,
         cubeMetadata: null,
         loadingProgress: 0,
-        audioEnabled: false,
-        userEngaged: false,
+        //audioEnabled: false,
+        //userEngaged: false,
     }),
     actions: {
         setProgress(progress: number) {
@@ -72,9 +72,9 @@ export const useProjectStore = defineStore('project', {
         setLoadingProgress(val: number) {
             this.loadingProgress = val;
         },
-        toggleAudio() { // New action
+        /*toggleAudio() { // New action
             this.audioEnabled = !this.audioEnabled;
-        },
+        },*/
     },
     persist: true
 });

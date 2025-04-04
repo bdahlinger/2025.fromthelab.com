@@ -2,12 +2,8 @@
 import { Head, Link } from '@inertiajs/vue3';
 import LogoMark from "@/Global/LogoMark.vue";
 import { useProjectStore } from '@/Stores/projectStore'
+import { useAudioStore } from '@/Stores/audioStore';
 import { storeToRefs } from 'pinia';
-
-//import ThreeDSpheres from "@/Global/ThreeDSpheres.vue";
-import CubeStrip from "@/Global/CubeStrip.vue";
-//import Hallway from "@/Global/Hallway.vue";
-//import HallwayV2 from "@/Global/HallwayV2.vue";
 import HallwayEngine from "@/Global/HallwayEngine.vue";
 import { ProjectData } from '@/Types/generated';
 import { App } from '@/Types/enums';
@@ -16,9 +12,7 @@ import AppWrap from '@/Pages/App.vue';
 import {computed, ref, onMounted, onBeforeMount, onUnmounted} from 'vue';
 import IntroMessage from "@/Global/Tunnel/IntroMessage.vue";
 import Hud from "@/Global/Tunnel/HUD.vue";
-import {gsap} from "gsap";
 import Preloader from "@/Global/Preloader.vue";
-import {ScrollTrigger} from "gsap/ScrollTrigger";
 
 const props = defineProps<{
     //canLogin: boolean
@@ -30,7 +24,9 @@ const props = defineProps<{
 }>()
 
 const projectStore = useProjectStore()
-const { loadingProgress } = storeToRefs(projectStore);
+const { loadingProgress } = storeToRefs(projectStore)
+const audioStore = useAudioStore()
+
 
 const camera = ref<THREE.PerspectiveCamera | null>(null)
 const sceneReady = ref<boolen>(false)
@@ -48,13 +44,11 @@ const classificationValues = computed(() => {
     return Object.values(App.Enums.Classification);
 });
 const handleGesture = () => {
-    console.log('handleGesture()', projectStore.audioEnabled)
-    if ( !projectStore.audioEnabled ) {
-        projectStore.audioEnabled = true
-        projectStore.userEngaged = true
-        window.removeEventListener('click', handleGesture)
-        window.removeEventListener('touchstart', handleGesture)
-        window.removeEventListener('keydown', handleGesture)
+    if (!audioStore.userEngaged) {
+        audioStore.unlockAudio();
+        window.removeEventListener('click', handleGesture);
+        window.removeEventListener('touchstart', handleGesture);
+        window.removeEventListener('keydown', handleGesture);
     }
 };
 const getClassificationColor = (classification: App.Enums.Classification): number => {

@@ -5,6 +5,8 @@ import { gsap } from 'gsap'
 import { TextPlugin } from "gsap/TextPlugin";
 import { useProjectStore } from '@/Stores/projectStore'
 import { useScreenStore } from '@/Stores/screenStore'
+import { useAudioStore } from '@/Stores/audioStore';
+
 import { storeToRefs } from 'pinia';
 import { App } from "@/Types/enums"
 import { router } from "@inertiajs/vue3"
@@ -21,7 +23,10 @@ const emit = defineEmits(['scene-ready'])
 
 const projectStore = useProjectStore()
 const screenStore = useScreenStore()
-const { projects, isInPortalLock, activeProjectIndex, audioEnabled } = storeToRefs(projectStore);
+const { projects, isInPortalLock, activeProjectIndex } = storeToRefs(projectStore);
+
+const audioStore = useAudioStore();
+
 const showIntroMessage = ref(true)
 const projectIndex = ref(0)
 const currentProject = ref<App.Data.ProjectData | null>(null)
@@ -143,8 +148,13 @@ const handleNavigate = () => {
 }
 
 const toggleAudio = () => {
-    if(!projectStore.userEngaged) return
-    projectStore.toggleAudio();
+    if (!audioStore.userEngaged) return;
+    audioStore.toggleAudioEnabled();
+};
+
+const updateVolume = (event: Event) => {
+    const input = event.target as HTMLInputElement;
+    audioStore.setVolume(parseFloat(input.value));
 };
 
 onMounted(() => {
@@ -283,14 +293,23 @@ watch( () => props.ready, (val) => {
 
             <h-u-d-mini-map v-if="ready" :project="currentProject" />
 
-            <div class="flex items-center gap-4 absolute hidden font-mono md:flex text-green-400/50 text-xxxs left-[90%] top-1/2 -translate-y-1/2">
+            <div class="flex items-center gap-4 absolute hidden font-mono md:flex text-green-400/50 text-xxxs right-3 top-1/2 -translate-y-1/2">
                 <div>{{ projectStore.progress.toString().padStart(10, '0') + '.00' }}</div>
                 <button
                     @click="toggleAudio"
                     class="border border-current rounded-none px-2 py-1 whitespace-nowrap text-xxxs text-white transition-opacity duration-300 pointer-events-auto hover:text-green-500 hover:border-green-500 drop-shadow-white"
                 >
-                    {{ audioEnabled ? 'Audio: On' : 'Audio: Off' }}
+                    {{ audioStore.audioEnabled ? 'Audio: On' : 'Audio: Off' }}
                 </button>
+                <input
+                    type="range"
+                    min="0"
+                    max="1"
+                    step="0.01"
+                    :value="audioStore.masterVolume"
+                    @input="updateVolume"
+                    class="pointer-events-auto w-20 accent-green-500"
+                />
             </div>
 
         </div>
