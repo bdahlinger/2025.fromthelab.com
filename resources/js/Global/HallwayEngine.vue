@@ -28,7 +28,7 @@ const props = defineProps<{
     initialSlug?: string;
 }>();
 
-const emit = defineEmits(['camera-ready','scene-ready'])
+const emit = defineEmits(['camera-ready', 'scene-ready', 'scroll-start'])
 
 const projectStore = useProjectStore();
 projectStore.projects = props.projects;
@@ -178,7 +178,8 @@ const init = async () => {
 
     const keyartCount = props.projects.filter(project => project.keyart).length;
     const JET_ASSETS_COUNT = 7; // Updated: jet, ufo, jet sound, ufo sound, minigun, minigun wind-down, explosion
-    const totalAssets = keyartCount + 2 + 1 + JET_ASSETS_COUNT; // Keyarts + 2 grids + 1 font + 7 jet assets
+    const MUSIC_BED_COUNT = 1
+    const totalAssets = keyartCount + 2 + 1 + JET_ASSETS_COUNT + MUSIC_BED_COUNT
     let loadedAssets = 0;
 
     const updateProgress = (count: number = 1) => {
@@ -390,7 +391,8 @@ onMounted(() => {
                         { CUBE_SIZE, CUBE_SPACING, FIRST_CUBE_Z },
                         { scrub: screenStore.isMobile ? 0.5 : 1.0 },
                         settings,
-                        stats
+                        stats,
+                        () => emit('scroll-start')
                     )
                     setReverting = result.setReverting
                     scrollTimeline = result.timeline
@@ -461,9 +463,6 @@ onUnmounted(() => {
     }
     if (cleanupInteractivity) cleanupInteractivity()
     window.removeEventListener('resize', onResize)
-    window.removeEventListener('click', handleGesture)
-    window.removeEventListener('touchstart', handleGesture)
-    window.removeEventListener('keydown', handleGesture)
     ScrollTrigger.getAll().forEach(trigger => trigger.kill())
 
     // Dispose of composer and passes

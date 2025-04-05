@@ -37,8 +37,6 @@ export const useProjectStore = defineStore('project', {
         projectCubes: null,
         cubeMetadata: null,
         loadingProgress: 0,
-        //audioEnabled: false,
-        //userEngaged: false,
     }),
     actions: {
         setProgress(progress: number) {
@@ -72,9 +70,7 @@ export const useProjectStore = defineStore('project', {
         setLoadingProgress(val: number) {
             this.loadingProgress = val;
         },
-        /*toggleAudio() { // New action
-            this.audioEnabled = !this.audioEnabled;
-        },*/
+
     },
     persist: true
 });

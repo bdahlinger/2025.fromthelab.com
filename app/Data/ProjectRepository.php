@@ -505,7 +505,7 @@ class ProjectRepository
             'client' => 'Warner Bros. Games',
         ],
         [
-            'classification' => Classification::ENTERTAINMENT,
+            'classification' => Classification::OTHER,
             'title' => 'YOOM',
             'client' => 'Yoom',
         ],

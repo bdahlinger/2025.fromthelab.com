@@ -135,6 +135,11 @@ export function useAudioManager(updateProgress: (count: number) => void) {
         source.source = audioSource
         source.isPlaying = true
 
+        // Set initial gain to maxVolume if no updatePosition is provided
+        if (!source.updatePosition) {
+            source.gain.gain.value = source.maxVolume
+        }
+
         if (camera && source.updatePosition) {
             updatePositionalAudio(id, camera)
         }
